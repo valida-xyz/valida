@@ -1,0 +1,9 @@
+[package]
+name = "valida"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+p3-field = { path = "../plonky3/field" }
+p3-commit = { path = "../plonky3/commit" }
