@@ -2,6 +2,7 @@
 
 extern crate alloc;
 
-pub mod cpu;
-pub mod framework;
-pub mod memory;
+mod cpu;
+mod framework;
+mod memory;
+mod util;
