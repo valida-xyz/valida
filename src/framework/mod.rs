@@ -1,7 +1,9 @@
 pub mod bus;
 pub mod config;
 pub mod constraint_consumer;
-pub mod multistark;
+pub mod machine;
 pub mod proof;
+pub mod prover;
 pub mod stark;
+pub mod verifier;
 pub mod window;

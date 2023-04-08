@@ -2,7 +2,7 @@ use crate::framework::config::Config;
 use crate::framework::stark::Stark;
 use alloc::vec::Vec;
 
-pub trait VmConfig<C: Config> {
+pub trait Machine<C: Config> {
     fn core_starks(&self) -> Vec<&dyn Stark<C>> {
         todo!()
     }

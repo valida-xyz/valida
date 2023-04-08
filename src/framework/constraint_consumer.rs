@@ -38,12 +38,12 @@ impl<F: Field, FE: FieldExtension<Base = F>, P: PackedField<Scalar = F>>
     }
 
     /// Add one constraint valid on all rows except the last.
-    pub fn constraint_transition(&mut self, constraint: P) {
-        self.constraint(constraint * self.z_last);
+    pub fn transition(&mut self, constraint: P) {
+        self.global(constraint * self.z_last);
     }
 
     /// Add one constraint on all rows.
-    pub fn constraint(&mut self, constraint: P) {
+    pub fn global(&mut self, constraint: P) {
         // TODO: Could be more efficient if there's a packed version of FE. Use FE::Packing?
         for c in constraint.as_slice() {
             self.constraint_acc = (self.constraint_acc * self.alpha).add_base(*c);
@@ -52,13 +52,13 @@ impl<F: Field, FE: FieldExtension<Base = F>, P: PackedField<Scalar = F>>
 
     /// Add one constraint, but first multiply it by a filter such that it will only apply to the
     /// first row of the trace.
-    pub fn constraint_first_row(&mut self, constraint: P) {
-        self.constraint(constraint * self.lagrange_basis_first);
+    pub fn first_row(&mut self, constraint: P) {
+        self.global(constraint * self.lagrange_basis_first);
     }
 
     /// Add one constraint, but first multiply it by a filter such that it will only apply to the
     /// last row of the trace.
-    pub fn constraint_last_row(&mut self, constraint: P) {
-        self.constraint(constraint * self.lagrange_basis_last);
+    pub fn last_row(&mut self, constraint: P) {
+        self.global(constraint * self.lagrange_basis_last);
     }
 }

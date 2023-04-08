@@ -1,6 +1,6 @@
+use crate::framework::config::Config;
 use p3_commit::pcs::PCS;
-use p3_field::field::Field;
 
-pub struct MultistarkProof<F: Field, P: PCS<F>> {
-    opening_proof: P::Proof,
+pub struct MachineProof<C: Config> {
+    pub opening_proof: <C::PCS as PCS<C::F>>::Proof,
 }
