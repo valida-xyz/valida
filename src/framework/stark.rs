@@ -5,6 +5,7 @@ use p3_field::field::Field;
 use p3_field::trivial_extension::TrivialExtension;
 
 pub trait Stark<C: Config> {
+    // TODO: Is it actually needed?
     fn columns(&self) -> usize;
 
     fn eval_packed_base(

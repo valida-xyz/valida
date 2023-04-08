@@ -1,15 +1,17 @@
-use core::mem::{size_of, transmute};
-use crate::cpu::CPU_MEMORY_CHANNELS;
+use crate::cpu::{CPU_MEMORY_CHANNELS, INSTRUCTION_ELEMENTS};
 use crate::memory::MEMORY_CELL_BYTES;
 use crate::util::indices_arr;
+use core::mem::{size_of, transmute};
 
 pub struct CpuCols<T> {
     pub instruction_pointer: T,
+    pub instruction: [T; INSTRUCTION_ELEMENTS],
     pub opcode_flags: OpcodeFlagCols<T>,
     pub mem_channels: [MemoryChannelCols<T>; CPU_MEMORY_CHANNELS],
 }
 
 pub struct OpcodeFlagCols<T> {
+    pub is_imm32: T,
     pub is_bus_op: T,
 }
 
