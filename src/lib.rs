@@ -2,8 +2,6 @@
 
 extern crate alloc;
 
-pub mod config;
-pub mod constraint_consumer;
-pub mod multistark;
-pub mod stark;
-pub mod window;
+pub mod cpu;
+pub mod framework;
+pub mod memory;

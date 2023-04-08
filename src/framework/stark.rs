@@ -1,6 +1,6 @@
-use crate::config::Config;
-use crate::constraint_consumer::ConstraintConsumer;
-use crate::window::AirWindow;
+use crate::framework::config::Config;
+use crate::framework::constraint_consumer::ConstraintConsumer;
+use crate::framework::window::AirWindow;
 use p3_field::field::Field;
 use p3_field::trivial_extension::TrivialExtension;
 
