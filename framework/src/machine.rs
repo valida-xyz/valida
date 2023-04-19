@@ -1,5 +1,5 @@
-use alloc::vec;
 use crate::chip::Chip;
+use alloc::vec;
 use alloc::vec::Vec;
 use p3_air::constraint_consumer::ConstraintConsumer;
 use p3_air::types::AirTypes;

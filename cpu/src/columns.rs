@@ -1,8 +1,8 @@
 use crate::{CPU_MEMORY_CHANNELS, INSTRUCTION_ELEMENTS};
-use valida_memory::MEMORY_CELL_BYTES;
-use valida_util::indices_arr;
 use core::borrow::{Borrow, BorrowMut};
 use core::mem::{size_of, transmute};
+use valida_memory::MEMORY_CELL_BYTES;
+use valida_util::indices_arr;
 
 pub struct CpuCols<T> {
     /// The program counter.
