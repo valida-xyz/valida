@@ -1,4 +1,4 @@
-use crate::cpu::columns::CpuCols;
+use crate::columns::CpuCols;
 use core::borrow::Borrow;
 use p3_air::constraint_consumer::ConstraintConsumer;
 use p3_air::types::AirTypes;

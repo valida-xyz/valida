@@ -1,4 +1,5 @@
-use crate::framework::chip::Chip;
+use alloc::vec;
+use crate::chip::Chip;
 use alloc::vec::Vec;
 use p3_air::constraint_consumer::ConstraintConsumer;
 use p3_air::types::AirTypes;
@@ -11,7 +12,7 @@ where
     CC: ConstraintConsumer<T>,
 {
     fn core_starks(&self) -> Vec<&dyn Chip<T, W, CC>> {
-        todo!()
+        vec![] // TODO
     }
 
     fn extension_starks(&self) -> Vec<&dyn Chip<T, W, CC>>;

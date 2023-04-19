@@ -1,3 +1,7 @@
+#![no_std]
+
+extern crate alloc;
+
 pub mod bus;
 pub mod chip;
 pub mod config;

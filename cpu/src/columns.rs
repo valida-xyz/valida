@@ -1,6 +1,6 @@
-use crate::cpu::{CPU_MEMORY_CHANNELS, INSTRUCTION_ELEMENTS};
-use crate::memory::MEMORY_CELL_BYTES;
-use crate::util::indices_arr;
+use crate::{CPU_MEMORY_CHANNELS, INSTRUCTION_ELEMENTS};
+use valida_memory::MEMORY_CELL_BYTES;
+use valida_util::indices_arr;
 use core::borrow::{Borrow, BorrowMut};
 use core::mem::{size_of, transmute};
 

@@ -1,3 +1,5 @@
+#![no_std]
+
 mod columns;
 mod stark;
 

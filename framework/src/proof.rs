@@ -1,4 +1,4 @@
-use crate::framework::config::Config;
+use crate::config::Config;
 use p3_commit::pcs::PCS;
 
 pub struct MachineProof<C: Config> {
