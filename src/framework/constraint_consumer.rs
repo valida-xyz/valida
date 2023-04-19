@@ -1,7 +1,7 @@
 use p3_field::field::{Field, FieldExtension};
 use p3_field::packed::PackedField;
 
-pub struct ConstraintConsumer<F: Field, FE: FieldExtension<Base = F>, P: PackedField<Scalar = F>> {
+pub struct FoldingConstraintConsumer<F: Field, FE: FieldExtension<F>, P: PackedField<Scalar = F>> {
     /// Random value used to combine multiple constraints into one.
     alpha: FE,
 
@@ -20,8 +20,8 @@ pub struct ConstraintConsumer<F: Field, FE: FieldExtension<Base = F>, P: PackedF
     lagrange_basis_last: P,
 }
 
-impl<F: Field, FE: FieldExtension<Base = F>, P: PackedField<Scalar = F>>
-    ConstraintConsumer<F, FE, P>
+impl<F: Field, FE: FieldExtension<F>, P: PackedField<Scalar = F>>
+    FoldingConstraintConsumer<F, FE, P>
 {
     pub fn new(alpha: FE, z_last: P, lagrange_basis_first: P, lagrange_basis_last: P) -> Self {
         Self {

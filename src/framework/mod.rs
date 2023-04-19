@@ -1,9 +1,8 @@
 pub mod bus;
+pub mod chip;
 pub mod config;
 pub mod constraint_consumer;
 pub mod machine;
 pub mod proof;
 pub mod prover;
-pub mod stark;
 pub mod verifier;
-pub mod window;
