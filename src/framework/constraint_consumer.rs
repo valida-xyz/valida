@@ -59,21 +59,4 @@ where
     pub fn accumulator(self) -> FE {
         self.constraint_acc
     }
-
-    /// Add one constraint valid on all rows except the last.
-    pub fn transition(&mut self, constraint: P) {
-        self.global(constraint * self.z_last);
-    }
-
-    /// Add one constraint, but first multiply it by a filter such that it will only apply to the
-    /// first row of the trace.
-    pub fn first_row(&mut self, constraint: P) {
-        self.global(constraint * self.lagrange_basis_first);
-    }
-
-    /// Add one constraint, but first multiply it by a filter such that it will only apply to the
-    /// last row of the trace.
-    pub fn last_row(&mut self, constraint: P) {
-        self.global(constraint * self.lagrange_basis_last);
-    }
 }
