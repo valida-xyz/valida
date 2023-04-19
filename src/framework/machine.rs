@@ -1,17 +1,24 @@
 use crate::framework::chip::Chip;
-use crate::framework::config::Config;
 use alloc::vec::Vec;
+use p3_air::constraint_consumer::ConstraintConsumer;
+use p3_air::types::AirTypes;
+use p3_air::window::AirWindow;
 
-pub trait Machine<C: Config> {
-    // fn core_starks(&self) -> Vec<&dyn Chip<C>> {
-    //     todo!()
-    // }
-    //
-    // fn extension_starks(&self) -> Vec<&dyn Chip<C>>;
-    //
-    // fn all_starks(&self) -> Vec<&dyn Chip<C>> {
-    //     let mut all = self.core_starks();
-    //     all.extend(self.extension_starks());
-    //     all
-    // }
+pub trait Machine<T, W, CC>
+where
+    T: AirTypes,
+    W: AirWindow<T::Var>,
+    CC: ConstraintConsumer<T>,
+{
+    fn core_starks(&self) -> Vec<&dyn Chip<T, W, CC>> {
+        todo!()
+    }
+
+    fn extension_starks(&self) -> Vec<&dyn Chip<T, W, CC>>;
+
+    fn all_starks(&self) -> Vec<&dyn Chip<T, W, CC>> {
+        let mut all = self.core_starks();
+        all.extend(self.extension_starks());
+        all
+    }
 }
