@@ -1,3 +1,12 @@
+pub mod bus;
+pub mod chip;
+pub mod config;
+pub mod constraint_consumer;
+pub mod machine;
+pub mod proof;
+pub mod prover;
+pub mod verifier;
+
 use crate::framework::chip::Chip;
 use crate::framework::config::Config;
 use alloc::vec::Vec;

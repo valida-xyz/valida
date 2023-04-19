@@ -11,11 +11,19 @@ pub struct CpuCols<T> {
     /// The instruction that was read, i.e. `program_code[pc]`.
     pub instruction: [T; INSTRUCTION_ELEMENTS],
 
+    /// Buffers for the two memory reads and single write
+    pub memory_read_1: [T; MEMORY_CELL_BYTES],
+    pub memory_read_2: [T; MEMORY_CELL_BYTES],
+    pub memory_write: [T; MEMORY_CELL_BYTES],
+
     /// Flags indicating what type of operation is being performed this cycle.
     pub opcode_flags: OpcodeFlagCols<T>,
 
     /// Channels to the memory bus.
     pub mem_channels: [MemoryChannelCols<T>; CPU_MEMORY_CHANNELS],
+
+    /// Channel to the shared coprocessor bus
+    pub coprocessor_channel: CoprocessorChannelCols<T>,
 }
 
 pub struct OpcodeFlagCols<T> {
@@ -27,6 +35,11 @@ pub struct MemoryChannelCols<T> {
     pub used: T,
     pub addr: T,
     pub value: [T; MEMORY_CELL_BYTES],
+}
+
+pub struct CoprocessorChannelCols<T> {
+    pub opcode: T,
+    pub value: T,
 }
 
 // `u8` is guaranteed to have a `size_of` of 1.
