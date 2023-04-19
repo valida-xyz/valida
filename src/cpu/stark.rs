@@ -1,14 +1,10 @@
-use crate::cpu::columns::{CpuCols, NUM_CPU_COLUMNS};
-use crate::framework::chip::Chip;
-use crate::framework::config::Config;
-use crate::framework::constraint_consumer::FoldingConstraintConsumer;
+use crate::cpu::columns::CpuCols;
 use core::borrow::Borrow;
 use p3_air::constraint_consumer::ConstraintConsumer;
 use p3_air::types::AirTypes;
 use p3_air::window::AirWindow;
 use p3_air::Air;
-use p3_field::field::{Field, FieldExtension};
-use p3_field::packed::PackedField;
+use p3_field::field::Field;
 use p3_matrix::Matrix;
 
 pub struct CpuStark;
