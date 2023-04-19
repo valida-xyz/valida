@@ -1,7 +1,13 @@
+use p3_air::constraint_consumer::ConstraintConsumer;
 use p3_field::field::{Field, FieldExtension};
 use p3_field::packed::PackedField;
 
-pub struct FoldingConstraintConsumer<F: Field, FE: FieldExtension<F>, P: PackedField<Scalar = F>> {
+pub(crate) struct FoldingConstraintConsumer<F, FE, P>
+where
+    F: Field,
+    FE: FieldExtension<F>,
+    P: PackedField<Scalar = F>,
+{
     /// Random value used to combine multiple constraints into one.
     alpha: FE,
 
@@ -20,8 +26,25 @@ pub struct FoldingConstraintConsumer<F: Field, FE: FieldExtension<F>, P: PackedF
     lagrange_basis_last: P,
 }
 
-impl<F: Field, FE: FieldExtension<F>, P: PackedField<Scalar = F>>
-    FoldingConstraintConsumer<F, FE, P>
+impl<F, FE, P> ConstraintConsumer<P> for FoldingConstraintConsumer<F, FE, P>
+where
+    F: Field,
+    FE: FieldExtension<F>,
+    P: PackedField<Scalar = F>,
+{
+    fn global(&mut self, constraint: P) {
+        // TODO: Could be more efficient if there's a packed version of FE. Use FE::Packing?
+        for c in constraint.as_slice() {
+            self.constraint_acc = (self.constraint_acc * self.alpha).add_base(*c);
+        }
+    }
+}
+
+impl<F, FE, P> FoldingConstraintConsumer<F, FE, P>
+where
+    F: Field,
+    FE: FieldExtension<F>,
+    P: PackedField<Scalar = F>,
 {
     pub fn new(alpha: FE, z_last: P, lagrange_basis_first: P, lagrange_basis_last: P) -> Self {
         Self {
@@ -35,30 +58,5 @@ impl<F: Field, FE: FieldExtension<F>, P: PackedField<Scalar = F>>
 
     pub fn accumulator(self) -> FE {
         self.constraint_acc
-    }
-
-    /// Add one constraint valid on all rows except the last.
-    pub fn transition(&mut self, constraint: P) {
-        self.global(constraint * self.z_last);
-    }
-
-    /// Add one constraint on all rows.
-    pub fn global(&mut self, constraint: P) {
-        // TODO: Could be more efficient if there's a packed version of FE. Use FE::Packing?
-        for c in constraint.as_slice() {
-            self.constraint_acc = (self.constraint_acc * self.alpha).add_base(*c);
-        }
-    }
-
-    /// Add one constraint, but first multiply it by a filter such that it will only apply to the
-    /// first row of the trace.
-    pub fn first_row(&mut self, constraint: P) {
-        self.global(constraint * self.lagrange_basis_first);
-    }
-
-    /// Add one constraint, but first multiply it by a filter such that it will only apply to the
-    /// last row of the trace.
-    pub fn last_row(&mut self, constraint: P) {
-        self.global(constraint * self.lagrange_basis_last);
     }
 }

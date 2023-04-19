@@ -1,6 +1,11 @@
 [workspace]
 members = [
     "cpu",
+    "machine",
     "memory",
-    "runner"
+    "prover",
+    "runner",
+    "u32-alu",
+    "util",
+    "verifier"
 ]

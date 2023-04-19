@@ -1,1 +1,3 @@
-pub(crate) const MEMORY_CELL_BYTES: usize = 4;
+#![no_std]
+
+pub const MEMORY_CELL_BYTES: usize = 4;
