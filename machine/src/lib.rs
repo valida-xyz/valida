@@ -4,7 +4,6 @@ use alloc::vec;
 use alloc::vec::Vec;
 
 use crate::chip::Chip;
-use crate::config::Config;
 use p3_air::constraint_consumer::ConstraintConsumer;
 use p3_air::types::AirTypes;
 use p3_air::window::AirWindow;
@@ -14,6 +13,31 @@ pub mod chip;
 pub mod config;
 pub mod constraint_consumer;
 pub mod proof;
+
+pub const MEMORY_CELL_BYTES: usize = 4;
+
+#[derive(Copy, Clone, Default)]
+pub struct Word<F>([F; MEMORY_CELL_BYTES]);
+
+pub trait Addressable<F: Copy>: Copy + From<u32> + From<Word<F>> {}
+
+impl<F: Copy> Into<u32> for Word<F> {
+    fn into(self) -> u32 {
+        todo!()
+    }
+}
+
+impl<F: Copy> From<u32> for Word<F> {
+    fn from(value: u32) -> Self {
+        todo!()
+    }
+}
+
+impl<F: Copy> Into<[F; MEMORY_CELL_BYTES]> for Word<F> {
+    fn into(self) -> [F; MEMORY_CELL_BYTES] {
+        self.0
+    }
+}
 
 pub trait Machine<T, W, CC>
 where

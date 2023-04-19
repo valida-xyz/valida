@@ -6,3 +6,6 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 p3-air = { path = "../../Plonky3/air" }
+p3-field = { path = "../../Plonky3/field" }
+
+valida-machine = { path = "../machine" }

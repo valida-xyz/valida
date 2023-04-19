@@ -1,20 +1,29 @@
 use crate::{CPU_MEMORY_CHANNELS, INSTRUCTION_ELEMENTS};
 use core::borrow::{Borrow, BorrowMut};
 use core::mem::{size_of, transmute};
-use valida_memory::MEMORY_CELL_BYTES;
+use valida_machine::Word;
 use valida_util::indices_arr;
 
+#[derive(Default)]
 pub struct CpuCols<T> {
-    /// The program counter.
+    /// Program counter.
     pub pc: T,
+
+    /// Frame pointer.
+    pub fp: T,
 
     /// The instruction that was read, i.e. `program_code[pc]`.
     pub instruction: [T; INSTRUCTION_ELEMENTS],
 
-    /// Buffers for the two memory reads and single write
-    pub memory_read_1: [T; MEMORY_CELL_BYTES],
-    pub memory_read_2: [T; MEMORY_CELL_BYTES],
-    pub memory_write: [T; MEMORY_CELL_BYTES],
+    /// Absolute addresses for memory operations.
+    pub addr_read_1: T,
+    pub addr_read_2: T,
+    pub addr_write: T,
+
+    /// Buffers for the two memory reads and single write.
+    pub mem_read_1: Word<T>,
+    pub mem_read_2: Word<T>,
+    pub mem_write: Word<T>,
 
     /// Flags indicating what type of operation is being performed this cycle.
     pub opcode_flags: OpcodeFlagCols<T>,
@@ -22,24 +31,67 @@ pub struct CpuCols<T> {
     /// Channels to the memory bus.
     pub mem_channels: [MemoryChannelCols<T>; CPU_MEMORY_CHANNELS],
 
-    /// Channel to the shared coprocessor bus
-    pub coprocessor_channel: CoprocessorChannelCols<T>,
+    /// Channel to the shared chip bus.
+    pub chip_channel: ChipChannelCols<T>,
 }
 
+impl<T> CpuCols<T> {
+    pub fn set_pc(&mut self, pc: T) {
+        self.pc = pc;
+    }
+
+    /// Set absolute addresses for memory operations.
+    pub fn set_addr_read_1(&mut self, addr: T) {
+        self.addr_read_1 = addr;
+    }
+    pub fn set_addr_read_2(&mut self, addr: T) {
+        self.addr_read_2 = addr;
+    }
+    pub fn set_addr_write(&mut self, addr: T) {
+        self.addr_write = addr;
+    }
+
+    /// Set buffered memory values.
+    pub fn set_mem_read_1(&mut self, mem: Word<T>) {
+        self.mem_read_1 = mem;
+    }
+    pub fn set_mem_read_2(&mut self, mem: Word<T>) {
+        self.mem_read_2 = mem;
+    }
+    pub fn set_mem_write(&mut self, mem: Word<T>) {
+        self.mem_write = mem;
+    }
+
+    pub fn set_opcode_flags(&mut self, operands: &[T]) {
+        todo!()
+    }
+    pub fn set_mem_channel_data(&mut self) {
+        todo!()
+    }
+    pub fn set_chip_channel_data(&mut self) {
+        todo!()
+    }
+}
+
+#[derive(Default)]
 pub struct OpcodeFlagCols<T> {
     pub is_imm32: T,
     pub is_bus_op: T,
 }
 
+#[derive(Default)]
 pub struct MemoryChannelCols<T> {
     pub used: T,
     pub addr: T,
-    pub value: [T; MEMORY_CELL_BYTES],
+    pub value: Word<T>,
 }
 
-pub struct CoprocessorChannelCols<T> {
+#[derive(Default)]
+pub struct ChipChannelCols<T> {
     pub opcode: T,
-    pub value: T,
+    pub read_value_1: Word<T>,
+    pub read_value_2: Word<T>,
+    pub write_value: Word<T>,
 }
 
 // `u8` is guaranteed to have a `size_of` of 1.
