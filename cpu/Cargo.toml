@@ -8,5 +8,7 @@ license = "MIT OR Apache-2.0"
 p3-air = { path = "../../Plonky3/air" }
 p3-field = { path = "../../Plonky3/field" }
 p3-matrix = { path = "../../Plonky3/matrix" }
+
+valida-machine = { path = "../machine" }
 valida-memory = { path = "../memory" }
 valida-util = { path = "../util" }

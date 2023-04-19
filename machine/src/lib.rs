@@ -4,7 +4,6 @@ use alloc::vec;
 use alloc::vec::Vec;
 
 use crate::chip::Chip;
-use crate::config::Config;
 use p3_air::constraint_consumer::ConstraintConsumer;
 use p3_air::types::AirTypes;
 use p3_air::window::AirWindow;
