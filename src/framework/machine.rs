@@ -1,17 +1,17 @@
+use crate::framework::chip::Chip;
 use crate::framework::config::Config;
-use crate::framework::stark::Stark;
 use alloc::vec::Vec;
 
 pub trait Machine<C: Config> {
-    fn core_starks(&self) -> Vec<&dyn Stark<C>> {
-        todo!()
-    }
-
-    fn extension_starks(&self) -> Vec<&dyn Stark<C>>;
-
-    fn all_starks(&self) -> Vec<&dyn Stark<C>> {
-        let mut all = self.core_starks();
-        all.extend(self.extension_starks());
-        all
-    }
+    // fn core_starks(&self) -> Vec<&dyn Chip<C>> {
+    //     todo!()
+    // }
+    //
+    // fn extension_starks(&self) -> Vec<&dyn Chip<C>>;
+    //
+    // fn all_starks(&self) -> Vec<&dyn Chip<C>> {
+    //     let mut all = self.core_starks();
+    //     all.extend(self.extension_starks());
+    //     all
+    // }
 }
