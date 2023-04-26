@@ -3,8 +3,8 @@ extern crate alloc;
 extern crate self as valida_machine;
 
 use p3_field::field::Field;
-use p3_mersenne_31::Mersenne31;
 
+pub mod __internal;
 pub mod bus;
 pub mod chip;
 pub mod config;
@@ -36,8 +36,6 @@ impl<F: Copy> Into<[F; MEMORY_CELL_BYTES]> for Word<F> {
         self.0
     }
 }
-
-pub type DefaultField = Mersenne31;
 
 pub trait Machine {
     type F: Field;
