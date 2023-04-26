@@ -1,8 +1,5 @@
 #![no_std]
 
-use crate::columns::CpuCols;
-use p3_field::field::Field;
-
 pub mod columns;
 mod stark;
 

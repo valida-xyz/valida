@@ -3,7 +3,6 @@
 extern crate alloc;
 
 use alloc::collections::BTreeMap;
-use p3_field::field::Field;
 use valida_machine::Word;
 
 pub mod columns;

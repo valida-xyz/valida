@@ -1,4 +1,4 @@
-use valida_machine::{Word, MEMORY_CELL_BYTES};
+use valida_machine::MEMORY_CELL_BYTES;
 
 pub struct MemoryCols<T: Copy> {
     pub addr: T,

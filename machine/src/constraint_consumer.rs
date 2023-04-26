@@ -32,10 +32,10 @@ where
     FE: FieldExtension<F>,
     P: PackedField<Scalar = F>,
 {
-    fn global(&mut self, constraint: P) {
+    fn assert_zero<I: Into<P>>(&mut self, constraint: I) {
         // TODO: Could be more efficient if there's a packed version of FE. Use FE::Packing?
-        for c in constraint.as_slice() {
-            self.constraint_acc = (self.constraint_acc * self.alpha).add_base(*c);
+        for c in constraint.into().as_slice() {
+            self.constraint_acc = (self.constraint_acc * self.alpha) + *c;
         }
     }
 }

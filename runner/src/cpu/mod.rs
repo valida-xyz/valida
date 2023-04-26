@@ -1,5 +1,4 @@
 use crate::{MachineState, Operands};
-use p3_field::field::Field;
 use valida_cpu::columns::CpuCols;
 use valida_machine::{Addressable, Word};
 use valida_memory::columns::{MemoryCols, ReadWriteLog};
