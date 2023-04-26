@@ -1,17 +1,15 @@
 extern crate alloc;
 
-use alloc::vec;
-use alloc::vec::Vec;
+extern crate self as valida_machine;
 
-use crate::chip::Chip;
-use p3_air::constraint_consumer::ConstraintConsumer;
-use p3_air::types::AirTypes;
-use p3_air::window::AirWindow;
+use p3_field::field::Field;
+use p3_mersenne_31::Mersenne31;
 
 pub mod bus;
 pub mod chip;
 pub mod config;
 pub mod constraint_consumer;
+pub mod instruction;
 pub mod proof;
 
 pub const MEMORY_CELL_BYTES: usize = 4;
@@ -39,21 +37,11 @@ impl<F: Copy> Into<[F; MEMORY_CELL_BYTES]> for Word<F> {
     }
 }
 
-pub trait Machine<T, W, CC>
-where
-    T: AirTypes,
-    W: AirWindow<T::Var>,
-    CC: ConstraintConsumer<T>,
-{
-    fn core_starks(&self) -> Vec<&dyn Chip<T, W, CC>> {
-        vec![] // TODO
-    }
+pub type DefaultField = Mersenne31;
 
-    fn extension_starks(&self) -> Vec<&dyn Chip<T, W, CC>>;
-
-    fn all_starks(&self) -> Vec<&dyn Chip<T, W, CC>> {
-        let mut all = self.core_starks();
-        all.extend(self.extension_starks());
-        all
-    }
+pub trait Machine {
+    type F: Field;
+    fn run(&mut self);
+    fn prove(&self);
+    fn verify();
 }
