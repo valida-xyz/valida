@@ -55,7 +55,7 @@ fn impl_machine_chip_impl_given_chips(machine: &Ident, chips: &[&Field]) -> Toke
         let chip_ty = &chip.ty;
         let tokens = quote!(#chip_ty);
         let chip_impl_name = Ident::new(&format!("MachineWith{}", tokens.to_string()), chip.span());
-        let chip_methods = chip_methods(machine, chips);
+        let chip_methods = chip_methods(machine, chip);
         quote! {
             impl #chip_impl_name for #machine {
                 #chip_methods
@@ -85,21 +85,19 @@ fn impl_machine_given_instructions_and_chips(
     }
 }
 
-fn chip_methods(machine: &Ident, chips: &[&Field]) -> TokenStream2 {
+fn chip_methods(machine: &Ident, chip: &Field) -> TokenStream2 {
     let mut methods = vec![];
-    for chip in chips {
-        let chip_name = chip.ident.as_ref().unwrap();
-        let chip_name_mut = Ident::new(&format!("{}_mut", chip_name), chip_name.span());
-        let chip_type = &chip.ty;
-        methods.push(quote! {
-            fn #chip_name(&self) -> &#chip_type {
-                &self.#chip_name
-            }
-            fn #chip_name_mut(&mut self) -> &mut #chip_type {
-                &mut self.#chip_name
-            }
-        });
-    }
+    let chip_name = chip.ident.as_ref().unwrap();
+    let chip_name_mut = Ident::new(&format!("{}_mut", chip_name), chip_name.span());
+    let chip_type = &chip.ty;
+    methods.push(quote! {
+        fn #chip_name(&self) -> &#chip_type {
+            &self.#chip_name
+        }
+        fn #chip_name_mut(&mut self) -> &mut #chip_type {
+            &mut self.#chip_name
+        }
+    });
     quote! {
         #(#methods)*
     }
