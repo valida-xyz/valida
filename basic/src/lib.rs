@@ -11,14 +11,14 @@ pub struct ALU32Chip {
     pub operations: Vec<()>,
 }
 
-pub trait MachineWithALU32: Machine {
+pub trait MachineWithALU32Chip: Machine {
     fn alu_32(&self) -> &ALU32Chip;
     fn alu_32_mut(&mut self) -> &mut ALU32Chip;
 }
 
 pub struct Add32Instruction;
 
-impl<M: MachineWithALU32> Instruction<M> for Add32Instruction {
+impl<M: MachineWithALU32Chip> Instruction<M> for Add32Instruction {
     const OPCODE: u32 = 123;
 
     fn execute(state: &mut M) {
@@ -33,13 +33,4 @@ pub struct BasicMachine {
 
     #[chip]
     alu_32: ALU32Chip,
-}
-
-impl MachineWithALU32 for BasicMachine {
-    fn alu_32(&self) -> &ALU32Chip {
-        &self.alu_32
-    }
-    fn alu_32_mut(&mut self) -> &mut ALU32Chip {
-        &mut self.alu_32
-    }
 }
