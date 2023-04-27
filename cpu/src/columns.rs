@@ -1,7 +1,6 @@
-use crate::{CPU_MEMORY_CHANNELS, INSTRUCTION_ELEMENTS};
 use core::borrow::{Borrow, BorrowMut};
 use core::mem::{size_of, transmute};
-use valida_machine::Word;
+use valida_machine::{InstructionWord, Word, CPU_MEMORY_CHANNELS, INSTRUCTION_ELEMENTS};
 use valida_util::indices_arr;
 
 #[derive(Default)]
@@ -13,7 +12,7 @@ pub struct CpuCols<T> {
     pub fp: T,
 
     /// The instruction that was read, i.e. `program_code[pc]`.
-    pub instruction: [T; INSTRUCTION_ELEMENTS],
+    pub instruction: InstructionWord<T>,
 
     /// Absolute addresses for memory operations.
     pub addr_read_1: T,

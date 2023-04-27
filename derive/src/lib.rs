@@ -111,7 +111,7 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
             let ty = &inst.ty;
             quote! {
                 <#ty as Instruction<#machine>>::OPCODE => {
-                    #ty::execute(self);
+                    #ty::execute(self, ops);
                 }
             }
         })
@@ -120,6 +120,7 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
         fn run(&mut self) {
             loop {
                 let opcode: u32 = 0u32; // TODO
+                let ops = Operands::default(); // TODO
                 match opcode {
                     #opcode_arms
                     _ => todo!(),

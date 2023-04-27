@@ -3,34 +3,36 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
+use valida_cpu::{
+    BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
+    Load32Instruction, Store32Instruction,
+};
+use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
-use valida_machine::instruction::Instruction;
-use valida_machine::Machine;
+use valida_machine::{Instruction, Machine, Operands};
+use valida_memory::{MachineWithMemoryChip, MemoryChip};
 
-pub struct ALU32Chip {
-    pub operations: Vec<()>,
-}
-
-pub trait MachineWithALU32Chip: Machine {
-    fn alu_32(&self) -> &ALU32Chip;
-    fn alu_32_mut(&mut self) -> &mut ALU32Chip;
-}
-
-pub struct Add32Instruction;
-
-impl<M: MachineWithALU32Chip> Instruction<M> for Add32Instruction {
-    const OPCODE: u32 = 123;
-
-    fn execute(state: &mut M) {
-        state.alu_32_mut().operations.push(());
-    }
-}
+// TODO: Emit instruction members in the derive macro instead of manually including
 
 #[derive(Machine)]
 pub struct BasicMachine {
     #[instruction]
-    add32: Add32Instruction,
+    load32: Load32Instruction,
+    #[instruction]
+    store32: Store32Instruction,
+    #[instruction]
+    jal: JalInstruction,
+    #[instruction]
+    jalv: JalvInstruction,
+    #[instruction]
+    beq: BeqInstruction,
+    #[instruction]
+    bne: BneInstruction,
+    #[instruction]
+    imm32: Imm32Instruction,
 
     #[chip]
-    alu_32: ALU32Chip,
+    cpu: CpuChip,
+    #[chip]
+    mem: MemoryChip,
 }
