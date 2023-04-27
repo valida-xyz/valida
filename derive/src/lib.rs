@@ -73,11 +73,11 @@ fn impl_machine_given_instructions_and_chips(
     chips: &[&Field],
 ) -> TokenStream2 {
     let run = run_method(machine, instructions);
-    let prove = prove_method();
-    let verify = verify_method();
+    let prove = prove_method(chips);
+    let verify = verify_method(chips);
     quote! {
         impl Machine for #machine {
-            type F = ::valida_machine::DefaultField;
+            type F = ::valida_machine::__internal::DefaultField;
             #run
             #prove
             #verify
@@ -107,7 +107,6 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
     let opcode_arms = instructions
         .iter()
         .map(|inst| {
-            let ident = &inst.ident;
             let ty = &inst.ty;
             quote! {
                 <#ty as Instruction<#machine>>::OPCODE => {
@@ -116,6 +115,7 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
             }
         })
         .collect::<TokenStream2>();
+
     quote! {
         fn run(&mut self) {
             loop {
@@ -123,17 +123,21 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
                 let ops = Operands::default(); // TODO
                 match opcode {
                     #opcode_arms
-                    _ => todo!(),
+                    _ => panic!("Unrecognized opcode: {}", opcode),
                 };
             }
         }
     }
 }
 
-fn prove_method() -> TokenStream2 {
-    quote! { fn prove(&self) {} }
+fn prove_method(chips: &[&Field]) -> TokenStream2 {
+    quote! {
+        fn prove(&self) {}
+    }
 }
 
-fn verify_method() -> TokenStream2 {
-    quote! { fn verify() {} }
+fn verify_method(chips: &[&Field]) -> TokenStream2 {
+    quote! {
+        fn verify() {}
+    }
 }
