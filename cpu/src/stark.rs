@@ -9,14 +9,16 @@ use p3_matrix::Matrix;
 
 pub struct CpuStark;
 
-impl<T, W, CC> Air<T, W, CC> for CpuStark
+impl<T, W> Air<T, W> for CpuStark
 where
     T: AirTypes,
-    W: AirWindow<T::Var>,
-    CC: ConstraintConsumer<T>,
+    W: AirWindow<T>,
 {
-    fn eval(&self, window: &W, constraints: &mut CC) {
-        let main = window.main();
+    fn eval<CC>(&self, constraints: &mut CC)
+    where
+        CC: ConstraintConsumer<T, W>,
+    {
+        let main = constraints.window().main();
         let local: &CpuCols<T::Var> = main.row(0).borrow();
         let next: &CpuCols<T::Var> = main.row(1).borrow();
 

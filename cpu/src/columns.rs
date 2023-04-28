@@ -1,6 +1,6 @@
 use core::borrow::{Borrow, BorrowMut};
 use core::mem::{size_of, transmute};
-use valida_machine::{InstructionWord, Word, CPU_MEMORY_CHANNELS, INSTRUCTION_ELEMENTS};
+use valida_machine::{InstructionWord, Word, CPU_MEMORY_CHANNELS};
 use valida_util::indices_arr;
 
 #[derive(Default)]

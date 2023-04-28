@@ -2,10 +2,6 @@ extern crate alloc;
 
 extern crate self as valida_machine;
 
-use crate::chip::Chip;
-use p3_air::constraint_consumer::ConstraintConsumer;
-use p3_air::types::AirTypes;
-use p3_air::window::AirWindow;
 use p3_field::field::Field;
 use p3_mersenne_31::Mersenne31 as Fp;
 
