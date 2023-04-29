@@ -42,17 +42,27 @@ impl CpuStark {
         constraints
             .when_transition()
             .when(should_increment_pc)
-            .assert_eq(next.pc, incremented_pc);
+            .assert_eq(next.pc, incremented_pc.clone());
 
-        constraints.assert_eq(local.diff,
-                              local.mem_read_1.0.into_iter().zip(next.mem_read_1.0).map(|(a, b)| (a - b).square()));
+        constraints.assert_eq(
+            local.diff,
+            local
+                .mem_read_1
+                .0
+                .into_iter()
+                .zip(next.mem_read_1.0)
+                .map(|(a, b)| (a - b) * (a - b))
+                .sum::<T::Exp>(),
+        );
 
         let not_equal = local.diff * local.diff_inv;
         constraints.assert_bool(not_equal.clone());
-        let equal = T::F::ONE - not_equal.clone();
+        let equal = T::Exp::from(T::F::ONE) - not_equal.clone();
 
-        let beq_next_pc_if_branching = incremented_pc; // TODO: Should be the immediate jump destination or another read?
-        let beq_next_pc = equal * beq_next_pc_if_branching + not_equal * (incremented_pc);
+        // TODO: Should be the immediate jump destination or another read?
+        let beq_next_pc_if_branching = incremented_pc.clone();
+
+        let beq_next_pc = equal * beq_next_pc_if_branching + not_equal * incremented_pc;
 
         constraints
             .when_transition()
