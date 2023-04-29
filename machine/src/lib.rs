@@ -22,7 +22,7 @@ pub const CPU_MEMORY_CHANNELS: usize = 3;
 pub const MEMORY_CELL_BYTES: usize = 4;
 
 #[derive(Copy, Clone, Default)]
-pub struct Word<F>([F; MEMORY_CELL_BYTES]);
+pub struct Word<F>(pub [F; MEMORY_CELL_BYTES]);
 
 #[derive(Copy, Clone, Default)]
 pub struct InstructionWord<F>([F; INSTRUCTION_ELEMENTS]);
