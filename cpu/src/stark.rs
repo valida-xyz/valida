@@ -55,14 +55,14 @@ impl CpuStark {
                 .sum::<T::Exp>(),
         );
 
-        let not_equal = local.diff * local.diff_inv;
-        constraints.assert_bool(not_equal.clone());
-        let equal = T::Exp::from(T::F::ONE) - not_equal.clone();
+        constraints.assert_bool(local.not_equal);
+        constraints.assert_eq(local.not_equal, local.diff * local.diff_inv);
+        let equal = T::Exp::from(T::F::ONE) - local.not_equal.clone();
 
         // TODO: Should be the immediate jump destination or another read?
         let beq_next_pc_if_branching = incremented_pc.clone();
 
-        let beq_next_pc = equal * beq_next_pc_if_branching + not_equal * incremented_pc;
+        let beq_next_pc = equal * beq_next_pc_if_branching + local.not_equal * incremented_pc;
 
         constraints
             .when_transition()

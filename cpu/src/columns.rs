@@ -32,6 +32,8 @@ pub struct CpuCols<T> {
     pub diff: T,
     /// The inverse of `diff`, or undefined if `diff = 0`.
     pub diff_inv: T,
+    /// A boolean flag indicating whether `diff != 0`.
+    pub not_equal: T,
 
     /// Channels to the memory bus.
     pub mem_channels: [MemoryChannelCols<T>; CPU_MEMORY_CHANNELS],
