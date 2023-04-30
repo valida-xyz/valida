@@ -2,10 +2,6 @@ extern crate alloc;
 
 extern crate self as valida_machine;
 
-use crate::chip::Chip;
-use p3_air::constraint_consumer::ConstraintConsumer;
-use p3_air::types::AirTypes;
-use p3_air::window::AirWindow;
 use p3_field::field::Field;
 use p3_mersenne_31::Mersenne31 as Fp;
 
@@ -26,7 +22,7 @@ pub const CPU_MEMORY_CHANNELS: usize = 3;
 pub const MEMORY_CELL_BYTES: usize = 4;
 
 #[derive(Copy, Clone, Default)]
-pub struct Word<F>([F; MEMORY_CELL_BYTES]);
+pub struct Word<F>(pub [F; MEMORY_CELL_BYTES]);
 
 #[derive(Copy, Clone, Default)]
 pub struct InstructionWord<F>([F; INSTRUCTION_ELEMENTS]);

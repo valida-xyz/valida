@@ -1,6 +1,6 @@
 use core::borrow::{Borrow, BorrowMut};
 use core::mem::{size_of, transmute};
-use valida_machine::{InstructionWord, Word, CPU_MEMORY_CHANNELS, INSTRUCTION_ELEMENTS};
+use valida_machine::{InstructionWord, Word, CPU_MEMORY_CHANNELS};
 use valida_util::indices_arr;
 
 #[derive(Default)]
@@ -26,6 +26,14 @@ pub struct CpuCols<T> {
 
     /// Flags indicating what type of operation is being performed this cycle.
     pub opcode_flags: OpcodeFlagCols<T>,
+
+    /// When doing an equality test between two words, `x` and `y`, this holds the sum of
+    /// `(x_i - y_i)^2`, which is zero if and only if `x = y`.
+    pub diff: T,
+    /// The inverse of `diff`, or undefined if `diff = 0`.
+    pub diff_inv: T,
+    /// A boolean flag indicating whether `diff != 0`.
+    pub not_equal: T,
 
     /// Channels to the memory bus.
     pub mem_channels: [MemoryChannelCols<T>; CPU_MEMORY_CHANNELS],
@@ -76,6 +84,7 @@ impl<T> CpuCols<T> {
 pub struct OpcodeFlagCols<T> {
     pub is_imm32: T,
     pub is_bus_op: T,
+    pub is_beq: T,
 }
 
 #[derive(Default)]
