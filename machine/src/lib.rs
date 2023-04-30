@@ -1,7 +1,10 @@
+#![feature(generic_const_exprs)]
+
 extern crate alloc;
 
 extern crate self as valida_machine;
 
+use core::ops::{Index, IndexMut};
 use p3_field::field::Field;
 use p3_mersenne_31::Mersenne31 as Fp;
 
@@ -12,6 +15,7 @@ pub mod config;
 pub mod constraint_consumer;
 pub mod instruction;
 pub mod proof;
+pub mod trace;
 
 pub use instruction::Instruction;
 
@@ -62,6 +66,20 @@ impl<F> From<[F; MEMORY_CELL_BYTES]> for Word<F> {
 impl From<Word<Fp>> for Fp {
     fn from(word: Word<Fp>) -> Self {
         todo!()
+    }
+}
+
+impl<T> Index<usize> for Word<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl<T> IndexMut<usize> for Word<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.0[index]
     }
 }
 

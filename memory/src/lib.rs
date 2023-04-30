@@ -10,14 +10,14 @@ use valida_machine::Word;
 
 pub mod columns;
 
-enum Operation {
+pub enum Operation {
     Read(Fp, Word<Fp>),
     Write(Fp, Word<Fp>),
 }
 
 pub struct MemoryChip {
-    cells: BTreeMap<Fp, Word<Fp>>,
-    operations: BTreeMap<Fp, Vec<Operation>>,
+    pub cells: BTreeMap<Fp, Word<Fp>>,
+    pub operations: BTreeMap<Fp, Vec<Operation>>,
 }
 
 pub trait MachineWithMemoryChip: Machine {

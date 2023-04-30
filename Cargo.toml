@@ -7,7 +7,7 @@ members = [
     "memory",
     "prover",
     "runner",
-    "u32-alu",
+    "alu_u32",
     "util",
     "verifier"
 ]

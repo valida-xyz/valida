@@ -47,10 +47,10 @@ impl CpuStark {
         constraints.assert_eq(
             local.diff,
             local
-                .mem_read_1
+                .mem_read_1()
                 .0
                 .into_iter()
-                .zip(next.mem_read_1.0)
+                .zip(next.mem_read_1().0)
                 .map(|(a, b)| (a - b) * (a - b))
                 .sum::<T::Exp>(),
         );

@@ -14,16 +14,6 @@ pub struct CpuCols<T> {
     /// The instruction that was read, i.e. `program_code[pc]`.
     pub instruction: InstructionWord<T>,
 
-    /// Absolute addresses for memory operations.
-    pub addr_read_1: T,
-    pub addr_read_2: T,
-    pub addr_write: T,
-
-    /// Buffers for the two memory reads and single write.
-    pub mem_read_1: Word<T>,
-    pub mem_read_2: Word<T>,
-    pub mem_write: Word<T>,
-
     /// Flags indicating what type of operation is being performed this cycle.
     pub opcode_flags: OpcodeFlagCols<T>,
 
@@ -40,44 +30,6 @@ pub struct CpuCols<T> {
 
     /// Channel to the shared chip bus.
     pub chip_channel: ChipChannelCols<T>,
-}
-
-impl<T> CpuCols<T> {
-    pub fn set_pc(&mut self, pc: T) {
-        self.pc = pc;
-    }
-
-    /// Set absolute addresses for memory operations.
-    pub fn set_addr_read_1(&mut self, addr: T) {
-        self.addr_read_1 = addr;
-    }
-    pub fn set_addr_read_2(&mut self, addr: T) {
-        self.addr_read_2 = addr;
-    }
-    pub fn set_addr_write(&mut self, addr: T) {
-        self.addr_write = addr;
-    }
-
-    /// Set buffered memory values.
-    pub fn set_mem_read_1(&mut self, mem: Word<T>) {
-        self.mem_read_1 = mem;
-    }
-    pub fn set_mem_read_2(&mut self, mem: Word<T>) {
-        self.mem_read_2 = mem;
-    }
-    pub fn set_mem_write(&mut self, mem: Word<T>) {
-        self.mem_write = mem;
-    }
-
-    pub fn set_opcode_flags(&mut self, operands: &[T]) {
-        todo!()
-    }
-    pub fn set_mem_channel_data(&mut self) {
-        todo!()
-    }
-    pub fn set_chip_channel_data(&mut self) {
-        todo!()
-    }
 }
 
 #[derive(Default)]
@@ -102,14 +54,26 @@ pub struct ChipChannelCols<T> {
     pub write_value: Word<T>,
 }
 
+impl<T: Copy> CpuCols<T> {
+    pub fn mem_read_1(&self) -> Word<T> {
+        self.mem_channels[0].value
+    }
+    pub fn mem_read_2(&self) -> Word<T> {
+        self.mem_channels[1].value
+    }
+    pub fn mem_write(&self) -> Word<T> {
+        self.mem_channels[2].value
+    }
+}
+
 // `u8` is guaranteed to have a `size_of` of 1.
-pub const NUM_CPU_COLUMNS: usize = size_of::<CpuCols<u8>>();
+pub const NUM_CPU_COLS: usize = size_of::<CpuCols<u8>>();
 
 pub const CPU_COL_INDICES: CpuCols<usize> = make_col_map();
 
 const fn make_col_map() -> CpuCols<usize> {
-    let indices_arr = indices_arr::<NUM_CPU_COLUMNS>();
-    unsafe { transmute::<[usize; NUM_CPU_COLUMNS], CpuCols<usize>>(indices_arr) }
+    let indices_arr = indices_arr::<NUM_CPU_COLS>();
+    unsafe { transmute::<[usize; NUM_CPU_COLS], CpuCols<usize>>(indices_arr) }
 }
 
 impl<T> Borrow<CpuCols<T>> for [T] {
