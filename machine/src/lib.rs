@@ -1,7 +1,10 @@
+#![feature(generic_const_exprs)]
+
 extern crate alloc;
 
 extern crate self as valida_machine;
 
+use core::ops::{Index, IndexMut};
 use p3_field::field::Field;
 use p3_mersenne_31::Mersenne31 as Fp;
 
@@ -12,6 +15,7 @@ pub mod config;
 pub mod constraint_consumer;
 pub mod instruction;
 pub mod proof;
+pub mod trace;
 
 pub use instruction::Instruction;
 
@@ -24,31 +28,28 @@ pub const MEMORY_CELL_BYTES: usize = 4;
 #[derive(Copy, Clone, Default)]
 pub struct Word<F>(pub [F; MEMORY_CELL_BYTES]);
 
-#[derive(Copy, Clone, Default)]
-pub struct InstructionWord<F>([F; INSTRUCTION_ELEMENTS]);
-
 pub trait Addressable<F: Copy>: Copy + From<u32> + From<Word<F>> {}
 
-#[derive(Default)]
-pub struct Operands([Fp; 5]);
+#[derive(Copy, Clone, Default)]
+pub struct Operands<F>([F; 5]);
 
-impl Operands {
-    pub fn a(&self) -> Fp {
+impl<F: Copy> Operands<F> {
+    pub fn a(&self) -> F {
         self.0[0]
     }
-    pub fn b(&self) -> Fp {
+    pub fn b(&self) -> F {
         self.0[1]
     }
-    pub fn c(&self) -> Fp {
+    pub fn c(&self) -> F {
         self.0[2]
     }
-    pub fn d(&self) -> Fp {
+    pub fn d(&self) -> F {
         self.0[3]
     }
-    pub fn e(&self) -> Fp {
+    pub fn e(&self) -> F {
         self.0[4]
     }
-    pub fn is_imm(&self) -> Fp {
+    pub fn is_imm(&self) -> F {
         self.0[4]
     }
 }
@@ -65,9 +66,32 @@ impl From<Word<Fp>> for Fp {
     }
 }
 
+impl<T> Index<usize> for Word<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl<T> IndexMut<usize> for Word<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.0[index]
+    }
+}
+
 impl<F: Field> From<F> for Word<F> {
     fn from(bytes: F) -> Self {
         Self([F::ZERO, F::ZERO, F::ZERO, bytes])
+    }
+}
+
+impl<F> IntoIterator for Word<F> {
+    type Item = F;
+    type IntoIter = core::array::IntoIter<F, MEMORY_CELL_BYTES>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 

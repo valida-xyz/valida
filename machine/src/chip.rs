@@ -8,9 +8,3 @@ where
     W: AirWindow<T>,
 {
 }
-
-//pub trait ChipLogger {
-//    fn push(&mut self, item: Self::Item);
-//
-//    fn execute_instruction(&mut self, opcode: u32, ops: &[u8]);
-//}

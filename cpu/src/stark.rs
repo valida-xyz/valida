@@ -23,6 +23,8 @@ where
         let next: &CpuCols<T::Var> = main.row(1).borrow();
 
         self.eval_pc(constraints, local, next);
+        self.eval_fp(constraints, local, next);
+        self.eval_equality(constraints, local, next);
     }
 }
 
@@ -44,29 +46,82 @@ impl CpuStark {
             .when(should_increment_pc)
             .assert_eq(next.pc, incremented_pc.clone());
 
-        constraints.assert_eq(
-            local.diff,
-            local
-                .mem_read_1
-                .0
-                .into_iter()
-                .zip(next.mem_read_1.0)
-                .map(|(a, b)| (a - b) * (a - b))
-                .sum::<T::Exp>(),
-        );
-
-        constraints.assert_bool(local.not_equal);
-        constraints.assert_eq(local.not_equal, local.diff * local.diff_inv);
+        // Branch manipulation
         let equal = T::Exp::from(T::F::ONE) - local.not_equal.clone();
-
-        // TODO: Should be the immediate jump destination or another read?
-        let beq_next_pc_if_branching = incremented_pc.clone();
-
-        let beq_next_pc = equal * beq_next_pc_if_branching + local.not_equal * incremented_pc;
-
+        let next_pc_if_branching = local.pc + local.instruction.operands.a();
+        let beq_next_pc =
+            equal.clone() * next_pc_if_branching.clone() + local.not_equal * incremented_pc.clone();
+        let bne_next_pc = equal * incremented_pc + local.not_equal * next_pc_if_branching;
         constraints
             .when_transition()
             .when(local.opcode_flags.is_beq)
             .assert_eq(next.pc, beq_next_pc);
+        constraints
+            .when_transition()
+            .when(local.opcode_flags.is_bne)
+            .assert_eq(next.pc, bne_next_pc);
+
+        // Jump manipulation
+        constraints
+            .when_transition()
+            .when(local.opcode_flags.is_jal)
+            .assert_eq(next.pc, local.instruction.operands.b());
+        constraints
+            .when_transition()
+            .when(local.opcode_flags.is_jalv)
+            .assert_eq(next.pc, local.mem_read_1()[3]);
+    }
+
+    fn eval_fp<T, W, CC>(
+        &self,
+        constraints: &mut CC,
+        local: &CpuCols<T::Var>,
+        next: &CpuCols<T::Var>,
+    ) where
+        T: AirTypes,
+        W: AirWindow<T>,
+        CC: ConstraintConsumer<T, W>,
+    {
+        constraints
+            .when_transition()
+            .when(local.opcode_flags.is_jal)
+            .assert_eq(next.fp, local.instruction.operands.c());
+
+        constraints
+            .when_transition()
+            .when(local.opcode_flags.is_jalv)
+            .assert_eq(next.fp, local.mem_channels[0].value[3]);
+    }
+
+    fn eval_equality<T, W, CC>(
+        &self,
+        constraints: &mut CC,
+        local: &CpuCols<T::Var>,
+        next: &CpuCols<T::Var>,
+    ) where
+        T: AirTypes,
+        W: AirWindow<T>,
+        CC: ConstraintConsumer<T, W>,
+    {
+        // Word equality constraints (for branch instructions)
+        constraints
+            .when(local.instruction.operands.is_imm())
+            .assert_eq(
+                local.diff,
+                local
+                    .mem_read_1()
+                    .into_iter()
+                    .zip(local.mem_read_2())
+                    .map(|(a, b)| (a - b) * (a - b))
+                    .sum::<T::Exp>(),
+            );
+        constraints
+            .when(T::Exp::from(T::F::ONE) - local.instruction.operands.is_imm())
+            .assert_eq(
+                local.diff,
+                local.mem_read_1()[3] - local.instruction.operands.c(),
+            );
+        constraints.assert_bool(local.not_equal);
+        constraints.assert_eq(local.not_equal, local.diff * local.diff_inv);
     }
 }

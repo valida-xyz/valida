@@ -2,6 +2,8 @@
 
 extern crate alloc;
 
+use valida_alu_u32::{ALU32Chip, MachineWithALU32Chip};
+use valida_alu_u32::{Add32Instruction, Mul32Instruction};
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
     Load32Instruction, Store32Instruction,
@@ -15,6 +17,7 @@ use valida_memory::{MachineWithMemoryChip, MemoryChip};
 
 #[derive(Machine)]
 pub struct BasicMachine {
+    // Core instructions
     #[instruction]
     load32: Load32Instruction,
     #[instruction]
@@ -30,8 +33,16 @@ pub struct BasicMachine {
     #[instruction]
     imm32: Imm32Instruction,
 
+    // ALU instructions
+    #[instruction]
+    add32: Add32Instruction,
+    #[instruction]
+    mul32: Mul32Instruction,
+
     #[chip]
     cpu: CpuChip,
     #[chip]
     mem: MemoryChip,
+    #[chip]
+    alu_u32: ALU32Chip,
 }
