@@ -139,7 +139,7 @@ pub struct Imm32Instruction;
 impl<M: MachineWithCpuChip> Instruction<M> for Load32Instruction {
     const OPCODE: u32 = 1;
 
-    fn execute(state: &mut M, ops: Operands) {
+    fn execute(state: &mut M, ops: Operands<Fp>) {
         let clk = state.cpu().clock;
         let read_addr_1 = state.cpu().fp + ops.c();
         let read_addr_2 = state.mem_mut().read(clk, read_addr_1, true);
@@ -156,7 +156,7 @@ impl<M: MachineWithCpuChip> Instruction<M> for Load32Instruction {
 impl<M: MachineWithCpuChip> Instruction<M> for Store32Instruction {
     const OPCODE: u32 = 2;
 
-    fn execute(state: &mut M, ops: Operands) {
+    fn execute(state: &mut M, ops: Operands<Fp>) {
         let clk = state.cpu().clock;
         let read_addr = state.cpu().fp + ops.c();
         let write_addr = state.cpu().fp + ops.b();
@@ -172,7 +172,7 @@ impl<M: MachineWithCpuChip> Instruction<M> for Store32Instruction {
 impl<M: MachineWithCpuChip> Instruction<M> for JalInstruction {
     const OPCODE: u32 = 3;
 
-    fn execute(state: &mut M, ops: Operands) {
+    fn execute(state: &mut M, ops: Operands<Fp>) {
         let clk = state.cpu().clock;
         // Store pc + 1 to local stack variable at offset a
         let write_addr = state.cpu().fp + ops.a();
@@ -191,7 +191,7 @@ impl<M: MachineWithCpuChip> Instruction<M> for JalInstruction {
 impl<M: MachineWithCpuChip> Instruction<M> for JalvInstruction {
     const OPCODE: u32 = 4;
 
-    fn execute(state: &mut M, ops: Operands) {
+    fn execute(state: &mut M, ops: Operands<Fp>) {
         let clk = state.cpu().clock;
         // Store pc + 1 to local stack variable at offset a
         let write_addr = state.cpu().fp + ops.a();
@@ -212,7 +212,7 @@ impl<M: MachineWithCpuChip> Instruction<M> for JalvInstruction {
 impl<M: MachineWithCpuChip> Instruction<M> for BeqInstruction {
     const OPCODE: u32 = 5;
 
-    fn execute(state: &mut M, ops: Operands) {
+    fn execute(state: &mut M, ops: Operands<Fp>) {
         let clk = state.cpu().clock;
         let read_addr_1 = state.cpu().fp + ops.b();
         let cell_1 = state.mem_mut().read(clk, read_addr_1, true);
@@ -236,7 +236,7 @@ impl<M: MachineWithCpuChip> Instruction<M> for BeqInstruction {
 impl<M: MachineWithCpuChip> Instruction<M> for BneInstruction {
     const OPCODE: u32 = 6;
 
-    fn execute(state: &mut M, ops: Operands) {
+    fn execute(state: &mut M, ops: Operands<Fp>) {
         let clk = state.cpu().clock;
         let read_addr_1 = state.cpu().fp + ops.b();
         let cell_1 = state.mem_mut().read(clk, read_addr_1, true);
@@ -260,7 +260,7 @@ impl<M: MachineWithCpuChip> Instruction<M> for BneInstruction {
 impl<M: MachineWithCpuChip> Instruction<M> for Imm32Instruction {
     const OPCODE: u32 = 7;
 
-    fn execute(state: &mut M, ops: Operands) {
+    fn execute(state: &mut M, ops: Operands<Fp>) {
         let clk = state.cpu().clock;
         let write_addr = state.cpu().fp + ops.a();
         let value = Word::from([ops.b(), ops.c(), ops.d(), ops.e()]);
