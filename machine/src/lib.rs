@@ -12,7 +12,6 @@ pub mod __internal;
 pub mod bus;
 pub mod chip;
 pub mod config;
-pub mod constraint_consumer;
 pub mod instruction;
 pub mod proof;
 pub mod trace;
