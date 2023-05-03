@@ -56,8 +56,9 @@ where
         rows
     }
 
-    fn op_to_row(&self, n: usize, op: Operation, machine: &M) -> [Fp; NUM_CPU_COLS] {
+    fn op_to_row<N: Into<usize>>(&self, clk: N, op: Operation, machine: &M) -> [Fp; NUM_CPU_COLS] {
         let mut cols = CpuCols::default();
+        let n = clk.into();
         cols.pc = self.registers[n].pc;
         cols.fp = self.registers[n].fp;
 
@@ -117,6 +118,7 @@ impl CpuChip {
                         cols.mem_channels[2].addr = *addr;
                         cols.mem_channels[2].value = *value;
                     }
+                    _ => {}
                 }
             }
         }

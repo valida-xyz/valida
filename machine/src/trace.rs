@@ -6,5 +6,10 @@ pub trait TraceGenerator<M, T> {
     fn generate_trace(&self, machine: &M) -> Vec<[T; Self::NUM_COLS]>;
 
     /// Convert an operation to a trace row.
-    fn op_to_row(&self, n: usize, op: Self::Operation, machine: &M) -> [T; Self::NUM_COLS];
+    fn op_to_row<N: Into<usize>>(
+        &self,
+        n: N,
+        op: Self::Operation,
+        machine: &M,
+    ) -> [T; Self::NUM_COLS];
 }

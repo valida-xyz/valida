@@ -5,6 +5,9 @@ use valida_util::indices_arr;
 
 #[derive(Default)]
 pub struct CpuCols<T> {
+    /// Clock cycle
+    pub clk: T,
+
     /// Program counter.
     pub pc: T,
 
