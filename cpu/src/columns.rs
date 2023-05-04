@@ -1,6 +1,6 @@
 use core::borrow::{Borrow, BorrowMut};
 use core::mem::{size_of, transmute};
-use valida_machine::{InstructionWord, Word, CPU_MEMORY_CHANNELS};
+use valida_machine::{Operands, Word, CPU_MEMORY_CHANNELS};
 use valida_util::indices_arr;
 
 #[derive(Default)]
@@ -12,7 +12,7 @@ pub struct CpuCols<T> {
     pub fp: T,
 
     /// The instruction that was read, i.e. `program_code[pc]`.
-    pub instruction: InstructionWord<T>,
+    pub instruction: InstructionCols<T>,
 
     /// Flags indicating what type of operation is being performed this cycle.
     pub opcode_flags: OpcodeFlagCols<T>,
@@ -33,10 +33,19 @@ pub struct CpuCols<T> {
 }
 
 #[derive(Default)]
+pub struct InstructionCols<F> {
+    pub opcode: F,
+    pub operands: Operands<F>,
+}
+
+#[derive(Default)]
 pub struct OpcodeFlagCols<T> {
     pub is_imm32: T,
     pub is_bus_op: T,
     pub is_beq: T,
+    pub is_bne: T,
+    pub is_jal: T,
+    pub is_jalv: T,
 }
 
 #[derive(Default)]

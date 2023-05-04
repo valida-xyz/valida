@@ -3,7 +3,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use p3_field::field::Field;
+use p3_field::field::{Field32, FieldLike};
 use p3_mersenne_31::Mersenne31 as Fp;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{Instruction, Operands, Word, MEMORY_CELL_BYTES};
@@ -32,7 +32,7 @@ pub struct Mul32Instruction;
 impl<M: MachineWithALU32Chip> Instruction<M> for Add32Instruction {
     const OPCODE: u32 = 8;
 
-    fn execute(state: &mut M, ops: Operands) {
+    fn execute(state: &mut M, ops: Operands<Fp>) {
         let clk = state.cpu().clock;
         let read_addr_1 = state.cpu().fp + ops.b();
         let read_addr_2 = state.cpu().fp + ops.c();
@@ -63,7 +63,7 @@ impl<M: MachineWithALU32Chip> Instruction<M> for Add32Instruction {
 impl<M: MachineWithALU32Chip> Instruction<M> for Mul32Instruction {
     const OPCODE: u32 = 9;
 
-    fn execute(state: &mut M, ops: Operands) {
+    fn execute(state: &mut M, ops: Operands<Fp>) {
         todo!()
     }
 }
