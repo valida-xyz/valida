@@ -20,9 +20,13 @@ pub struct MemoryCols<T> {
     /// Whether memory operation is a dummy read
     pub is_dummy: T,
 
-    /// addr' - addr
+    /// Either addr' - addr (if address is changed), or clk' - clk (if address is not changed)
     pub diff: T,
-    pub diff_sorted: T,
+    /// The inverse of `diff`, or 0 if `diff = 0`.
+    pub diff_inv: T,
+
+    /// A boolean flag indicating whether addr' - addr == 0
+    pub addr_not_equal: T,
 }
 
 pub const NUM_MEM_COLS: usize = size_of::<MemoryCols<u8>>();

@@ -11,6 +11,7 @@ use p3_mersenne_31::Mersenne31 as Fp;
 use valida_machine::{trace::TraceGenerator, Machine, Word};
 
 pub mod columns;
+mod stark;
 
 #[derive(Copy, Clone)]
 pub enum Operation {

@@ -9,7 +9,7 @@ use p3_matrix::Matrix;
 
 pub struct MemoryStark;
 
-impl<T, W> Air<T, W> for CpuStark
+impl<T, W> Air<T, W> for MemoryStark
 where
     T: AirTypes,
     W: AirWindow<T>,
@@ -22,15 +22,32 @@ where
         let local: &MemoryCols<T::Var> = main.row(0).borrow();
         let next: &MemoryCols<T::Var> = main.row(1).borrow();
 
-        let is_value_unchanged =
-            (next.address - local.address + T::Exp::from(T::F::ONE)) * (next.value - local.value);
-        constraints
-            .when_transition()
-            .when(next.is_read)
-            .assert_zero(is_value_unchanged);
+        // Address equality constraints
+        constraints.when_transition().assert_eq(
+            local.addr_not_equal,
+            (next.addr - local.addr) * next.diff_inv,
+        );
+        constraints.assert_bool(local.addr_not_equal);
 
+        // Non-contiguous
         constraints
             .when_transition()
-            .assert_eq(local.diff, next.addr - local.addr)
+            .when(local.addr_not_equal)
+            .assert_eq(next.diff, next.addr - local.addr);
+        constraints
+            .when_transition()
+            .when(T::Exp::from(T::F::ONE) - local.addr_not_equal)
+            .assert_eq(next.diff, next.clk - local.clk - T::Exp::from(T::F::ONE));
+
+        // Read/write
+        // TODO: Record \sum_i (value'_i - value_i)^2 in trace and convert to a single constraint?
+        for (value_next, value) in next.value.into_iter().zip(local.value.into_iter()) {
+            let is_value_unchanged =
+                (local.addr - next.addr + T::Exp::from(T::F::ONE)) * (value_next - value);
+            constraints
+                .when_transition()
+                .when(next.is_read)
+                .assert_zero(is_value_unchanged);
+        }
     }
 }
