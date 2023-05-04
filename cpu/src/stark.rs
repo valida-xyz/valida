@@ -97,17 +97,15 @@ impl CpuStark {
         next: &CpuCols<AB::Var>,
     ) {
         // Word equality constraints (for branch instructions)
-        builder
-            .when(local.instruction.operands.is_imm())
-            .assert_eq(
-                local.diff,
-                local
-                    .mem_read_1()
-                    .into_iter()
-                    .zip(local.mem_read_2())
-                    .map(|(a, b)| (a - b) * (a - b))
-                    .sum::<AB::FL>(),
-            );
+        builder.when(local.instruction.operands.is_imm()).assert_eq(
+            local.diff,
+            local
+                .mem_read_1()
+                .into_iter()
+                .zip(local.mem_read_2())
+                .map(|(a, b)| (a - b) * (a - b))
+                .sum::<AB::FL>(),
+        );
         builder
             .when(AB::FL::from(AB::F::ONE) - local.instruction.operands.is_imm())
             .assert_eq(

@@ -43,7 +43,6 @@ where
     M: MachineWithMemoryChip,
 {
     const NUM_COLS: usize = NUM_CPU_COLS;
-    type Operation = Operation;
 
     fn generate_trace(&self, machine: &M) -> Vec<[Fp; NUM_CPU_COLS]> {
         let rows = self
@@ -55,8 +54,14 @@ where
             .collect();
         rows
     }
+}
 
-    fn op_to_row<N: Into<usize>>(&self, clk: N, op: Operation, machine: &M) -> [Fp; NUM_CPU_COLS] {
+impl CpuChip {
+    fn op_to_row<N, M>(&self, clk: N, op: Operation, machine: &M) -> [Fp; NUM_CPU_COLS]
+    where
+        N: Into<usize>,
+        M: MachineWithMemoryChip,
+    {
         let mut cols = CpuCols::default();
         let n = clk.into();
         cols.pc = self.registers[n].pc;
@@ -87,9 +92,7 @@ where
         let row: [Fp; NUM_CPU_COLS] = unsafe { transmute(cols) };
         row
     }
-}
 
-impl CpuChip {
     fn set_memory_trace_values<M: MachineWithMemoryChip>(
         &self,
         n: usize,

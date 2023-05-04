@@ -6,7 +6,7 @@ use crate::columns::{MemoryCols, NUM_MEM_COLS};
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use core::mem::transmute;
-use p3_field::field::Field;
+use p3_field::field::FieldLike;
 use p3_mersenne_31::Mersenne31 as Fp;
 use valida_machine::{trace::TraceGenerator, Machine, Word};
 
@@ -82,7 +82,6 @@ where
     M: MachineWithMemoryChip,
 {
     const NUM_COLS: usize = NUM_MEM_COLS;
-    type Operation = Operation;
 
     // TODO: Parallelize with rayon
     fn generate_trace(&self, machine: &M) -> Vec<[Fp; NUM_MEM_COLS]> {
@@ -107,12 +106,18 @@ where
             .map(|(n, op)| self.op_to_row(n, op, machine))
             .collect::<Vec<_>>();
 
-        // TODO: Set diff and diff_sorted in rows
+        // TODO: Set diff
 
         rows
     }
+}
 
-    fn op_to_row<N: Into<usize>>(&self, n: N, op: Operation, _machine: &M) -> [Fp; NUM_MEM_COLS] {
+impl MemoryChip {
+    fn op_to_row<N, M>(&self, n: N, op: Operation, _machine: &M) -> [Fp; NUM_MEM_COLS]
+    where
+        N: Into<usize>,
+        M: MachineWithMemoryChip,
+    {
         let mut cols = MemoryCols::<Fp>::default();
         cols.clk = Fp::from(n.into() as u32);
 
@@ -136,9 +141,7 @@ where
         let row: [Fp; NUM_MEM_COLS] = unsafe { transmute(cols) };
         row
     }
-}
 
-impl MemoryChip {
     fn insert_dummy_reads(ops: &mut Vec<(Fp, Operation)>) {
         let mut dummy_ops = Vec::new();
         for (op1, op2) in ops.iter().zip(ops.iter().skip(1)) {
