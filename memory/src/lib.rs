@@ -6,7 +6,7 @@ use crate::columns::{MemoryCols, NUM_MEM_COLS};
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use core::mem::transmute;
-use p3_field::field::FieldLike;
+use p3_field::field::{AbstractField, Field32};
 use p3_mersenne_31::Mersenne31 as Fp;
 use valida_machine::{trace::TraceGenerator, Machine, Word};
 
@@ -103,7 +103,7 @@ where
 
         let mut rows = ops
             .into_iter()
-            .map(|(n, op)| self.op_to_row(n, op, machine))
+            .map(|(n, op)| self.op_to_row(n.as_canonical_u32() as usize, op, machine))
             .collect::<Vec<_>>();
 
         // TODO: Set diff
