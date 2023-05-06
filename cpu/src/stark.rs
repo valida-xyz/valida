@@ -1,7 +1,7 @@
 use crate::columns::CpuCols;
 use core::borrow::Borrow;
 use p3_air::{Air, AirBuilder};
-use p3_field::field::FieldLike;
+use p3_field::field::AbstractField;
 use p3_matrix::Matrix;
 
 pub struct CpuStark;
@@ -42,13 +42,13 @@ impl CpuStark {
                 .into_iter()
                 .zip(next.mem_read_2().0)
                 .map(|(a, b)| (a - b) * (a - b))
-                .sum::<AB::FL>(),
+                .sum::<AB::Exp>(),
         );
         builder.assert_bool(local.not_equal);
         builder.assert_eq(local.not_equal, local.diff * local.diff_inv);
 
         // Branch manipulation
-        let equal = AB::FL::from(AB::F::ONE) - local.not_equal;
+        let equal = AB::Exp::from(AB::F::ONE) - local.not_equal;
         let next_pc_if_branching = local.pc + local.instruction.operands.a();
         let beq_next_pc =
             equal.clone() * next_pc_if_branching.clone() + local.not_equal * incremented_pc.clone();
@@ -97,19 +97,17 @@ impl CpuStark {
         next: &CpuCols<AB::Var>,
     ) {
         // Word equality constraints (for branch instructions)
+        builder.when(local.instruction.operands.is_imm()).assert_eq(
+            local.diff,
+            local
+                .mem_read_1()
+                .into_iter()
+                .zip(local.mem_read_2())
+                .map(|(a, b)| (a - b) * (a - b))
+                .sum::<AB::Exp>(),
+        );
         builder
-            .when(local.instruction.operands.is_imm())
-            .assert_eq(
-                local.diff,
-                local
-                    .mem_read_1()
-                    .into_iter()
-                    .zip(local.mem_read_2())
-                    .map(|(a, b)| (a - b) * (a - b))
-                    .sum::<AB::FL>(),
-            );
-        builder
-            .when(AB::FL::from(AB::F::ONE) - local.instruction.operands.is_imm())
+            .when(AB::Exp::from(AB::F::ONE) - local.instruction.operands.is_imm())
             .assert_eq(
                 local.diff,
                 local.mem_read_1()[3] - local.instruction.operands.c(),
