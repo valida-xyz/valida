@@ -149,9 +149,9 @@ impl MemoryChip {
             if addr_diff != Fp::ZERO {
                 continue;
             }
-            let clk_diff = op2.0 - op1.0;
-            if clk_diff > Fp::from(1 << 16) {
-                let num_dummy_ops = (clk_diff / Fp::from(1 << 16)).into();
+            let clk_diff = (op2.0 - op1.0).as_canonical_u32();
+            if clk_diff > 1 << 16 {
+                let num_dummy_ops = clk_diff >> 16;
                 for j in 0..num_dummy_ops {
                     let dummy_op_clk = op1.0 + Fp::from(1 << 16) * Fp::from(j as u32 + 1);
                     let dummy_op_addr = op1.1.get_address();
