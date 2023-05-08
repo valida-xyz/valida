@@ -2,13 +2,14 @@
 
 extern crate alloc;
 
-use crate::columns::{MemoryCols, NUM_MEM_COLS};
+use crate::columns::{MemoryCols, MEM_COL_MAP, NUM_MEM_COLS, NUM_MEM_PERM_COLS};
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use core::mem::transmute;
-use p3_field::field::{AbstractField, Field32};
+use p3_field::field::{AbstractField, Field, Field32};
 use p3_mersenne_31::Mersenne31 as Fp;
-use valida_machine::{trace::TraceGenerator, Machine, Word};
+use valida_machine::{lookup, trace::TraceGenerator, Machine, Word};
+use valida_util::to_rows;
 
 pub mod columns;
 mod stark;
@@ -77,11 +78,15 @@ impl MemoryChip {
     }
 }
 
-impl<M> TraceGenerator<M, Fp> for MemoryChip
+impl<M> TraceGenerator<M> for MemoryChip
 where
     M: MachineWithMemoryChip,
 {
+    type F = Fp;
+    type FE = Fp; // TODO
+
     const NUM_COLS: usize = NUM_MEM_COLS;
+    const NUM_PERM_COLS: usize = NUM_MEM_PERM_COLS;
 
     // TODO: Parallelize with rayon
     fn generate_trace(&self, machine: &M) -> Vec<[Fp; NUM_MEM_COLS]> {
@@ -98,28 +103,65 @@ where
         // Sort first by addr, then by clk
         ops.sort_by_key(|(clk, op)| (op.get_address(), *clk));
 
-        // Ensure consecutive sorted clock cycles for an address differ no more than 2^16
+        // Ensure consecutive sorted clock cycles for an address differ no more than
+        // the length of the table
         Self::insert_dummy_reads(&mut ops);
 
         let mut rows = ops
             .into_iter()
-            .map(|(n, op)| self.op_to_row(n.as_canonical_u32() as usize, op, machine))
+            .enumerate()
+            .map(|(n, (clk, op))| self.op_to_row(n, clk.as_canonical_u32() as usize, op, machine))
             .collect::<Vec<_>>();
 
-        // TODO: Set diff
+        // Compute address difference values
+        Self::compute_address_diffs(&mut rows);
 
         rows
+    }
+
+    fn generate_permutation_trace(
+        &self,
+        machine: &M,
+        main_trace: Vec<[Fp; NUM_MEM_COLS]>,
+        random_elements: Vec<Fp>,
+    ) -> Vec<[Self::FE; NUM_MEM_PERM_COLS]> {
+        let counter = main_trace
+            .iter()
+            .map(|row| row[MEM_COL_MAP.counter])
+            .collect::<Vec<_>>();
+        let addr = main_trace
+            .iter()
+            .map(|row| row[MEM_COL_MAP.addr])
+            .collect::<Vec<_>>();
+        let diff = main_trace
+            .iter()
+            .map(|row| row[MEM_COL_MAP.diff])
+            .collect::<Vec<_>>();
+        let (addr_sorted, counter_addr_permuted) = lookup::permuted_cols(&addr, &counter);
+        let (diff_sorted, counter_diff_permuted) = lookup::permuted_cols(&diff, &counter);
+
+        // TODO: Compute the running product column z
+        let z = Vec::new();
+
+        to_rows(&[
+            addr_sorted,
+            counter_addr_permuted,
+            diff_sorted,
+            counter_diff_permuted,
+            z,
+        ])
     }
 }
 
 impl MemoryChip {
-    fn op_to_row<N, M>(&self, n: N, op: Operation, _machine: &M) -> [Fp; NUM_MEM_COLS]
+    fn op_to_row<N, M>(&self, n: N, clk: N, op: Operation, _machine: &M) -> [Fp; NUM_MEM_COLS]
     where
         N: Into<usize>,
         M: MachineWithMemoryChip,
     {
         let mut cols = MemoryCols::<Fp>::default();
-        cols.clk = Fp::from(n.into() as u32);
+        cols.clk = Fp::from(clk.into() as u32);
+        cols.counter = Fp::from(n.into() as u32);
 
         match op {
             Operation::Read(addr, value) => {
@@ -143,6 +185,7 @@ impl MemoryChip {
     }
 
     fn insert_dummy_reads(ops: &mut Vec<(Fp, Operation)>) {
+        let table_len = ops.len() as u32;
         let mut dummy_ops = Vec::new();
         for (op1, op2) in ops.iter().zip(ops.iter().skip(1)) {
             let addr_diff = op2.1.get_address() - op1.1.get_address();
@@ -150,10 +193,10 @@ impl MemoryChip {
                 continue;
             }
             let clk_diff = (op2.0 - op1.0).as_canonical_u32();
-            if clk_diff > 1 << 16 {
-                let num_dummy_ops = clk_diff >> 16;
+            if clk_diff > table_len {
+                let num_dummy_ops = clk_diff / table_len;
                 for j in 0..num_dummy_ops {
-                    let dummy_op_clk = op1.0 + Fp::from(1 << 16) * Fp::from(j as u32 + 1);
+                    let dummy_op_clk = op1.0 + Fp::from(table_len) * Fp::from(j as u32 + 1);
                     let dummy_op_addr = op1.1.get_address();
                     let dummy_op_value = op1.1.get_value();
                     dummy_ops.push((
@@ -175,6 +218,18 @@ impl MemoryChip {
             let idx_clk =
                 ops[idx_addr..(idx_addr + num_ops)].partition_point(|(clk2, _)| clk2 < clk);
             ops.insert(idx_addr + idx_clk, (*clk, *op));
+        }
+    }
+
+    fn compute_address_diffs(rows: &mut Vec<[Fp; NUM_MEM_COLS]>) {
+        for n in 0..(rows.len() - 1) {
+            let addr = rows[n][MEM_COL_MAP.addr];
+            let addr_next = rows[n][MEM_COL_MAP.addr];
+            rows[n][MEM_COL_MAP.diff] = addr_next - addr;
+            if (addr - addr_next) != Fp::ZERO {
+                rows[n][MEM_COL_MAP.diff_inv] = (addr_next - addr).try_inverse().unwrap();
+                rows[n][MEM_COL_MAP.addr_not_equal] = Fp::ONE;
+            }
         }
     }
 }

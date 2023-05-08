@@ -1,9 +1,10 @@
 use core::borrow::{Borrow, BorrowMut};
 use core::mem::{size_of, transmute};
+use valida_derive::AlignedBorrow;
 use valida_machine::{Operands, Word, CPU_MEMORY_CHANNELS};
 use valida_util::indices_arr;
 
-#[derive(Default)]
+#[derive(AlignedBorrow, Default)]
 pub struct CpuCols<T> {
     /// Clock cycle
     pub clk: T,
@@ -80,30 +81,11 @@ impl<T: Copy> CpuCols<T> {
 
 // `u8` is guaranteed to have a `size_of` of 1.
 pub const NUM_CPU_COLS: usize = size_of::<CpuCols<u8>>();
+pub const NUM_CPU_PERM_COLS: usize = 0; // todo!();
 
 pub const CPU_COL_INDICES: CpuCols<usize> = make_col_map();
 
 const fn make_col_map() -> CpuCols<usize> {
     let indices_arr = indices_arr::<NUM_CPU_COLS>();
     unsafe { transmute::<[usize; NUM_CPU_COLS], CpuCols<usize>>(indices_arr) }
-}
-
-impl<T> Borrow<CpuCols<T>> for [T] {
-    fn borrow(&self) -> &CpuCols<T> {
-        // TODO: Double check if this is correct & consider making asserts debug-only.
-        let (prefix, shorts, _suffix) = unsafe { self.align_to::<CpuCols<T>>() };
-        assert!(prefix.is_empty(), "Data was not aligned");
-        assert_eq!(shorts.len(), 1);
-        &shorts[0]
-    }
-}
-
-impl<T> BorrowMut<CpuCols<T>> for [T] {
-    fn borrow_mut(&mut self) -> &mut CpuCols<T> {
-        // TODO: Double check if this is correct & consider making asserts debug-only.
-        let (prefix, shorts, _suffix) = unsafe { self.align_to_mut::<CpuCols<T>>() };
-        assert!(prefix.is_empty(), "Data was not aligned");
-        assert_eq!(shorts.len(), 1);
-        &mut shorts[0]
-    }
 }

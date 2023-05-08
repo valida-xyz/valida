@@ -11,4 +11,5 @@ p3-mersenne-31 = { path = "../../Plonky3/mersenne-31" }
 p3-matrix = { path = "../../Plonky3/matrix" }
 
 valida-machine = { path = "../machine" }
+valida-derive = { path = "../derive" }
 valida-util = { path = "../util" }

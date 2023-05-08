@@ -10,7 +10,7 @@ use valida_cpu::{
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
-use valida_machine::{Instruction, Machine, Operands};
+use valida_machine::{Field32, Instruction, Machine, Operands, ProgramROM, ProgramState};
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 
 // TODO: Emit instruction members in the derive macro instead of manually including
