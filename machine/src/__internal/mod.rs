@@ -10,16 +10,11 @@ use std::ops::{Add, Mul, Sub};
 
 pub type DefaultField = Mersenne31;
 
-pub struct BasicFoldingAirBuilder<'a, F, FL, V>
-where
-    F: Field,
-    FL: AbstractField<F>,
-    V: Into<FL> + Copy + Add<V, Output = FL> + Sub<V, Output = FL> + Mul<V, Output = FL>,
-{
-    main: TwoRowMatrixView<'a, V>,
-    is_first_row: FL,
-    is_last_row: FL,
-    is_transition: FL,
+pub struct BasicFoldingAirBuilder<'a, F, Exp, Var> {
+    main: TwoRowMatrixView<'a, Var>,
+    is_first_row: Exp,
+    is_last_row: Exp,
+    is_transition: Exp,
     _phantom_f: PhantomData<F>,
 }
 
