@@ -59,8 +59,10 @@ impl MemoryStark {
         let perm_local: &MemoryPermutationCols<AB::Var> = perm.row(0).borrow();
         let perm_next: &MemoryPermutationCols<AB::Var> = perm.row(1).borrow();
 
-        // FIXME: Should return multiple random elements
         let rand_elems = builder.permutation_randomness();
+        let rand0 = rand_elems[0].clone();
+        let rand1 = rand_elems[1].clone();
+        let rand2 = rand_elems[2].clone();
 
         // Plookup constraints
         builder
@@ -85,12 +87,12 @@ impl MemoryStark {
             .assert_eq(perm_local.z, AB::Exp::from(AB::F::ONE));
         builder.when_transition().assert_eq(
             perm_next.z
-                * ((perm_local.addr + rand_elems[0] * perm_local.diff) - rand_elems[1])
-                * ((perm_local.counter_addr + rand_elems[0] * perm_local.counter_diff)
-                    - rand_elems[2]),
+                * ((perm_local.addr + rand0.clone() * perm_local.diff) - rand1.clone())
+                * ((perm_local.counter_addr + rand0.clone() * perm_local.counter_diff)
+                    - rand2.clone()),
             perm_local.z
-                * ((main_local.addr + rand_elems[0] * main_local.diff) - rand_elems[1])
-                * ((main_local.counter + rand_elems[0] * main_local.counter) - rand_elems[2]),
+                * ((main_local.addr + rand0.clone() * main_local.diff) - rand1)
+                * ((main_local.counter + rand0 * main_local.counter) - rand2),
         );
     }
 }
