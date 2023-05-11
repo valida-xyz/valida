@@ -6,7 +6,7 @@ use crate::columns::{MemoryCols, MEM_COL_MAP, NUM_MEM_COLS, NUM_MEM_PERM_COLS};
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use core::mem::transmute;
-use p3_field::field::{AbstractField, Field, Field32};
+use p3_field::{AbstractField, Field, Field32};
 use p3_mersenne_31::Mersenne31 as Fp;
 use valida_machine::{lookup, trace::TraceGenerator, Machine, Word};
 use valida_util::to_rows;

@@ -1,8 +1,8 @@
 use crate::config::StarkConfig;
-use p3_air::two_row_matrix::TwoRowMatrixView;
 use p3_air::Air;
-use p3_field::field::{AbstractField, Field};
-use p3_field::symbolic::SymbolicField;
+use p3_air::TwoRowMatrixView;
+use p3_field::SymbolicField;
+use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_mersenne_31::Mersenne31;
 use std::marker::PhantomData;

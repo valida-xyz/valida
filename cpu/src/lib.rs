@@ -5,7 +5,7 @@ extern crate alloc;
 use crate::columns::{CpuCols, NUM_CPU_COLS, NUM_CPU_PERM_COLS};
 use alloc::vec::Vec;
 use core::mem::transmute;
-use p3_field::field::AbstractField;
+use p3_field::AbstractField;
 use p3_mersenne_31::Mersenne31 as Fp;
 use valida_machine::{trace::TraceGenerator, Instruction, Operands, Word};
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};

@@ -5,7 +5,7 @@ extern crate alloc;
 extern crate self as valida_machine;
 
 use core::ops::{Index, IndexMut};
-pub use p3_field::field::{Field, Field32};
+pub use p3_field::{Field, Field32};
 use p3_mersenne_31::Mersenne31 as Fp;
 
 pub mod __internal;

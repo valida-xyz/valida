@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use p3_field::field::Field32;
+use p3_field::Field32;
 use std::cmp::Ordering;
 
 /// Generate the permutations columns required for the Halo2 lookup argument

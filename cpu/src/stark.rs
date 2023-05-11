@@ -1,7 +1,7 @@
 use crate::columns::CpuCols;
 use core::borrow::Borrow;
 use p3_air::{Air, AirBuilder};
-use p3_field::field::AbstractField;
+use p3_field::AbstractField;
 use p3_matrix::Matrix;
 
 pub struct CpuStark;

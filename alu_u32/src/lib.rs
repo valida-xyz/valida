@@ -3,7 +3,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use p3_field::field::{AbstractField, Field32};
+use p3_field::{AbstractField, Field32};
 use p3_mersenne_31::Mersenne31 as Fp;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{Instruction, Operands, Word, MEMORY_CELL_BYTES};

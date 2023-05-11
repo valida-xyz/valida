@@ -2,9 +2,9 @@
 //
 //use alloc::collections::BTreeMap;
 //use core::mem::transmute;
-//use p3_field::field::Field;
+//use p3_field::Field;
 //use valida_cpu::columns::CpuCols;
-//use p3_field::field::Field32;
+//use p3_field::Field32;
 //use valida_machine::Operands;
 //use valida_memory::columns::MemoryCols;
 
