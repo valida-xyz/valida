@@ -5,7 +5,7 @@ extern crate alloc;
 extern crate self as valida_machine;
 
 use core::ops::{Index, IndexMut};
-use p3_field::field::Field;
+pub use p3_field::{Field, Field32};
 use p3_mersenne_31::Mersenne31 as Fp;
 
 pub mod __internal;
@@ -13,6 +13,7 @@ pub mod bus;
 pub mod chip;
 pub mod config;
 pub mod instruction;
+pub mod lookup;
 pub mod proof;
 pub mod trace;
 
@@ -28,6 +29,24 @@ pub const MEMORY_CELL_BYTES: usize = 4;
 pub struct Word<F>(pub [F; MEMORY_CELL_BYTES]);
 
 pub trait Addressable<F: Copy>: Copy + From<u32> + From<Word<F>> {}
+
+pub struct InstructionWord<F> {
+    pub opcode: u32,
+    pub operands: Operands<F>,
+}
+
+pub struct ProgramState<F> {
+    pub pc: F,
+    pub fp: F,
+}
+
+pub struct ProgramROM<F>(Vec<InstructionWord<F>>);
+
+impl<F: Field32> ProgramROM<F> {
+    pub fn get_instruction(&self, pc: F) -> &InstructionWord<F> {
+        &self.0[pc.as_canonical_u32() as usize]
+    }
+}
 
 #[derive(Copy, Clone, Default)]
 pub struct Operands<F>([F; 5]);
@@ -119,7 +138,7 @@ impl<F> Into<[F; MEMORY_CELL_BYTES]> for Word<F> {
 
 pub trait Machine {
     type F: Field;
-    fn run(&mut self);
+    fn run(&mut self, initial_state: ProgramState<Self::F>, program: ProgramROM<Self::F>);
     fn prove(&self);
     fn verify();
 }

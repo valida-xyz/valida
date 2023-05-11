@@ -2,10 +2,10 @@
 
 extern crate alloc;
 
-use crate::columns::{CpuCols, NUM_CPU_COLS};
+use crate::columns::{CpuCols, NUM_CPU_COLS, NUM_CPU_PERM_COLS};
 use alloc::vec::Vec;
 use core::mem::transmute;
-use p3_field::field::AbstractField;
+use p3_field::AbstractField;
 use p3_mersenne_31::Mersenne31 as Fp;
 use valida_machine::{trace::TraceGenerator, Instruction, Operands, Word};
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
@@ -38,11 +38,15 @@ pub struct Registers {
     fp: Fp,
 }
 
-impl<M> TraceGenerator<M, Fp> for CpuChip
+impl<M> TraceGenerator<M> for CpuChip
 where
     M: MachineWithMemoryChip,
 {
+    type F = Fp;
+    type FE = Fp; // TODO
+
     const NUM_COLS: usize = NUM_CPU_COLS;
+    const NUM_PERM_COLS: usize = NUM_CPU_PERM_COLS;
 
     fn generate_trace(&self, machine: &M) -> Vec<[Fp; NUM_CPU_COLS]> {
         let rows = self
@@ -53,6 +57,15 @@ where
             .map(|(n, op)| self.op_to_row(n, op, machine))
             .collect();
         rows
+    }
+
+    fn generate_permutation_trace(
+        &self,
+        machine: &M,
+        main_trace: Vec<[Fp; NUM_CPU_COLS]>,
+        random_elements: Vec<Fp>,
+    ) -> Vec<[Self::FE; NUM_CPU_PERM_COLS]> {
+        todo!()
     }
 }
 

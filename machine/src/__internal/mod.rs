@@ -1,8 +1,8 @@
 use crate::config::StarkConfig;
-use p3_air::two_row_matrix::TwoRowMatrixView;
 use p3_air::Air;
-use p3_field::field::{AbstractField, Field};
-use p3_field::symbolic::SymbolicField;
+use p3_air::TwoRowMatrixView;
+use p3_field::SymbolicField;
+use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_mersenne_31::Mersenne31;
 use std::marker::PhantomData;
@@ -10,16 +10,11 @@ use std::ops::{Add, Mul, Sub};
 
 pub type DefaultField = Mersenne31;
 
-pub struct BasicFoldingAirBuilder<'a, F, FL, V>
-where
-    F: Field,
-    FL: AbstractField<F>,
-    V: Into<FL> + Copy + Add<V, Output = FL> + Sub<V, Output = FL> + Mul<V, Output = FL>,
-{
-    main: TwoRowMatrixView<'a, V>,
-    is_first_row: FL,
-    is_last_row: FL,
-    is_transition: FL,
+pub struct BasicFoldingAirBuilder<'a, F, Exp, Var> {
+    main: TwoRowMatrixView<'a, Var>,
+    is_first_row: Exp,
+    is_last_row: Exp,
+    is_transition: Exp,
     _phantom_f: PhantomData<F>,
 }
 

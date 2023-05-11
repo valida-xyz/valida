@@ -7,6 +7,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 valida-machine = { path = "../machine" }
 valida-derive = { path = "../derive" }
+valida-runner = { path = "../runner" }
 valida-cpu = { path = "../cpu" }
 valida-alu-u32 = { path = "../alu_u32" }
 valida-memory = { path = "../memory" }
