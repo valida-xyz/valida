@@ -1,13 +1,14 @@
 [workspace]
 members = [
+    "alu_u32",
     "basic",
+    "bus",
     "cpu",
     "derive",
     "machine",
     "memory",
     "prover",
     "runner",
-    "alu_u32",
     "util",
     "verifier"
 ]

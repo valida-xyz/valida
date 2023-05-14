@@ -2,13 +2,15 @@
 
 extern crate alloc;
 
-use crate::columns::{CpuCols, NUM_CPU_COLS, NUM_CPU_PERM_COLS};
+use crate::columns::{CpuCols, NUM_CPU_COLS};
 use alloc::vec::Vec;
 use core::mem::transmute;
-use p3_field::AbstractField;
-use p3_mersenne_31::Mersenne31 as Fp;
-use valida_machine::{trace::TraceGenerator, Instruction, Operands, Word};
+use valida_machine::{Chip, Instruction, Operands, Word};
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
+
+use p3_field::AbstractField;
+use p3_matrix::dense::RowMajorMatrix;
+use p3_mersenne_31::Mersenne31 as Fp;
 
 pub mod columns;
 mod stark;
@@ -38,33 +40,30 @@ pub struct Registers {
     fp: Fp,
 }
 
-impl<M> TraceGenerator<M> for CpuChip
+impl<M> Chip<M> for CpuChip
 where
     M: MachineWithMemoryChip,
 {
     type F = Fp;
-    type FE = Fp; // TODO
+    type FE = Fp; // FIXME
 
-    const NUM_COLS: usize = NUM_CPU_COLS;
-    const NUM_PERM_COLS: usize = NUM_CPU_PERM_COLS;
-
-    fn generate_trace(&self, machine: &M) -> Vec<[Fp; NUM_CPU_COLS]> {
+    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<Self::F> {
         let rows = self
             .operations
-            .iter() // TODO: Parallelize with rayon
+            .iter()
             .cloned()
             .enumerate()
             .map(|(n, op)| self.op_to_row(n, op, machine))
-            .collect();
-        rows
+            .collect::<Vec<_>>();
+        RowMajorMatrix::new(rows.concat(), NUM_CPU_COLS)
     }
 
     fn generate_permutation_trace(
         &self,
         machine: &M,
-        main_trace: Vec<[Fp; NUM_CPU_COLS]>,
-        random_elements: Vec<Fp>,
-    ) -> Vec<[Self::FE; NUM_CPU_PERM_COLS]> {
+        main_trace: RowMajorMatrix<Self::F>,
+        random_elements: Vec<Self::FE>,
+    ) -> RowMajorMatrix<Self::F> {
         todo!()
     }
 }

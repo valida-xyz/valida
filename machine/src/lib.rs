@@ -5,25 +5,22 @@ extern crate alloc;
 extern crate self as valida_machine;
 
 use core::ops::{Index, IndexMut};
-pub use p3_field::{Field, Field32};
+pub use p3_field::{AsInt, Field};
 use p3_mersenne_31::Mersenne31 as Fp;
 
 pub mod __internal;
-pub mod bus;
 pub mod chip;
 pub mod config;
-pub mod instruction;
 pub mod lookup;
 pub mod proof;
-pub mod trace;
 
-pub use instruction::Instruction;
+pub use chip::{Chip, Instruction};
 
 pub const OPERAND_ELEMENTS: usize = 5;
 pub const INSTRUCTION_ELEMENTS: usize = OPERAND_ELEMENTS + 1;
 pub const CPU_MEMORY_CHANNELS: usize = 3;
-
 pub const MEMORY_CELL_BYTES: usize = 4;
+pub const LOOKUP_DEGREE_BOUND: usize = 3;
 
 #[derive(Copy, Clone, Default)]
 pub struct Word<F>(pub [F; MEMORY_CELL_BYTES]);
@@ -42,9 +39,9 @@ pub struct ProgramState<F> {
 
 pub struct ProgramROM<F>(Vec<InstructionWord<F>>);
 
-impl<F: Field32> ProgramROM<F> {
+impl<F: Field + AsInt<UnsignedInteger = u32>> ProgramROM<F> {
     pub fn get_instruction(&self, pc: F) -> &InstructionWord<F> {
-        &self.0[pc.as_canonical_u32() as usize]
+        &self.0[pc.as_canonical_uint() as usize]
     }
 }
 
