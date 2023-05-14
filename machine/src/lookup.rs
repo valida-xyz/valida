@@ -1,61 +1,261 @@
+use crate::Field;
+use alloc::collections::BTreeMap;
+use core::borrow::{Borrow, BorrowMut};
 use itertools::Itertools;
-use p3_field::field::Field32;
+use p3_air::{Air, AirBuilder, PermutationAirBuilder};
+use p3_field::field::{AbstractField, Field32};
+use p3_matrix::dense::RowMajorMatrix;
+use p3_matrix::Matrix;
 use std::cmp::Ordering;
 
-/// Generate the permutations columns required for the Halo2 lookup argument
-/// (modified from Plonky2)
-pub fn permuted_cols<F: Field32>(inputs: &[F], table: &[F]) -> (Vec<F>, Vec<F>) {
-    let n = inputs.len();
+/// Column lookup type: [(looking, looked, batch_id)]
+/// - Values in the `looking` column are looked up in the `looked` column
+/// - `lookup_id` is used to group together multi-column lookups.
+type Lookup = (usize, usize, usize);
 
-    let sorted_inputs = inputs
-        .iter()
-        .cloned()
-        .sorted_unstable_by_key(|x| x.as_canonical_u32())
-        .collect_vec();
-    let sorted_table = table
-        .iter()
-        .sorted_unstable_by_key(|x| x.as_canonical_u32())
-        .collect_vec();
+/// A batched version of the univariate logarithmic derivative (LogUp) lookup argument
+/// (see https://eprint.iacr.org/2022/1530.pdf)
+///
+/// - N is the number of lookups
+/// - M is the maximum allowed degree for all lookup-related constraints
+///
+/// The returned trace is a matrix where the first virtual column is the running sum,
+/// followed by multiplicity columns, followed by any quotient columns
+pub struct LogUp<'a, F: Field32, const N: usize, const M: usize> {
+    lookups: [Lookup; N],
+    main_trace: Option<&'a RowMajorMatrix<F>>,
+}
 
-    let mut unused_table_inds = Vec::with_capacity(n);
-    let mut unused_table_vals = Vec::with_capacity(n);
-    let mut permuted_table = vec![F::ZERO; n];
-    let mut i = 0;
-    let mut j = 0;
-    while (j < n) && (i < n) {
-        let input_val = sorted_inputs[i].as_canonical_u32();
-        let table_val = sorted_table[j].as_canonical_u32();
-        match input_val.cmp(&table_val) {
-            Ordering::Greater => {
-                unused_table_vals.push(sorted_table[j]);
-                j += 1;
-            }
-            Ordering::Less => {
-                if let Some(x) = unused_table_vals.pop() {
-                    permuted_table[i] = *x;
-                } else {
-                    unused_table_inds.push(i);
-                }
-                i += 1;
-            }
-            Ordering::Equal => {
-                permuted_table[i] = *sorted_table[j];
-                i += 1;
-                j += 1;
-            }
+impl<'a, F: Field32, const N: usize, const M: usize> LogUp<'a, F, N, M> {
+    fn new(lookups: [Lookup; N], main_trace: Option<&'a RowMajorMatrix<F>>) -> Self {
+        assert!(N <= 2, "Up to 2 lookups are supported for now");
+        assert_eq!(M, 3, "Degree bounds other than 3 are not yet supported");
+        assert_eq!(
+            lookups
+                .iter()
+                .map(|(_, _, lookup_id)| lookup_id)
+                .unique()
+                .count(),
+            N,
+            "Multi-column lookups are not yet implemented"
+        );
+        assert_eq!(
+            lookups
+                .iter()
+                .map(|(looking, _, _)| looking)
+                .unique()
+                .count(),
+            N,
+            "Duplicate looking columns are not yet implemented"
+        );
+
+        Self {
+            lookups,
+            main_trace,
         }
     }
 
-    #[allow(clippy::needless_range_loop)] // indexing is just more natural here
-    for jj in j..n {
-        unused_table_vals.push(sorted_table[jj]);
-    }
-    for ii in i..n {
-        unused_table_inds.push(ii);
-    }
-    for (ind, val) in unused_table_inds.into_iter().zip_eq(unused_table_vals) {
-        permuted_table[ind] = *val;
+    // TODO:
+    // - Generalize this to arbitrary N
+    // - Use extension field elements (and a virtual column) for the running sum
+    // - Variable names used here are a bit of a tongue twister. We should consider renaming them.
+    fn build_trace(&self, random_elements: Vec<F>) -> RowMajorMatrix<F> {
+        let lookups = self.lookups;
+        let trace = self.main_trace;
+
+        // Gather all unique looking indices
+        let looking_indices = lookups
+            .iter()
+            .map(|lookup| lookup.0)
+            .unique()
+            .collect::<Vec<_>>();
+
+        // Gather all unique looked indices
+        let looked_indices = lookups
+            .iter()
+            .map(|lookup| lookup.1)
+            .unique()
+            .collect::<Vec<_>>();
+
+        // Copy trace columns corresponding to the looking and looked indices.
+        // We assume that {looking indices} ∩ {looked indices} = ∅.
+        let mut looking_columns = vec![Vec::with_capacity(trace.height()); looking_indices.len()];
+        let mut looked_columns = vec![Vec::with_capacity(trace.height()); looked_indices.len()];
+        for row in trace.rows() {
+            for (n, idx) in looking_indices.iter().cloned().enumerate() {
+                looking_columns[n].push(row[idx]);
+            }
+            // For each looked column, add a unique random element to the copied values
+            for (n, (idx, rand_elem)) in looked_indices
+                .iter()
+                .cloned()
+                .zip(random_elements.iter().cloned())
+                .enumerate()
+            {
+                looked_columns[n].push(row[idx] + rand_elem);
+            }
+        }
+
+        // Compute new relative column indices
+        let (looking_indices_relative, looked_indices_relative) = lookups
+            .iter()
+            .map(|lookup| {
+                (
+                    looking_indices
+                        .iter()
+                        .position(|&idx| idx == lookup.0)
+                        .unwrap(),
+                    looked_indices
+                        .iter()
+                        .position(|&idx| idx == lookup.1)
+                        .unwrap(),
+                )
+            })
+            .unzip::<_, _, Vec<_>, Vec<_>>();
+
+        // Compute multiplicities after distributing random elements to the looking columns
+        let mut multiplicities = vec![vec![F::ZERO; trace.height()]; looked_indices.len()];
+        for (n, ((looked_idx, looked_column), rand_elem)) in looked_indices
+            .into_iter()
+            .zip(looked_columns)
+            .zip(random_elements)
+            .enumerate()
+        {
+            let mut multiplicity = vec![F::ZERO; trace.height()];
+            for (_, idx_1, _) in lookups.into_iter() {
+                // If the looked index is in the lookup:
+                // - Add the associated random element to all values in the looking column
+                // - Count the number of times that looking values appear in the looked column
+                if looked_idx == idx_1 {
+                    for elem in looking_columns[n].iter_mut() {
+                        *elem += rand_elem;
+                    }
+                    let counts = count_elements(&looking_columns[n], &looked_column);
+                    for (a, b) in multiplicity.iter_mut().zip(counts) {
+                        *a += b;
+                    }
+                }
+            }
+            multiplicities[n] = multiplicity;
+        }
+
+        // Invert all lookup elements
+        let looking_inv = batch_invert(&looking_columns);
+        let looked_inv = batch_invert(&looking_columns);
+
+        // Running sum column
+        let mut running_sum = vec![F::ZERO; trace.height()];
+        for n in 1..(running_sum.len()) {
+            running_sum[n] = running_sum[n - 1];
+            for idx in looking_indices_relative.iter().cloned() {
+                running_sum[n] += looking_inv[idx][n]
+            }
+            for idx in looked_indices_relative.iter().cloned() {
+                running_sum[n] -= looked_inv[idx][n] * multiplicities[idx][n];
+            }
+        }
+
+        if N == 1 {
+            let mut values = vec![F::ZERO; trace.height() * 2];
+            for (n, row) in values.chunks_mut(2).enumerate() {
+                row[0] = running_sum[n];
+                row[1] = multiplicities[0][n];
+            }
+            return RowMajorMatrix::new(values, 2);
+        } else if N == 2 {
+            let mut values = vec![F::ZERO; trace.height() * 3];
+            for (n, row) in values.chunks_mut(2).enumerate() {
+                row[0] = running_sum[n];
+                row[1] = multiplicities[0][n];
+                row[2] = looking_inv[0][n];
+            }
+            return RowMajorMatrix::new(values, 3);
+        } else {
+            panic!("Unreachable");
+        }
     }
 
-    (sorted_inputs, permuted_table)
+    // TODO: Generalize this to arbitrary N, and to more than one looked column
+    fn build_constraints<AB: PermutationAirBuilder>(&self, builder: &mut AB) {
+        let lookups = self.lookups;
+
+        let main = builder.main();
+        let main_local = main.row(0);
+
+        let perm = builder.permutation();
+        let perm_local = perm.row(0);
+        let perm_next = perm.row(1);
+
+        let rand_elems = builder.permutation_randomness().to_vec();
+
+        // Quotient constraints
+        if N == 2 {
+            // This assumes that the looked columns are the same
+            let f_0 = main_local[lookups[0].0];
+            let f_1 = main_local[lookups[1].0];
+            let q_0 = perm_local[2];
+            builder.when_transition().assert_one(q_0 * f_0 * f_1);
+        }
+
+        // Running sum constraints
+        let mut lhs = perm_next[0] - perm_local[0];
+        let mut rhs = AB::Exp::from(AB::F::ZERO);
+        let m_0 = perm_local[1];
+        let alpha = rand_elems[0].clone();
+        if N == 1 {
+            let f_0 = main_local[lookups[0].0]; // Looking
+            let t_0 = main_local[lookups[0].1]; // Looked
+
+            lhs *= (f_0 + alpha.clone()) * (t_0 + alpha.clone());
+            rhs += t_0 + alpha.clone() - m_0 * (f_0 + alpha.clone());
+        } else if N == 2 {
+            // This assumes that the looked columns are the same
+            let q_0 = perm_local[2];
+            let t_0 = main_local[lookups[0].1];
+
+            lhs *= t_0 + alpha.clone();
+            rhs += m_0 + q_0 * (t_0 + alpha.clone());
+        }
+        builder.when_transition().assert_eq(lhs, rhs);
+        builder.when_first_row().assert_zero(perm_local[0]);
+        builder.when_last_row().assert_zero(perm_local[0]);
+    }
+}
+
+/// Performs batch inversion on a vector of field elements.
+pub fn batch_invert<F: Field>(cols: &[Vec<F>]) -> Vec<Vec<F>> {
+    let n_cols = cols.len();
+    let n_rows = cols[0].len();
+    let mut res = vec![vec![F::ZERO; n_rows]; n_cols];
+    let mut prod = F::ONE;
+    for n in 0..n_cols {
+        for m in 0..n_rows {
+            res[n][m] = prod;
+            prod *= cols[n][m];
+        }
+    }
+
+    let mut inv = prod.inverse();
+    for n in (0..n_cols).rev() {
+        for m in (0..n_rows).rev() {
+            res[n][m] *= inv;
+            inv *= cols[n][m];
+        }
+    }
+
+    res
+}
+
+fn count_elements<F: Field32>(v1: &Vec<F>, v2: &Vec<F>) -> Vec<F> {
+    let mut map: BTreeMap<u32, F> = BTreeMap::new();
+
+    // Count elements in the first vector
+    for &item in v1.iter() {
+        *map.entry(item.as_canonical_u32()).or_insert(F::ZERO) += F::ONE;
+    }
+
+    // Construct the final vector
+    v2.into_iter()
+        .map(|item| *map.get(&item.as_canonical_u32()).unwrap_or(&F::ZERO))
+        .collect()
 }

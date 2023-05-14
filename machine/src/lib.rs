@@ -9,15 +9,12 @@ pub use p3_field::field::{Field, Field32};
 use p3_mersenne_31::Mersenne31 as Fp;
 
 pub mod __internal;
-pub mod bus;
 pub mod chip;
 pub mod config;
-pub mod instruction;
 pub mod lookup;
 pub mod proof;
-pub mod trace;
 
-pub use instruction::Instruction;
+pub use chip::Chip;
 
 pub const OPERAND_ELEMENTS: usize = 5;
 pub const INSTRUCTION_ELEMENTS: usize = OPERAND_ELEMENTS + 1;

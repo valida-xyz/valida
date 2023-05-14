@@ -7,7 +7,7 @@ use alloc::vec::Vec;
 use core::mem::transmute;
 use p3_field::field::AbstractField;
 use p3_mersenne_31::Mersenne31 as Fp;
-use valida_machine::{trace::TraceGenerator, Instruction, Operands, Word};
+use valida_machine::{Instruction, Operands, TraceGenerator, Word};
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 
 pub mod columns;
@@ -38,7 +38,7 @@ pub struct Registers {
     fp: Fp,
 }
 
-impl<M> TraceGenerator<M> for CpuChip
+impl<M> Chip<M> for CpuChip
 where
     M: MachineWithMemoryChip,
 {

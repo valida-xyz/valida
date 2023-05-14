@@ -32,22 +32,10 @@ pub struct MemoryCols<T> {
     pub counter: T,
 }
 
-#[derive(AlignedBorrow, Default)]
-pub struct MemoryPermutationCols<T> {
-    /// Permuted memory address and counter
-    pub addr: T,
-    pub counter_addr: T,
-
-    /// Permuted memory/clock difference and counter
-    pub diff: T,
-    pub counter_diff: T,
-
-    /// Running product
-    pub z: T,
-}
+pub const MEM_LOOKUPS: [(usize, usize, usize); 1] = [(MEM_COL_MAP.diff, MEM_COL_MAP.counter, 0)];
+pub const NUM_RANDOM_ELEMENTS: usize = 1;
 
 pub const NUM_MEM_COLS: usize = size_of::<MemoryCols<u8>>();
-pub const NUM_MEM_PERM_COLS: usize = size_of::<MemoryPermutationCols<u8>>();
 pub const MEM_COL_MAP: MemoryCols<usize> = make_col_map();
 
 const fn make_col_map() -> MemoryCols<usize> {

@@ -2,14 +2,19 @@
 
 extern crate alloc;
 
-use crate::columns::{MemoryCols, MEM_COL_MAP, NUM_MEM_COLS, NUM_MEM_PERM_COLS};
+use crate::columns::{MemoryCols, MEM_COL_MAP, MEM_LOOKUPS, NUM_MEM_COLS};
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use core::mem::transmute;
-use p3_field::field::{AbstractField, Field, Field32};
-use p3_mersenne_31::Mersenne31 as Fp;
-use valida_machine::{lookup, trace::TraceGenerator, Machine, Word};
+use valida_machine::{
+    lookup::{LogUp, LookupArgument},
+    Chip, Machine, Word,
+};
 use valida_util::to_rows;
+
+use p3_field::field::{AbstractField, Field, Field32};
+use p3_matrix::dense::RowMajorMatrix;
+use p3_mersenne_31::Mersenne31 as Fp;
 
 pub mod columns;
 mod stark;
@@ -78,7 +83,7 @@ impl MemoryChip {
     }
 }
 
-impl<M> TraceGenerator<M> for MemoryChip
+impl<M> Chip<M> for MemoryChip
 where
     M: MachineWithMemoryChip,
 {
@@ -86,7 +91,6 @@ where
     type FE = Fp; // TODO
 
     const NUM_COLS: usize = NUM_MEM_COLS;
-    const NUM_PERM_COLS: usize = NUM_MEM_PERM_COLS;
 
     // TODO: Parallelize with rayon
     fn generate_trace(&self, machine: &M) -> Vec<[Fp; NUM_MEM_COLS]> {
@@ -122,34 +126,10 @@ where
     fn generate_permutation_trace(
         &self,
         machine: &M,
-        main_trace: Vec<[Fp; NUM_MEM_COLS]>,
+        main_trace: RowMajorMatrix<F>,
         random_elements: Vec<Fp>,
-    ) -> Vec<[Self::FE; NUM_MEM_PERM_COLS]> {
-        let counter = main_trace
-            .iter()
-            .map(|row| row[MEM_COL_MAP.counter])
-            .collect::<Vec<_>>();
-        let addr = main_trace
-            .iter()
-            .map(|row| row[MEM_COL_MAP.addr])
-            .collect::<Vec<_>>();
-        let diff = main_trace
-            .iter()
-            .map(|row| row[MEM_COL_MAP.diff])
-            .collect::<Vec<_>>();
-        let (addr_sorted, counter_addr_permuted) = lookup::permuted_cols(&addr, &counter);
-        let (diff_sorted, counter_diff_permuted) = lookup::permuted_cols(&diff, &counter);
-
-        // TODO: Compute the running product column z
-        let z = Vec::new();
-
-        to_rows(&[
-            addr_sorted,
-            counter_addr_permuted,
-            diff_sorted,
-            counter_diff_permuted,
-            z,
-        ])
+    ) -> RowMajorMatrix<F> {
+        LogUp::new(MEM_LOOKUPS, &main_trace).build_trace(random_elements);
     }
 }
 
@@ -222,6 +202,7 @@ impl MemoryChip {
     }
 
     fn compute_address_diffs(rows: &mut Vec<[Fp; NUM_MEM_COLS]>) {
+        // TODO: Use batch inversion
         for n in 0..(rows.len() - 1) {
             let addr = rows[n][MEM_COL_MAP.addr];
             let addr_next = rows[n][MEM_COL_MAP.addr];

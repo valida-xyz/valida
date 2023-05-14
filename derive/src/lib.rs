@@ -11,7 +11,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{spanned::Spanned, Data, Field, Fields, Ident};
 
-#[proc_macro_derive(Machine, attributes(instruction, chip))]
+#[proc_macro_derive(Machine, attributes(bus, chip, instruction))]
 pub fn machine_derive(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).unwrap();
     impl_machine(&ast)
