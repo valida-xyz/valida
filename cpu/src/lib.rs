@@ -5,7 +5,7 @@ extern crate alloc;
 use crate::columns::{CpuCols, NUM_CPU_COLS};
 use alloc::vec::Vec;
 use core::mem::transmute;
-use valida_machine::{Chip, Instruction, Operands, Word};
+use valida_machine::{instructions, Chip, Instruction, Operands, Word};
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 
 use p3_field::AbstractField;
@@ -27,6 +27,7 @@ pub enum Operation {
     Bus(u32),
 }
 
+#[derive(Default)]
 pub struct CpuChip {
     pub clock: Fp,
     pub pc: Fp,
@@ -35,6 +36,7 @@ pub struct CpuChip {
     pub operations: Vec<Operation>,
 }
 
+#[derive(Default)]
 pub struct Registers {
     pc: Fp,
     fp: Fp,
@@ -107,7 +109,7 @@ impl CpuChip {
 
     fn set_memory_trace_values<M: MachineWithMemoryChip>(
         &self,
-        n: usize,
+        _clk: usize,
         cols: &mut CpuCols<Fp>,
         machine: &M,
     ) {
@@ -145,13 +147,15 @@ pub trait MachineWithCpuChip: MachineWithMemoryChip {
     fn cpu_mut(&mut self) -> &mut CpuChip;
 }
 
-pub struct Load32Instruction;
-pub struct Store32Instruction;
-pub struct JalInstruction;
-pub struct JalvInstruction;
-pub struct BeqInstruction;
-pub struct BneInstruction;
-pub struct Imm32Instruction;
+instructions!(
+    Load32Instruction,
+    Store32Instruction,
+    JalInstruction,
+    JalvInstruction,
+    BeqInstruction,
+    BneInstruction,
+    Imm32Instruction
+);
 
 impl<M: MachineWithCpuChip> Instruction<M> for Load32Instruction {
     const OPCODE: u32 = 1;

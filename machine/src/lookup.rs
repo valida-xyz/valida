@@ -3,7 +3,7 @@ use core::borrow::{Borrow, BorrowMut};
 use itertools::Itertools;
 
 use p3_air::{Air, AirBuilder, PermutationAirBuilder};
-use p3_field::{AbstractField, AsInt, Field};
+use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_matrix::Matrix;
 
@@ -54,7 +54,7 @@ impl<const N: usize, const M: usize> LogUp<N, M> {
         Self { lookups }
     }
 
-    pub fn build_trace<F: Field + AsInt<UnsignedInteger = u32>>(
+    pub fn build_trace<F: Field<IntegerRepr = I>, I: Ord>(
         &self,
         main: &RowMajorMatrix<F>,
         random_elements: Vec<F>,
@@ -119,7 +119,6 @@ impl<const N: usize, const M: usize> LogUp<N, M> {
             .zip(random_elements)
             .enumerate()
         {
-            let mut multiplicity = vec![F::ZERO; main.height()];
             for (_, idx_1, _) in lookups.into_iter() {
                 // If the looked index is in the lookup:
                 // - Add the associated random element to all values in the looking column
@@ -129,12 +128,11 @@ impl<const N: usize, const M: usize> LogUp<N, M> {
                         *elem += rand_elem;
                     }
                     let counts = count_elements(&looking_columns[n], &looked_column);
-                    for (a, b) in multiplicity.iter_mut().zip(counts) {
+                    for (a, b) in multiplicities[n].iter_mut().zip(counts) {
                         *a += b;
                     }
                 }
             }
-            multiplicities[n] = multiplicity;
         }
 
         // Invert all lookup elements
@@ -243,10 +241,7 @@ pub fn batch_invert<F: Field>(cols: &[Vec<F>]) -> Vec<Vec<F>> {
     res
 }
 
-fn count_elements<F: Field + AsInt<UnsignedInteger = I>, I: Ord>(
-    v1: &Vec<F>,
-    v2: &Vec<F>,
-) -> Vec<F> {
+fn count_elements<F: Field<IntegerRepr = I>, I: Ord>(v1: &Vec<F>, v2: &Vec<F>) -> Vec<F> {
     let mut map: BTreeMap<I, F> = BTreeMap::new();
 
     // Count elements in the first vector

@@ -3,10 +3,10 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use p3_field::{AbstractField, AsInt, Field};
+use p3_field::{AbstractField, Field};
 use p3_mersenne_31::Mersenne31 as Fp;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{Instruction, Operands, Word, MEMORY_CELL_BYTES};
+use valida_machine::{instructions, Instruction, Operands, Word, MEMORY_CELL_BYTES};
 
 pub mod columns;
 mod stark;
@@ -16,6 +16,7 @@ pub enum Operation {
     Mul32,
 }
 
+#[derive(Default)]
 pub struct ALU32Chip {
     pub clock: Fp,
     pub operations: Vec<Operation>,
@@ -26,8 +27,7 @@ pub trait MachineWithALU32Chip: MachineWithCpuChip {
     fn alu_u32_mut(&mut self) -> &mut ALU32Chip;
 }
 
-pub struct Add32Instruction;
-pub struct Mul32Instruction;
+instructions!(Add32Instruction, Mul32Instruction);
 
 impl<M: MachineWithALU32Chip> Instruction<M> for Add32Instruction {
     const OPCODE: u32 = 8;

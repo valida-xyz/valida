@@ -11,12 +11,12 @@ use valida_cpu::{
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
-use valida_machine::{Instruction, Machine, Operands, ProgramROM, ProgramState};
+use valida_machine::{Instruction, Machine, Operands, ProgramROM};
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 
 // TODO: Emit instruction members in the derive macro instead of manually including
 
-#[derive(Machine)]
+#[derive(Machine, Default)]
 pub struct BasicMachine {
     // Core instructions
     #[instruction]
@@ -51,4 +51,36 @@ pub struct BasicMachine {
     cpu_mem_bus: CpuMemBus,
     #[bus(cpu, alu_u32)]
     cpu_alu_u32_bus: SharedCoprocessorBus,
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn store32() {
+        use super::*;
+        use alloc::vec;
+        use p3_field::AbstractField;
+        use p3_mersenne_31::Mersenne31 as Fp;
+        use valida_machine::InstructionWord;
+
+        let mut machine = BasicMachine::default();
+
+        let program = vec![
+            InstructionWord {
+                opcode: <Imm32Instruction as Instruction<BasicMachine>>::OPCODE,
+                operands: Operands::<Fp>::from_i32_slice(&[-4, 0, 0, 0, 42]),
+            },
+            InstructionWord {
+                opcode: <Store32Instruction as Instruction<BasicMachine>>::OPCODE,
+                operands: Operands::from_i32_slice(&[0, -8, -4, 0, 0]),
+            },
+            InstructionWord {
+                opcode: 0,
+                operands: Operands::default(),
+            },
+        ];
+        let rom = ProgramROM::new(program);
+
+        machine.run(rom);
+    }
 }

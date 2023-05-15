@@ -6,7 +6,7 @@ use crate::columns::{MemoryCols, MEM_COL_MAP, MEM_LOOKUPS, NUM_MEM_COLS, NUM_MEM
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use core::mem::transmute;
-use p3_field::{AbstractField, AsInt, Field};
+use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_mersenne_31::Mersenne31 as Fp;
 use valida_machine::{lookup::LogUp, Chip, Machine, Word, LOOKUP_DEGREE_BOUND};
@@ -38,6 +38,7 @@ impl Operation {
     }
 }
 
+#[derive(Default)]
 pub struct MemoryChip {
     pub cells: BTreeMap<Fp, Word<Fp>>,
     pub operations: BTreeMap<Fp, Vec<Operation>>,
@@ -100,7 +101,7 @@ where
         ops.sort_by_key(|(clk, op)| (op.get_address(), *clk));
 
         // Ensure consecutive sorted clock cycles for an address differ no more than
-        // the length of the table
+        // the length of the table (which is capped at 2^29)
         Self::insert_dummy_reads(&mut ops);
 
         let mut rows = ops
@@ -117,7 +118,7 @@ where
 
     fn generate_permutation_trace(
         &self,
-        machine: &M,
+        _machine: &M,
         main_trace: RowMajorMatrix<Self::F>,
         random_elements: Vec<Self::FE>,
     ) -> RowMajorMatrix<Self::F> {

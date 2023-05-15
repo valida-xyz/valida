@@ -19,6 +19,16 @@ pub trait Chip<M> {
     ) -> RowMajorMatrix<Self::F>;
 }
 
+#[macro_export]
+macro_rules! instructions {
+    ($($t:ident),*) => {
+        $(
+            #[derive(Default)]
+            pub struct $t {}
+        )*
+    }
+}
+
 pub trait Instruction<M: Machine> {
     const OPCODE: u32;
 
