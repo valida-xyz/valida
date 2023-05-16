@@ -8,7 +8,6 @@ members = [
     "machine",
     "memory",
     "prover",
-    "runner",
     "util",
     "verifier"
 ]
