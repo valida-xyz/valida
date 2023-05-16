@@ -6,7 +6,7 @@ use crate::columns::{MemoryCols, MEM_COL_MAP, MEM_LOOKUPS, NUM_MEM_COLS, NUM_MEM
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use core::mem::transmute;
-use p3_field::{AbstractField, Field};
+use p3_field::{AbstractField, Field, PrimeField, PrimeField32, PrimeField64};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_mersenne_31::Mersenne31 as Fp;
 use valida_machine::{lookup::LogUp, Chip, Machine, Word, LOOKUP_DEGREE_BOUND};
@@ -107,7 +107,7 @@ where
         let mut rows = ops
             .into_iter()
             .enumerate()
-            .map(|(n, (clk, op))| self.op_to_row(n, clk.as_canonical_uint() as usize, op, machine))
+            .map(|(n, (clk, op))| self.op_to_row(n, clk.as_canonical_u64() as usize, op, machine))
             .collect::<Vec<_>>();
 
         // Compute address difference values
@@ -128,14 +128,13 @@ where
 }
 
 impl MemoryChip {
-    fn op_to_row<N, M>(&self, n: N, clk: N, op: Operation, _machine: &M) -> [Fp; NUM_MEM_COLS]
+    fn op_to_row<M>(&self, n: usize, clk: usize, op: Operation, _machine: &M) -> [Fp; NUM_MEM_COLS]
     where
-        N: Into<usize>,
         M: MachineWithMemoryChip,
     {
         let mut cols = MemoryCols::<Fp>::default();
-        cols.clk = Fp::from(clk.into() as u32);
-        cols.counter = Fp::from(n.into() as u32);
+        cols.clk = Fp::from_canonical_usize(clk);
+        cols.counter = Fp::from_canonical_usize(n);
 
         match op {
             Operation::Read(addr, value) => {
@@ -166,11 +165,12 @@ impl MemoryChip {
             if addr_diff != Fp::ZERO {
                 continue;
             }
-            let clk_diff = (op2.0 - op1.0).as_canonical_uint();
+            let clk_diff = (op2.0 - op1.0).as_canonical_u32();
             if clk_diff > table_len {
                 let num_dummy_ops = clk_diff / table_len;
                 for j in 0..num_dummy_ops {
-                    let dummy_op_clk = op1.0 + Fp::from(table_len) * Fp::from(j as u32 + 1);
+                    let dummy_op_clk =
+                        op1.0 + Fp::from_canonical_u32(table_len) * Fp::from_canonical_u32(j + 1);
                     let dummy_op_addr = op1.1.get_address();
                     let dummy_op_value = op1.1.get_value();
                     dummy_ops.push((

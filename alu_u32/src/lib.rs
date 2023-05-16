@@ -3,7 +3,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use p3_field::{AbstractField, Field};
+use p3_field::{AbstractField, PrimeField, PrimeField32};
 use p3_mersenne_31::Mersenne31 as Fp;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Instruction, Operands, Word, MEMORY_CELL_BYTES};
@@ -44,12 +44,12 @@ impl<M: MachineWithALU32Chip> Instruction<M> for Add32Instruction {
         let mut a = Word::<Fp>::default();
         let mut carry = 0u8;
         for i in (0..MEMORY_CELL_BYTES).rev() {
-            let b_i = b[i].as_canonical_uint() as u8;
-            let c_i = c[i].as_canonical_uint() as u8;
+            let b_i = b[i].as_canonical_u32() as u8;
+            let c_i = c[i].as_canonical_u32() as u8;
             let (sum, overflow) = b_i.overflowing_add(c_i);
             let (sum_with_carry, carry_overflow) = sum.overflowing_add(carry);
             carry = overflow as u8 + carry_overflow as u8;
-            a[i] = Fp::from(sum_with_carry as u32);
+            a[i] = Fp::from_canonical_u8(sum_with_carry);
         }
         state.mem_mut().write(clk, write_addr, a, true);
 

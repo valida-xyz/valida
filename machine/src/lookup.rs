@@ -1,9 +1,8 @@
 use alloc::collections::BTreeMap;
-use core::borrow::{Borrow, BorrowMut};
 use itertools::Itertools;
 
-use p3_air::{Air, AirBuilder, PermutationAirBuilder};
-use p3_field::{AbstractField, Field};
+use p3_air::{AirBuilder, PermutationAirBuilder};
+use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_matrix::Matrix;
 
@@ -54,7 +53,7 @@ impl<const N: usize, const M: usize> LogUp<N, M> {
         Self { lookups }
     }
 
-    pub fn build_trace<F: Field<IntegerRepr = I>, I: Ord>(
+    pub fn build_trace<F: PrimeField>(
         &self,
         main: &RowMajorMatrix<F>,
         random_elements: Vec<F>,
@@ -241,16 +240,16 @@ pub fn batch_invert<F: Field>(cols: &[Vec<F>]) -> Vec<Vec<F>> {
     res
 }
 
-fn count_elements<F: Field<IntegerRepr = I>, I: Ord>(v1: &Vec<F>, v2: &Vec<F>) -> Vec<F> {
-    let mut map: BTreeMap<I, F> = BTreeMap::new();
+fn count_elements<F: PrimeField>(v1: &Vec<F>, v2: &Vec<F>) -> Vec<F> {
+    let mut map: BTreeMap<F, F> = BTreeMap::new();
 
     // Count elements in the first vector
     for &item in v1.iter() {
-        *map.entry(item.as_canonical_uint()).or_insert(F::ZERO) += F::ONE;
+        *map.entry(item).or_insert(F::ZERO) += F::ONE;
     }
 
     // Construct the final vector
     v2.into_iter()
-        .map(|item| *map.get(&item.as_canonical_uint()).unwrap_or(&F::ZERO))
+        .map(|item| *map.get(&item).unwrap_or(&F::ZERO))
         .collect()
 }

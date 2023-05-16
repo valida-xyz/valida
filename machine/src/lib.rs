@@ -5,6 +5,7 @@ extern crate alloc;
 extern crate self as valida_machine;
 
 use core::ops::{Index, IndexMut};
+use p3_field::PrimeField64;
 pub use p3_field::{Field, PrimeField};
 use p3_mersenne_31::Mersenne31 as Fp;
 
@@ -34,13 +35,13 @@ pub struct InstructionWord<F> {
 
 pub struct ProgramROM<F>(Vec<InstructionWord<F>>);
 
-impl<F: Field<IntegerRepr = u32>> ProgramROM<F> {
+impl<F: PrimeField64> ProgramROM<F> {
     pub fn new(instructions: Vec<InstructionWord<F>>) -> Self {
         Self(instructions)
     }
 
     pub fn get_instruction(&self, pc: F) -> &InstructionWord<F> {
-        &self.0[pc.as_canonical_uint() as usize]
+        &self.0[pc.as_canonical_u64() as usize]
     }
 }
 
@@ -68,11 +69,12 @@ impl<F: Copy> Operands<F> {
     }
 }
 
-impl<F: Field<IntegerRepr = I> + PrimeField, I: Into<F>> Operands<F> {
+impl<F: PrimeField> Operands<F> {
     pub fn from_i32_slice(slice: &[i32]) -> Self {
         let mut operands = [F::ZERO; 5];
         for (i, operand) in slice.into_iter().enumerate() {
-            operands[i] = F::ORDER.into() - F::from(operand.abs() as u32)
+            operand >> 31;
+            operands[i] = -F::from_canonical_u32(operand.abs() as u32)
         }
         Self(operands)
     }
@@ -143,7 +145,7 @@ impl<F> Into<[F; MEMORY_CELL_BYTES]> for Word<F> {
 }
 
 pub trait Machine {
-    type F: Field;
+    type F: PrimeField64;
     fn run(&mut self, program: ProgramROM<Self::F>);
     fn prove(&self);
     fn verify();

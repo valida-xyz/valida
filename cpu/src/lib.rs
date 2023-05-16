@@ -8,7 +8,7 @@ use core::mem::transmute;
 use valida_machine::{instructions, Chip, Instruction, Operands, Word};
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 
-use p3_field::AbstractField;
+use p3_field::{AbstractField, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_mersenne_31::Mersenne31 as Fp;
 
@@ -71,17 +71,15 @@ where
 }
 
 impl CpuChip {
-    fn op_to_row<N, M>(&self, clk: N, op: Operation, machine: &M) -> [Fp; NUM_CPU_COLS]
+    fn op_to_row<M>(&self, clk: usize, op: Operation, machine: &M) -> [Fp; NUM_CPU_COLS]
     where
-        N: Into<usize>,
         M: MachineWithMemoryChip,
     {
         let mut cols = CpuCols::default();
-        let n = clk.into();
-        cols.pc = self.registers[n].pc;
-        cols.fp = self.registers[n].fp;
+        cols.pc = self.registers[clk].pc;
+        cols.fp = self.registers[clk].fp;
 
-        self.set_memory_trace_values(n, &mut cols, machine);
+        self.set_memory_trace_values(clk, &mut cols, machine);
 
         match op {
             Operation::Store32 => {}
@@ -97,7 +95,7 @@ impl CpuChip {
             }
             Operation::Bus(opcode) => {
                 cols.opcode_flags.is_bus_op = Fp::ONE;
-                cols.chip_channel.opcode = opcode.into();
+                cols.chip_channel.opcode = Fp::from_canonical_u32(opcode);
                 // TODO: Set other chip channel fields in an additional trace pass,
                 // or read this information from the machine and set it here?
             }

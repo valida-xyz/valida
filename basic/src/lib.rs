@@ -11,7 +11,7 @@ use valida_cpu::{
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
-use valida_machine::{Instruction, Machine, Operands, ProgramROM};
+use valida_machine::{Instruction, Machine, ProgramROM};
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 
 // TODO: Emit instruction members in the derive macro instead of manually including
@@ -85,11 +85,12 @@ impl MachineWithALU32Chip for BasicMachine {
 
 #[cfg(test)]
 mod tests {
+    use valida_machine::Operands;
+
     #[test]
     fn store32() {
         use super::*;
         use alloc::vec;
-        use p3_field::AbstractField;
         use p3_mersenne_31::Mersenne31 as Fp;
         use valida_machine::InstructionWord;
 

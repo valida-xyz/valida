@@ -10,6 +10,10 @@ pub trait Chip<M> {
     /// Generate the main trace for the chip given the provided machine.
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<Self::F>;
 
+    // fn bus_senders(&self) -> Vec<BusInteraction> {}
+    // fn bus_receivers(&self) -> Vec<BusInteraction> {}
+    // fn permutation_pairs(&self) -> Vec<PermutationPair> {}
+
     /// Generate the permutation trace for the chip given the provided machine.
     fn generate_permutation_trace(
         &self,
