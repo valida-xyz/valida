@@ -53,6 +53,36 @@ pub struct BasicMachine {
     cpu_alu_u32_bus: SharedCoprocessorBus,
 }
 
+impl MachineWithCpuChip for BasicMachine {
+    fn cpu(&self) -> &CpuChip {
+        &self.cpu
+    }
+
+    fn cpu_mut(&mut self) -> &mut CpuChip {
+        &mut self.cpu
+    }
+}
+
+impl MachineWithMemoryChip for BasicMachine {
+    fn mem(&self) -> &MemoryChip {
+        &self.mem
+    }
+
+    fn mem_mut(&mut self) -> &mut MemoryChip {
+        &mut self.mem
+    }
+}
+
+impl MachineWithALU32Chip for BasicMachine {
+    fn alu_u32(&self) -> &ALU32Chip {
+        &self.alu_u32
+    }
+
+    fn alu_u32_mut(&mut self) -> &mut ALU32Chip {
+        &mut self.alu_u32
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]

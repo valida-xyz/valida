@@ -42,14 +42,10 @@ fn impl_machine_given_fields(machine: &Ident, fields: &[&Field]) -> TokenStream 
         .filter(|f| f.attrs.iter().any(|a| a.path.is_ident("chip")))
         .copied()
         .collect::<Vec<_>>();
-    let mut out = TokenStream2::new();
-    let out1 = impl_machine_given_instructions_and_chips(machine, &instructions, &chips);
-    let out2 = impl_machine_chip_impl_given_chips(machine, &chips);
-    out.extend(out1);
-    out.extend(out2);
-    out.into()
+    impl_machine_given_instructions_and_chips(machine, &instructions, &chips).into()
 }
 
+#[deprecated] // Planning manual impls for now.
 fn impl_machine_chip_impl_given_chips(machine: &Ident, chips: &[&Field]) -> TokenStream2 {
     let chip_impls = chips.iter().map(|chip| {
         let chip_ty = &chip.ty;
