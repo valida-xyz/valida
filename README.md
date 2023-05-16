@@ -10,6 +10,9 @@ Our roadmap also includes implementing fast recursion and continuations to enabl
 ## Compiler 
 The Valida compiler is hosted separately, and can be found [here](https://github.com/delendum-xyz/valida-compiler). For instructions on how to build Valida programs, please refer to the README in that repository.
 
+## Backend
+Valida uses the [Plonky3](https://github.com/Plonky3/Plonky3) toolkit to implement the STARK IOP, and to handle all field and cryptographic operations.
+
 ## Contributing
 Valida is a community-driven project, and we encourage contributions to both the VM and compiler.
 
