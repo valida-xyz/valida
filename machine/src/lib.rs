@@ -72,9 +72,9 @@ impl<F: Copy> Operands<F> {
 impl<F: PrimeField> Operands<F> {
     pub fn from_i32_slice(slice: &[i32]) -> Self {
         let mut operands = [F::ZERO; 5];
-        for (i, operand) in slice.into_iter().enumerate() {
-            operand >> 31;
-            operands[i] = -F::from_canonical_u32(operand.abs() as u32)
+        for (i, &operand) in slice.iter().enumerate() {
+            let mut abs = F::from_canonical_u32(operand.abs() as u32);
+            operands[i] = if operand < 0 { -abs } else { abs };
         }
         Self(operands)
     }
