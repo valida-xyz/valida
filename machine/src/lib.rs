@@ -5,8 +5,7 @@ extern crate alloc;
 extern crate self as valida_machine;
 
 use core::ops::{Index, IndexMut};
-use p3_field::PrimeField64;
-pub use p3_field::{Field, PrimeField};
+pub use p3_field::{AbstractField, Field, PrimeField, PrimeField64};
 use p3_mersenne_31::Mersenne31 as Fp;
 
 pub mod __internal;
@@ -23,10 +22,8 @@ pub const CPU_MEMORY_CHANNELS: usize = 3;
 pub const MEMORY_CELL_BYTES: usize = 4;
 pub const LOOKUP_DEGREE_BOUND: usize = 3;
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct Word<F>(pub [F; MEMORY_CELL_BYTES]);
-
-pub trait Addressable<F: Copy>: Copy + From<u32> + From<Word<F>> {}
 
 pub struct InstructionWord<F> {
     pub opcode: u32,
@@ -88,7 +85,12 @@ impl<F> From<[F; MEMORY_CELL_BYTES]> for Word<F> {
 
 impl From<Word<Fp>> for Fp {
     fn from(word: Word<Fp>) -> Self {
-        todo!()
+        let mut bytes = word.0;
+        let mut value = Fp::ZERO;
+        for i in 0..MEMORY_CELL_BYTES {
+            value = bytes[i] + value * Fp::from_canonical_u32(32);
+        }
+        value
     }
 }
 

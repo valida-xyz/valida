@@ -35,10 +35,14 @@ impl<M: MachineWithALU32Chip> Instruction<M> for Add32Instruction {
     fn execute(state: &mut M, ops: Operands<Fp>) {
         let clk = state.cpu().clock;
         let read_addr_1 = state.cpu().fp + ops.b();
-        let read_addr_2 = state.cpu().fp + ops.c();
         let write_addr = state.cpu().fp + ops.a();
         let b = state.mem_mut().read(clk, read_addr_1, true);
-        let c = state.mem_mut().read(clk, read_addr_2, true);
+        let c = if ops.is_imm() == Fp::ONE {
+            ops.c().into()
+        } else {
+            let read_addr_2 = state.cpu().fp + ops.c();
+            state.mem_mut().read(clk, read_addr_2, true)
+        };
 
         // FIXME
         let mut a = Word::<Fp>::default();

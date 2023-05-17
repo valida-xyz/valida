@@ -221,7 +221,8 @@ impl<M: MachineWithCpuChip> Instruction<M> for JalvInstruction {
         state.cpu_mut().pc = state.mem_mut().read(clk, read_addr, true).into();
         // Set fp to [c]
         let read_addr = state.cpu().fp + ops.c();
-        state.cpu_mut().fp = state.mem_mut().read(clk, read_addr, true).into();
+        let cell = state.mem_mut().read(clk, read_addr, true).into();
+        state.cpu_mut().fp += cell;
         state.cpu_mut().clock += Fp::ONE;
         state.cpu_mut().operations.push(Operation::Jalv);
         set_pc_and_fp(state);
@@ -242,7 +243,7 @@ impl<M: MachineWithCpuChip> Instruction<M> for BeqInstruction {
             state.mem_mut().read(clk, read_addr_2, true)
         };
         if cell_1 == cell_2 {
-            state.cpu_mut().pc = state.cpu().pc + ops.a();
+            state.cpu_mut().pc = ops.a();
         } else {
             state.cpu_mut().pc = state.cpu().pc + Fp::ONE;
         }
@@ -266,7 +267,7 @@ impl<M: MachineWithCpuChip> Instruction<M> for BneInstruction {
             state.mem_mut().read(clk, read_addr_2, true)
         };
         if cell_1 != cell_2 {
-            state.cpu_mut().pc = state.cpu().pc + ops.a();
+            state.cpu_mut().pc = ops.a();
         } else {
             state.cpu_mut().pc = state.cpu().pc + Fp::ONE;
         }
