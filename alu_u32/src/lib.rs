@@ -2,15 +2,20 @@
 
 extern crate alloc;
 
+use crate::columns::NUM_ALU_COLS;
 use alloc::vec::Vec;
-use p3_field::{AbstractField, PrimeField, PrimeField32};
-use p3_mersenne_31::Mersenne31 as Fp;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Instruction, Operands, Word, MEMORY_CELL_BYTES};
+
+use p3_field::{AbstractField, PrimeField, PrimeField32};
+use p3_matrix::dense::RowMajorMatrix;
+use p3_mersenne_31::Mersenne31 as Fp;
+use valida_machine::Chip;
 
 pub mod columns;
 mod stark;
 
+#[derive(Clone)]
 pub enum Operation {
     Add32,
     Mul32,
@@ -20,6 +25,43 @@ pub enum Operation {
 pub struct ALU32Chip {
     pub clock: Fp,
     pub operations: Vec<Operation>,
+}
+
+impl<M> Chip<M> for ALU32Chip
+where
+    M: MachineWithALU32Chip,
+{
+    type F = Fp;
+    type FE = Fp; // FIXME
+
+    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<Self::F> {
+        let rows = self
+            .operations
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(n, op)| self.op_to_row(op, machine))
+            .collect::<Vec<_>>();
+        RowMajorMatrix::new(rows.concat(), NUM_ALU_COLS)
+    }
+
+    fn generate_permutation_trace(
+        &self,
+        machine: &M,
+        main_trace: RowMajorMatrix<Self::F>,
+        random_elements: Vec<Self::FE>,
+    ) -> RowMajorMatrix<Self::F> {
+        todo!()
+    }
+}
+
+impl ALU32Chip {
+    fn op_to_row<M>(&self, op: Operation, _machine: &M) -> [Fp; NUM_ALU_COLS]
+    where
+        M: MachineWithALU32Chip,
+    {
+        todo!()
+    }
 }
 
 pub trait MachineWithALU32Chip: MachineWithCpuChip {

@@ -251,6 +251,7 @@ mod tests {
 
         assert_eq!(machine.cpu().operations.len(), 141);
         assert_eq!(machine.mem().operations.len(), 191);
+        assert_eq!(machine.alu_u32().operations.len(), 50);
 
         assert_eq!(
             *machine.mem().cells.get(&Fp::from_canonical_u32(4)).unwrap(), // Return value
