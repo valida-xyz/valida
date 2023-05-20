@@ -2,14 +2,18 @@
 
 extern crate alloc;
 
-use crate::columns::{MemoryCols, MEM_COL_MAP, MEM_LOOKUPS, NUM_MEM_COLS, NUM_MEM_LOOKUPS};
+use crate::columns::{MemoryCols, MEM_COL_MAP, NUM_MEM_COLS};
 use alloc::collections::BTreeMap;
+use alloc::vec;
 use alloc::vec::Vec;
 use core::mem::transmute;
+use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field, PrimeField, PrimeField32, PrimeField64};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_mersenne_31::Mersenne31 as Fp;
-use valida_machine::{lookup::LogUp, Chip, Machine, Word, LOOKUP_DEGREE_BOUND};
+use valida_bus::MachineWithMemBus;
+use valida_machine::chip::Interaction;
+use valida_machine::{Chip, Machine, Word};
 
 pub mod columns;
 mod stark;
@@ -81,7 +85,7 @@ impl MemoryChip {
 
 impl<M> Chip<M> for MemoryChip
 where
-    M: MachineWithMemoryChip,
+    M: MachineWithMemoryChip + MachineWithMemBus,
 {
     type F = Fp;
     type FE = Fp; // FIXME
@@ -116,14 +120,20 @@ where
         RowMajorMatrix::new(rows.concat(), NUM_MEM_COLS)
     }
 
-    fn generate_permutation_trace(
-        &self,
-        _machine: &M,
-        main_trace: RowMajorMatrix<Self::F>,
-        random_elements: Vec<Self::FE>,
-    ) -> RowMajorMatrix<Self::F> {
-        LogUp::<NUM_MEM_LOOKUPS, LOOKUP_DEGREE_BOUND>::new(MEM_LOOKUPS)
-            .build_trace(&main_trace, random_elements)
+    fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
+        let is_read: VirtualPairCol<M::F> = VirtualPairCol::single_main(MEM_COL_MAP.is_read);
+        let addr = VirtualPairCol::single_main(MEM_COL_MAP.addr);
+        let value = MEM_COL_MAP.value.0.map(VirtualPairCol::single_main);
+
+        let mut fields = vec![is_read, addr];
+        fields.extend(value);
+
+        let receive = Interaction {
+            fields: vec![],
+            count: VirtualPairCol::single_main(MEM_COL_MAP.is_real),
+            argument_index: machine.mem_bus(),
+        };
+        vec![receive]
     }
 }
 
@@ -141,15 +151,16 @@ impl MemoryChip {
                 cols.is_read = Fp::ONE;
                 cols.addr = addr;
                 cols.value = value;
+                cols.is_read = Fp::ONE;
             }
             Operation::Write(addr, value) => {
                 cols.addr = addr;
                 cols.value = value;
+                cols.is_read = Fp::ONE;
             }
             Operation::DummyRead(addr, value) => {
                 cols.addr = addr;
                 cols.value = value;
-                cols.is_dummy = Fp::ONE;
             }
         }
 

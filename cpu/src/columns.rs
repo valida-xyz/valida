@@ -55,6 +55,7 @@ pub struct OpcodeFlagCols<T> {
 #[derive(Default)]
 pub struct MemoryChannelCols<T> {
     pub used: T,
+    pub is_read: T,
     pub addr: T,
     pub value: Word<T>,
 }

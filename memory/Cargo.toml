@@ -10,6 +10,7 @@ p3-field = { path = "../../Plonky3/field" }
 p3-mersenne-31 = { path = "../../Plonky3/mersenne-31" }
 p3-matrix = { path = "../../Plonky3/matrix" }
 
+valida-bus = { path = "../bus" }
 valida-machine = { path = "../machine" }
 valida-derive = { path = "../derive" }
 valida-util = { path = "../util" }
