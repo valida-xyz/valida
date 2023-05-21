@@ -4,11 +4,15 @@ extern crate alloc;
 
 use crate::columns::{MemoryCols, MEM_COL_MAP, NUM_MEM_COLS};
 use alloc::collections::BTreeMap;
+use alloc::vec;
 use alloc::vec::Vec;
 use core::mem::transmute;
-use p3_field::{AbstractField, Field, PrimeField, PrimeField64};
+use p3_air::VirtualPairCol;
+use p3_field::{AbstractField, Field, PrimeField, PrimeField32, PrimeField64};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_mersenne_31::Mersenne31 as Fp;
+use valida_bus::MachineWithMemBus;
+use valida_machine::chip::Interaction;
 use valida_machine::{Chip, Machine, Word};
 
 pub mod columns;
@@ -82,7 +86,7 @@ impl<F: PrimeField64> MemoryChip<F> {
 impl<F, M> Chip<M> for MemoryChip<F>
 where
     F: PrimeField64,
-    M: MachineWithMemoryChip<F = F>,
+    M: MachineWithMemoryChip<F = F> + MachineWithMemBus,
 {
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F> {
         let mut ops = self
@@ -113,6 +117,22 @@ where
 
         RowMajorMatrix::new(rows.concat(), NUM_MEM_COLS)
     }
+
+    fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
+        let is_read: VirtualPairCol<M::F> = VirtualPairCol::single_main(MEM_COL_MAP.is_read);
+        let addr = VirtualPairCol::single_main(MEM_COL_MAP.addr);
+        let value = MEM_COL_MAP.value.0.map(VirtualPairCol::single_main);
+
+        let mut fields = vec![is_read, addr];
+        fields.extend(value);
+
+        let receive = Interaction {
+            fields,
+            count: VirtualPairCol::single_main(MEM_COL_MAP.is_real),
+            argument_index: machine.mem_bus(),
+        };
+        vec![receive]
+    }
 }
 
 impl<F: PrimeField64> MemoryChip<F> {
@@ -128,15 +148,16 @@ impl<F: PrimeField64> MemoryChip<F> {
                 cols.is_read = F::ONE;
                 cols.addr = addr;
                 cols.value = value;
+                cols.is_read = F::ONE;
             }
             Operation::Write(addr, value) => {
                 cols.addr = addr;
                 cols.value = value;
+                cols.is_read = F::ONE;
             }
             Operation::DummyRead(addr, value) => {
                 cols.addr = addr;
                 cols.value = value;
-                cols.is_dummy = F::ONE;
             }
         }
 

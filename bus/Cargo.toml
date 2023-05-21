@@ -11,6 +11,4 @@ p3-matrix = { path = "../../Plonky3/matrix" }
 p3-mersenne-31 = { path = "../../Plonky3/mersenne-31" }
 
 valida-machine = { path = "../machine" }
-valida-memory = { path = "../memory" }
-valida-cpu = { path = "../cpu" }
 valida-util = { path = "../util" }

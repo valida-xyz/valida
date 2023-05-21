@@ -19,8 +19,8 @@ pub struct MemoryCols<T> {
     /// Whether memory operation is a read
     pub is_read: T,
 
-    /// Whether memory operation is a dummy read
-    pub is_dummy: T,
+    /// Whether memory operation is a real read, not a dummy.
+    pub is_real: T,
 
     /// Either addr' - addr (if address is changed), or clk' - clk (if address is not changed)
     pub diff: T,

@@ -9,7 +9,7 @@ use valida_alu_u32::{
     mul::{MachineWithMul32Chip, Mul32Chip, Mul32Instruction},
     //sub::{MachineWithSub32Chip, Sub32Chip, Sub32Instruction},
 };
-use valida_bus::{CpuMemBus, SharedCoprocessorBus};
+use valida_bus::{CpuMemBus, MachineWithGeneralBus, MachineWithMemBus, SharedCoprocessorBus};
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
     Load32Instruction, Store32Instruction,
@@ -56,18 +56,26 @@ pub struct BasicMachine {
     mem: MemoryChip<Fp>,
     #[chip]
     add_u32: Add32Chip<Fp>,
-    //#[chip]
-    //sub_u32: Sub32Chip<F>,
     #[chip]
     mul_u32: Mul32Chip<Fp>,
+    //#[chip]
+    //sub_u32: Sub32Chip<F>,
     //#[chip]
     //div_u32: Div32Chip<F>,
     //#[chip]
     //lt_u32: Lt32Chip<F>,
-    #[bus(cpu, mem)]
-    cpu_mem_bus: CpuMemBus,
-    #[bus(cpu, alu_u32)]
-    cpu_alu_u32_bus: SharedCoprocessorBus,
+}
+
+impl MachineWithGeneralBus for BasicMachine {
+    fn general_bus(&self) -> usize {
+        0
+    }
+}
+
+impl MachineWithMemBus for BasicMachine {
+    fn mem_bus(&self) -> usize {
+        1
+    }
 }
 
 impl MachineWithCpuChip for BasicMachine {
