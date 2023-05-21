@@ -5,6 +5,7 @@ use valida_machine::Word;
 use valida_util::indices_arr;
 
 #[derive(AlignedBorrow, Default)]
+#[repr(C)]
 pub struct MemoryCols<T> {
     /// Memory address
     pub addr: T,
@@ -31,10 +32,6 @@ pub struct MemoryCols<T> {
 
     pub counter: T,
 }
-
-pub const MEM_LOOKUPS: [(usize, usize, usize); 1] = [(MEM_COL_MAP.diff, MEM_COL_MAP.counter, 0)];
-pub const NUM_MEM_LOOKUPS: usize = 1;
-pub const NUM_RANDOM_ELEMENTS: usize = 1;
 
 pub const NUM_MEM_COLS: usize = size_of::<MemoryCols<u8>>();
 pub const MEM_COL_MAP: MemoryCols<usize> = make_col_map();

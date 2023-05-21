@@ -9,13 +9,8 @@ use p3_mersenne_31::Mersenne31 as Fp;
 const LOOKUP_DEGREE_BOUND: usize = 3;
 
 pub trait Chip<M: Machine> {
-    #[deprecated]
-    type F;
-    #[deprecated]
-    type FE;
-
     /// Generate the main trace for the chip given the provided machine.
-    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<Self::F>;
+    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F>;
 
     fn local_sends(&self) -> Vec<Interaction<M::F>> {
         vec![]
