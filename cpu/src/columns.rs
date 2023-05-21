@@ -4,6 +4,7 @@ use valida_derive::AlignedBorrow;
 use valida_machine::{Operands, Word, CPU_MEMORY_CHANNELS};
 use valida_util::indices_arr;
 
+#[repr(C)]
 #[derive(AlignedBorrow, Default)]
 pub struct CpuCols<T> {
     /// Clock cycle

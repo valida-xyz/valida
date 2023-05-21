@@ -1,18 +1,14 @@
-use crate::columns::{MemoryCols, MEM_LOOKUPS, NUM_MEM_LOOKUPS};
+use crate::columns::MemoryCols;
 use core::borrow::Borrow;
 use p3_air::{Air, AirBuilder, PermutationAirBuilder};
 use p3_field::AbstractField;
 use p3_matrix::Matrix;
-use valida_machine::{lookup::LogUp, LOOKUP_DEGREE_BOUND};
 
 pub struct MemoryStark {}
 
 impl<AB: PermutationAirBuilder> Air<AB> for MemoryStark {
     fn eval(&self, builder: &mut AB) {
         self.eval_main(builder);
-
-        // Build lookup constraints
-        LogUp::<NUM_MEM_LOOKUPS, LOOKUP_DEGREE_BOUND>::new(MEM_LOOKUPS).build_constraints(builder);
     }
 }
 

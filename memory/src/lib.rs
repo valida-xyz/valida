@@ -2,34 +2,34 @@
 
 extern crate alloc;
 
-use crate::columns::{MemoryCols, MEM_COL_MAP, MEM_LOOKUPS, NUM_MEM_COLS, NUM_MEM_LOOKUPS};
+use crate::columns::{MemoryCols, MEM_COL_MAP, NUM_MEM_COLS};
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use core::mem::transmute;
-use p3_field::{AbstractField, Field, PrimeField, PrimeField32, PrimeField64};
+use p3_field::{AbstractField, Field, PrimeField, PrimeField64};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_mersenne_31::Mersenne31 as Fp;
-use valida_machine::{lookup::LogUp, Chip, Machine, Word, LOOKUP_DEGREE_BOUND};
+use valida_machine::{Chip, Machine, Word};
 
 pub mod columns;
 mod stark;
 
 #[derive(Copy, Clone)]
-pub enum Operation {
-    Read(Fp, Word<Fp>),
-    Write(Fp, Word<Fp>),
-    DummyRead(Fp, Word<Fp>),
+pub enum Operation<F> {
+    Read(F, Word<F>),
+    Write(F, Word<F>),
+    DummyRead(F, Word<F>),
 }
 
-impl Operation {
-    pub fn get_address(&self) -> Fp {
+impl<F: Copy> Operation<F> {
+    pub fn get_address(&self) -> F {
         match self {
             Operation::Read(addr, _) => *addr,
             Operation::Write(addr, _) => *addr,
             Operation::DummyRead(addr, _) => *addr,
         }
     }
-    pub fn get_value(&self) -> Word<Fp> {
+    pub fn get_value(&self) -> Word<F> {
         match self {
             Operation::Read(_, value) => *value,
             Operation::Write(_, value) => *value,
@@ -39,17 +39,17 @@ impl Operation {
 }
 
 #[derive(Default)]
-pub struct MemoryChip {
-    pub cells: BTreeMap<Fp, Word<Fp>>,
-    pub operations: BTreeMap<Fp, Vec<Operation>>,
+pub struct MemoryChip<F> {
+    pub cells: BTreeMap<F, Word<F>>,
+    pub operations: BTreeMap<F, Vec<Operation<F>>>,
 }
 
 pub trait MachineWithMemoryChip: Machine {
-    fn mem(&self) -> &MemoryChip;
-    fn mem_mut(&mut self) -> &mut MemoryChip;
+    fn mem(&self) -> &MemoryChip<Self::F>;
+    fn mem_mut(&mut self) -> &mut MemoryChip<Self::F>;
 }
 
-impl MemoryChip {
+impl<F: PrimeField64> MemoryChip<F> {
     pub fn new() -> Self {
         Self {
             cells: BTreeMap::new(),
@@ -57,7 +57,7 @@ impl MemoryChip {
         }
     }
 
-    pub fn read<A: Into<Fp> + Copy>(&mut self, clk: Fp, address: A, log: bool) -> Word<Fp> {
+    pub fn read<A: Into<F> + Copy>(&mut self, clk: F, address: A, log: bool) -> Word<F> {
         let value = self.cells.get(&address.into()).copied().unwrap();
         if log {
             self.operations
@@ -68,7 +68,7 @@ impl MemoryChip {
         value
     }
 
-    pub fn write<V: Into<Word<Fp>> + Copy>(&mut self, clk: Fp, address: Fp, value: V, log: bool) {
+    pub fn write<V: Into<Word<F>> + Copy>(&mut self, clk: F, address: F, value: V, log: bool) {
         if log {
             self.operations
                 .entry(clk)
@@ -79,21 +79,19 @@ impl MemoryChip {
     }
 }
 
-impl<M> Chip<M> for MemoryChip
+impl<F, M> Chip<M> for MemoryChip<F>
 where
-    M: MachineWithMemoryChip,
+    F: PrimeField64,
+    M: MachineWithMemoryChip<F = F>,
 {
-    type F = Fp;
-    type FE = Fp; // FIXME
-
-    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<Self::F> {
+    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F> {
         let mut ops = self
             .operations
             .iter()
             .flat_map(|(clk, ops)| {
                 ops.iter()
                     .map(|op| (*clk, *op))
-                    .collect::<Vec<(Fp, Operation)>>()
+                    .collect::<Vec<(F, Operation<F>)>>()
             })
             .collect::<Vec<_>>();
 
@@ -107,7 +105,7 @@ where
         let mut rows = ops
             .into_iter()
             .enumerate()
-            .map(|(n, (clk, op))| self.op_to_row(n, clk.as_canonical_u64() as usize, op, machine))
+            .map(|(n, (clk, op))| self.op_to_row(n, clk.as_canonical_u64() as usize, op))
             .collect::<Vec<_>>();
 
         // Compute address difference values
@@ -115,30 +113,19 @@ where
 
         RowMajorMatrix::new(rows.concat(), NUM_MEM_COLS)
     }
-
-    fn generate_permutation_trace(
-        &self,
-        _machine: &M,
-        main_trace: RowMajorMatrix<Self::F>,
-        random_elements: Vec<Self::FE>,
-    ) -> RowMajorMatrix<Self::F> {
-        LogUp::<NUM_MEM_LOOKUPS, LOOKUP_DEGREE_BOUND>::new(MEM_LOOKUPS)
-            .build_trace(&main_trace, random_elements)
-    }
 }
 
-impl MemoryChip {
-    fn op_to_row<M>(&self, n: usize, clk: usize, op: Operation, _machine: &M) -> [Fp; NUM_MEM_COLS]
-    where
-        M: MachineWithMemoryChip,
-    {
-        let mut cols = MemoryCols::<Fp>::default();
-        cols.clk = Fp::from_canonical_usize(clk);
-        cols.counter = Fp::from_canonical_usize(n);
+impl<F: PrimeField64> MemoryChip<F> {
+    fn op_to_row(&self, n: usize, clk: usize, op: Operation<F>) -> [F; NUM_MEM_COLS] {
+        let mut row = [F::ZERO; NUM_MEM_COLS];
+        let mut cols: &mut MemoryCols<F> = unsafe { transmute(&mut row) };
+
+        cols.clk = F::from_canonical_usize(clk);
+        cols.counter = F::from_canonical_usize(n);
 
         match op {
             Operation::Read(addr, value) => {
-                cols.is_read = Fp::ONE;
+                cols.is_read = F::ONE;
                 cols.addr = addr;
                 cols.value = value;
             }
@@ -149,28 +136,27 @@ impl MemoryChip {
             Operation::DummyRead(addr, value) => {
                 cols.addr = addr;
                 cols.value = value;
-                cols.is_dummy = Fp::ONE;
+                cols.is_dummy = F::ONE;
             }
         }
 
-        let row: [Fp; NUM_MEM_COLS] = unsafe { transmute(cols) };
         row
     }
 
-    fn insert_dummy_reads(ops: &mut Vec<(Fp, Operation)>) {
+    fn insert_dummy_reads(ops: &mut Vec<(F, Operation<F>)>) {
         let table_len = ops.len() as u32;
         let mut dummy_ops = Vec::new();
         for (op1, op2) in ops.iter().zip(ops.iter().skip(1)) {
             let addr_diff = op2.1.get_address() - op1.1.get_address();
-            if addr_diff != Fp::ZERO {
+            if addr_diff != F::ZERO {
                 continue;
             }
-            let clk_diff = (op2.0 - op1.0).as_canonical_u32();
+            let clk_diff = (op2.0 - op1.0).as_canonical_u64() as u32;
             if clk_diff > table_len {
                 let num_dummy_ops = clk_diff / table_len;
                 for j in 0..num_dummy_ops {
                     let dummy_op_clk =
-                        op1.0 + Fp::from_canonical_u32(table_len) * Fp::from_canonical_u32(j + 1);
+                        op1.0 + F::from_canonical_u32(table_len) * F::from_canonical_u32(j + 1);
                     let dummy_op_addr = op1.1.get_address();
                     let dummy_op_value = op1.1.get_value();
                     dummy_ops.push((
@@ -195,15 +181,15 @@ impl MemoryChip {
         }
     }
 
-    fn compute_address_diffs(rows: &mut Vec<[Fp; NUM_MEM_COLS]>) {
+    fn compute_address_diffs(rows: &mut Vec<[F; NUM_MEM_COLS]>) {
         // TODO: Use batch inversion
         for n in 0..(rows.len() - 1) {
             let addr = rows[n][MEM_COL_MAP.addr];
             let addr_next = rows[n][MEM_COL_MAP.addr];
             rows[n][MEM_COL_MAP.diff] = addr_next - addr;
-            if (addr - addr_next) != Fp::ZERO {
+            if (addr - addr_next) != F::ZERO {
                 rows[n][MEM_COL_MAP.diff_inv] = (addr_next - addr).try_inverse().unwrap();
-                rows[n][MEM_COL_MAP.addr_not_equal] = Fp::ONE;
+                rows[n][MEM_COL_MAP.addr_not_equal] = F::ONE;
             }
         }
     }

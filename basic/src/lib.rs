@@ -2,8 +2,13 @@
 
 extern crate alloc;
 
-use valida_alu_u32::{ALU32Chip, MachineWithALU32Chip};
-use valida_alu_u32::{Add32Instruction, Mul32Instruction};
+use valida_alu_u32::{
+    add::{Add32Chip, Add32Instruction, MachineWithAdd32Chip},
+    //div::{Div32Instruction, MachineWithDiv32Chip},
+    //lt::{Lt32Instruction, MachineWithLt32Chip},
+    mul::{MachineWithMul32Chip, Mul32Chip, Mul32Instruction},
+    //sub::{MachineWithSub32Chip, Sub32Chip, Sub32Instruction},
+};
 use valida_bus::{CpuMemBus, SharedCoprocessorBus};
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
@@ -11,7 +16,7 @@ use valida_cpu::{
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
-use valida_machine::{Instruction, Machine, ProgramROM};
+use valida_machine::{Fp, Instruction, Machine, ProgramROM};
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 
 // TODO: Emit instruction members in the derive macro instead of manually including
@@ -35,18 +40,30 @@ pub struct BasicMachine {
     imm32: Imm32Instruction,
 
     // ALU instructions
-    #[instruction(alu_u32)]
+    #[instruction(add_u32)]
     add32: Add32Instruction,
-    #[instruction(alu_u32)]
+    //#[instruction(sub_u32)]
+    //sub32: Sub32Instruction,
+    #[instruction(mul_u32)]
     mul32: Mul32Instruction,
-
+    //#[instruction(div_u32)]
+    //div32: Div32Instruction,
+    //#[instruction(lt_u32)]
+    //lt32: LtInstruction,
     #[chip]
-    cpu: CpuChip,
+    cpu: CpuChip<Fp>,
     #[chip]
-    mem: MemoryChip,
+    mem: MemoryChip<Fp>,
     #[chip]
-    alu_u32: ALU32Chip,
-
+    add_u32: Add32Chip<Fp>,
+    //#[chip]
+    //sub_u32: Sub32Chip<F>,
+    #[chip]
+    mul_u32: Mul32Chip<Fp>,
+    //#[chip]
+    //div_u32: Div32Chip<F>,
+    //#[chip]
+    //lt_u32: Lt32Chip<F>,
     #[bus(cpu, mem)]
     cpu_mem_bus: CpuMemBus,
     #[bus(cpu, alu_u32)]
@@ -54,34 +71,74 @@ pub struct BasicMachine {
 }
 
 impl MachineWithCpuChip for BasicMachine {
-    fn cpu(&self) -> &CpuChip {
+    fn cpu(&self) -> &CpuChip<Fp> {
         &self.cpu
     }
 
-    fn cpu_mut(&mut self) -> &mut CpuChip {
+    fn cpu_mut(&mut self) -> &mut CpuChip<Fp> {
         &mut self.cpu
     }
 }
 
 impl MachineWithMemoryChip for BasicMachine {
-    fn mem(&self) -> &MemoryChip {
+    fn mem(&self) -> &MemoryChip<Fp> {
         &self.mem
     }
 
-    fn mem_mut(&mut self) -> &mut MemoryChip {
+    fn mem_mut(&mut self) -> &mut MemoryChip<Fp> {
         &mut self.mem
     }
 }
 
-impl MachineWithALU32Chip for BasicMachine {
-    fn alu_u32(&self) -> &ALU32Chip {
-        &self.alu_u32
+impl MachineWithAdd32Chip for BasicMachine {
+    fn add_u32(&self) -> &Add32Chip<Fp> {
+        &self.add_u32
     }
 
-    fn alu_u32_mut(&mut self) -> &mut ALU32Chip {
-        &mut self.alu_u32
+    fn add_u32_mut(&mut self) -> &mut Add32Chip<Fp> {
+        &mut self.add_u32
     }
 }
+
+//impl MachineWithSub32Chip for BasicMachine {
+//    fn sub_u32(&self) -> &Sub32Chip {
+//        &self.add_u32
+//    }
+//
+//    fn sub_u32_mut(&mut self) -> &mut Sub32Chip {
+//        &mut self.add_u32
+//    }
+//}
+
+impl MachineWithMul32Chip for BasicMachine {
+    fn mul_u32(&self) -> &Mul32Chip<Fp> {
+        &self.mul_u32
+    }
+
+    fn mul_u32_mut(&mut self) -> &mut Mul32Chip<Fp> {
+        &mut self.mul_u32
+    }
+}
+
+//impl MachineWithDiv32Chip for BasicMachine {
+//    fn div_u32(&self) -> &Div32Chip {
+//        &self.div_u32
+//    }
+//
+//    fn div_u32_mut(&mut self) -> &mut Div32Chip {
+//        &mut self.div_u32
+//    }
+//}
+
+//impl MachineWithLt32Chip for BasicMachine {
+//    fn lt_u32(&self) -> &Lt32Chip {
+//        &self.lt_u32
+//    }
+//
+//    fn lt_u32_mut(&mut self) -> &mut Lt32Chip {
+//        &mut self.lt_u32
+//    }
+//}
 
 #[cfg(test)]
 mod tests {
@@ -249,9 +306,10 @@ mod tests {
         let rom = ProgramROM::new(program);
         machine.run(rom);
 
+        assert_eq!(machine.cpu().clock, Fp::from_canonical_usize(191));
         assert_eq!(machine.cpu().operations.len(), 141);
         assert_eq!(machine.mem().operations.len(), 191);
-        assert_eq!(machine.alu_u32().operations.len(), 50);
+        assert_eq!(machine.add_u32().operations.len(), 50);
 
         assert_eq!(
             *machine.mem().cells.get(&Fp::from_canonical_u32(4)).unwrap(), // Return value

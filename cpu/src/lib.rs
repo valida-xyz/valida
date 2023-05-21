@@ -4,11 +4,12 @@ extern crate alloc;
 
 use crate::columns::{CpuCols, NUM_CPU_COLS};
 use alloc::vec::Vec;
+use core::borrow::BorrowMut;
 use core::mem::transmute;
 use valida_machine::{instructions, Chip, Instruction, Operands, Word};
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 
-use p3_field::{AbstractField, PrimeField};
+use p3_field::{AbstractField, PrimeField, PrimeField64};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_mersenne_31::Mersenne31 as Fp;
 
@@ -28,28 +29,26 @@ pub enum Operation {
 }
 
 #[derive(Default)]
-pub struct CpuChip {
-    pub clock: Fp,
-    pub pc: Fp,
-    pub fp: Fp,
-    pub registers: Vec<Registers>,
+pub struct CpuChip<F> {
+    pub clock: F,
+    pub pc: F,
+    pub fp: F,
+    pub registers: Vec<Registers<F>>,
     pub operations: Vec<Operation>,
 }
 
 #[derive(Default)]
-pub struct Registers {
-    pc: Fp,
-    fp: Fp,
+pub struct Registers<F> {
+    pc: F,
+    fp: F,
 }
 
-impl<M> Chip<M> for CpuChip
+impl<F, M> Chip<M> for CpuChip<F>
 where
-    M: MachineWithMemoryChip,
+    F: PrimeField64,
+    M: MachineWithMemoryChip<F = F>,
 {
-    type F = Fp;
-    type FE = Fp; // FIXME
-
-    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<Self::F> {
+    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
             .operations
             .iter()
@@ -59,27 +58,25 @@ where
             .collect::<Vec<_>>();
         RowMajorMatrix::new(rows.concat(), NUM_CPU_COLS)
     }
-
-    fn generate_permutation_trace(
-        &self,
-        machine: &M,
-        main_trace: RowMajorMatrix<Self::F>,
-        random_elements: Vec<Self::FE>,
-    ) -> RowMajorMatrix<Self::F> {
-        todo!()
-    }
 }
 
-impl CpuChip {
-    fn op_to_row<M>(&self, clk: usize, op: Operation, machine: &M) -> [Fp; NUM_CPU_COLS]
+impl<F: PrimeField64> CpuChip<F> {
+    fn op_to_row<M: MachineWithMemoryChip<F = F>>(
+        &self,
+        clk: usize,
+        op: Operation,
+        machine: &M,
+    ) -> [F; NUM_CPU_COLS]
     where
         M: MachineWithMemoryChip,
     {
-        let mut cols = CpuCols::default();
+        let mut row = [F::ZERO; NUM_CPU_COLS];
+        let mut cols: &mut CpuCols<F> = unsafe { transmute(&mut row) };
+
         cols.pc = self.registers[clk].pc;
         cols.fp = self.registers[clk].fp;
 
-        self.set_memory_trace_values(clk, &mut cols, machine);
+        self.set_memory_trace_values(clk, cols, machine);
 
         match op {
             Operation::Store32 => {}
@@ -87,28 +84,27 @@ impl CpuChip {
             Operation::Jal => {}
             Operation::Jalv => {}
             Operation::Beq => {
-                cols.opcode_flags.is_beq = Fp::ONE;
+                cols.opcode_flags.is_beq = F::ONE;
             }
             Operation::Bne => {}
             Operation::Imm32 => {
-                cols.opcode_flags.is_imm32 = Fp::ONE;
+                cols.opcode_flags.is_imm32 = F::ONE;
             }
             Operation::Bus(opcode) => {
-                cols.opcode_flags.is_bus_op = Fp::ONE;
-                cols.chip_channel.opcode = Fp::from_canonical_u32(opcode);
+                cols.opcode_flags.is_bus_op = F::ONE;
+                cols.chip_channel.opcode = F::from_canonical_u32(opcode);
                 // TODO: Set other chip channel fields in an additional trace pass,
                 // or read this information from the machine and set it here?
             }
         }
 
-        let row: [Fp; NUM_CPU_COLS] = unsafe { transmute(cols) };
         row
     }
 
-    fn set_memory_trace_values<M: MachineWithMemoryChip>(
+    fn set_memory_trace_values<M: MachineWithMemoryChip<F = F>>(
         &self,
         _clk: usize,
-        cols: &mut CpuCols<Fp>,
+        cols: &mut CpuCols<F>,
         machine: &M,
     ) {
         let memory = machine.mem();
@@ -118,18 +114,18 @@ impl CpuChip {
                 match op {
                     MemoryOperation::Read(addr, value) => {
                         if is_first_read {
-                            cols.mem_channels[0].used = Fp::ONE;
+                            cols.mem_channels[0].used = F::ONE;
                             cols.mem_channels[0].addr = *addr;
                             cols.mem_channels[0].value = *value;
                             is_first_read = false;
                         } else {
-                            cols.mem_channels[1].used = Fp::ONE;
+                            cols.mem_channels[1].used = F::ONE;
                             cols.mem_channels[1].addr = *addr;
                             cols.mem_channels[1].value = *value;
                         }
                     }
                     MemoryOperation::Write(addr, value) => {
-                        cols.mem_channels[2].used = Fp::ONE;
+                        cols.mem_channels[2].used = F::ONE;
                         cols.mem_channels[2].addr = *addr;
                         cols.mem_channels[2].value = *value;
                     }
@@ -141,8 +137,8 @@ impl CpuChip {
 }
 
 pub trait MachineWithCpuChip: MachineWithMemoryChip {
-    fn cpu(&self) -> &CpuChip;
-    fn cpu_mut(&mut self) -> &mut CpuChip;
+    fn cpu(&self) -> &CpuChip<Self::F>;
+    fn cpu_mut(&mut self) -> &mut CpuChip<Self::F>;
 }
 
 instructions!(
@@ -155,7 +151,7 @@ instructions!(
     Imm32Instruction
 );
 
-impl<M: MachineWithCpuChip> Instruction<M> for Load32Instruction {
+impl<M: MachineWithCpuChip<F = Fp>> Instruction<M> for Load32Instruction {
     const OPCODE: u32 = 1;
 
     fn execute(state: &mut M, ops: Operands<Fp>) {
@@ -172,7 +168,7 @@ impl<M: MachineWithCpuChip> Instruction<M> for Load32Instruction {
     }
 }
 
-impl<M: MachineWithCpuChip> Instruction<M> for Store32Instruction {
+impl<M: MachineWithCpuChip<F = Fp>> Instruction<M> for Store32Instruction {
     const OPCODE: u32 = 2;
 
     fn execute(state: &mut M, ops: Operands<Fp>) {
@@ -188,7 +184,7 @@ impl<M: MachineWithCpuChip> Instruction<M> for Store32Instruction {
     }
 }
 
-impl<M: MachineWithCpuChip> Instruction<M> for JalInstruction {
+impl<M: MachineWithCpuChip<F = Fp>> Instruction<M> for JalInstruction {
     const OPCODE: u32 = 3;
 
     fn execute(state: &mut M, ops: Operands<Fp>) {
@@ -207,7 +203,7 @@ impl<M: MachineWithCpuChip> Instruction<M> for JalInstruction {
     }
 }
 
-impl<M: MachineWithCpuChip> Instruction<M> for JalvInstruction {
+impl<M: MachineWithCpuChip<F = Fp>> Instruction<M> for JalvInstruction {
     const OPCODE: u32 = 4;
 
     fn execute(state: &mut M, ops: Operands<Fp>) {
@@ -229,7 +225,7 @@ impl<M: MachineWithCpuChip> Instruction<M> for JalvInstruction {
     }
 }
 
-impl<M: MachineWithCpuChip> Instruction<M> for BeqInstruction {
+impl<M: MachineWithCpuChip<F = Fp>> Instruction<M> for BeqInstruction {
     const OPCODE: u32 = 5;
 
     fn execute(state: &mut M, ops: Operands<Fp>) {
@@ -253,7 +249,7 @@ impl<M: MachineWithCpuChip> Instruction<M> for BeqInstruction {
     }
 }
 
-impl<M: MachineWithCpuChip> Instruction<M> for BneInstruction {
+impl<M: MachineWithCpuChip<F = Fp>> Instruction<M> for BneInstruction {
     const OPCODE: u32 = 6;
 
     fn execute(state: &mut M, ops: Operands<Fp>) {
@@ -277,7 +273,7 @@ impl<M: MachineWithCpuChip> Instruction<M> for BneInstruction {
     }
 }
 
-impl<M: MachineWithCpuChip> Instruction<M> for Imm32Instruction {
+impl<M: MachineWithCpuChip<F = Fp>> Instruction<M> for Imm32Instruction {
     const OPCODE: u32 = 7;
 
     fn execute(state: &mut M, ops: Operands<Fp>) {

@@ -5,8 +5,8 @@ extern crate alloc;
 extern crate self as valida_machine;
 
 use core::ops::{Index, IndexMut};
-pub use p3_field::{AbstractField, Field, PrimeField, PrimeField64};
-use p3_mersenne_31::Mersenne31 as Fp;
+pub use p3_field::{AbstractField, Field, PrimeField, PrimeField32, PrimeField64};
+pub use p3_mersenne_31::Mersenne31 as Fp;
 
 pub mod __internal;
 pub mod chip;
@@ -70,10 +70,30 @@ impl<F: PrimeField> Operands<F> {
     pub fn from_i32_slice(slice: &[i32]) -> Self {
         let mut operands = [F::ZERO; 5];
         for (i, &operand) in slice.iter().enumerate() {
-            let mut abs = F::from_canonical_u32(operand.abs() as u32);
+            let abs = F::from_canonical_u32(operand.abs() as u32);
             operands[i] = if operand < 0 { -abs } else { abs };
         }
         Self(operands)
+    }
+}
+
+impl From<Word<Fp>> for Fp {
+    fn from(word: Word<Fp>) -> Self {
+        let mut value = Fp::ZERO;
+        for i in 0..MEMORY_CELL_BYTES {
+            value = word.0[i] + value * Fp::from_canonical_u32(256);
+        }
+        value
+    }
+}
+
+impl Into<[u32; MEMORY_CELL_BYTES]> for Word<Fp> {
+    fn into(self) -> [u32; MEMORY_CELL_BYTES] {
+        let mut result = [0; MEMORY_CELL_BYTES];
+        for i in 0..MEMORY_CELL_BYTES {
+            result[i] = self.0[i].as_canonical_u32();
+        }
+        result
     }
 }
 
@@ -83,14 +103,15 @@ impl<F> From<[F; MEMORY_CELL_BYTES]> for Word<F> {
     }
 }
 
-impl From<Word<Fp>> for Fp {
-    fn from(word: Word<Fp>) -> Self {
-        let mut bytes = word.0;
-        let mut value = Fp::ZERO;
-        for i in 0..MEMORY_CELL_BYTES {
-            value = bytes[i] + value * Fp::from_canonical_u32(32);
-        }
-        value
+impl<F: Field> From<F> for Word<F> {
+    fn from(bytes: F) -> Self {
+        Self([F::ZERO, F::ZERO, F::ZERO, bytes])
+    }
+}
+
+impl<F> Into<[F; MEMORY_CELL_BYTES]> for Word<F> {
+    fn into(self) -> [F; MEMORY_CELL_BYTES] {
+        self.0
     }
 }
 
@@ -108,20 +129,7 @@ impl<T> IndexMut<usize> for Word<T> {
     }
 }
 
-impl<F: Field> From<F> for Word<F> {
-    fn from(bytes: F) -> Self {
-        Self([F::ZERO, F::ZERO, F::ZERO, bytes])
-    }
-}
-
-impl<F> IntoIterator for Word<F> {
-    type Item = F;
-    type IntoIter = core::array::IntoIter<F, MEMORY_CELL_BYTES>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
+impl<F> Eq for Word<F> where F: Field {}
 
 impl<F> PartialEq for Word<F>
 where
@@ -132,17 +140,12 @@ where
     }
 }
 
-impl<F> Eq for Word<F> where F: Field {}
+impl<F> IntoIterator for Word<F> {
+    type Item = F;
+    type IntoIter = core::array::IntoIter<F, MEMORY_CELL_BYTES>;
 
-impl<F> Into<u32> for Word<F> {
-    fn into(self) -> u32 {
-        todo!()
-    }
-}
-
-impl<F> Into<[F; MEMORY_CELL_BYTES]> for Word<F> {
-    fn into(self) -> [F; MEMORY_CELL_BYTES] {
-        self.0
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
