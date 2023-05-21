@@ -2,15 +2,20 @@
 
 extern crate alloc;
 
-use crate::columns::{CpuCols, NUM_CPU_COLS};
+use crate::columns::{CpuCols, CPU_COL_INDICES, NUM_CPU_COLS};
+use alloc::vec;
 use alloc::vec::Vec;
+use core::iter;
 use core::mem::transmute;
+use p3_air::VirtualPairCol;
 use valida_machine::{instructions, Chip, Instruction, Operands, Word};
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 
 use p3_field::{AbstractField, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_mersenne_31::Mersenne31 as Fp;
+use valida_bus::{MachineWithGeneralBus, MachineWithMemBus};
+use valida_machine::chip::Interaction;
 
 pub mod columns;
 mod stark;
@@ -44,7 +49,7 @@ pub struct Registers {
 
 impl<M> Chip<M> for CpuChip
 where
-    M: MachineWithMemoryChip,
+    M: MachineWithMemoryChip + MachineWithGeneralBus + MachineWithMemBus,
 {
     type F = Fp;
     type FE = Fp; // FIXME
@@ -60,13 +65,34 @@ where
         RowMajorMatrix::new(rows.concat(), NUM_CPU_COLS)
     }
 
-    fn generate_permutation_trace(
-        &self,
-        machine: &M,
-        main_trace: RowMajorMatrix<Self::F>,
-        random_elements: Vec<Self::FE>,
-    ) -> RowMajorMatrix<Self::F> {
-        todo!()
+    fn global_sends(&self, machine: &M) -> Vec<Interaction<M::F>> {
+        let mem_sends = (0..3).map(|i| {
+            let channel = &CPU_COL_INDICES.mem_channels[i];
+            let is_read = VirtualPairCol::single_main(channel.is_read);
+            let addr = VirtualPairCol::single_main(channel.addr);
+            let value = channel.value.0.map(VirtualPairCol::single_main);
+
+            let mut fields = vec![is_read, addr];
+            fields.extend(value);
+
+            Interaction {
+                fields,
+                count: VirtualPairCol::single_main(channel.used),
+                argument_index: machine.mem_bus(),
+            }
+        });
+
+        let send_general = Interaction {
+            fields: CPU_COL_INDICES
+                .chip_channel
+                .iter_flat()
+                .map(VirtualPairCol::single_main)
+                .collect(),
+            count: VirtualPairCol::single_main(CPU_COL_INDICES.opcode_flags.is_bus_op),
+            argument_index: machine.general_bus(),
+        };
+
+        mem_sends.chain(iter::once(send_general)).collect()
     }
 }
 

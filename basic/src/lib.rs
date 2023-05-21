@@ -4,7 +4,7 @@ extern crate alloc;
 
 use valida_alu_u32::{ALU32Chip, MachineWithALU32Chip};
 use valida_alu_u32::{Add32Instruction, Mul32Instruction};
-use valida_bus::{CpuMemBus, SharedCoprocessorBus};
+use valida_bus::{CpuMemBus, MachineWithGeneralBus, MachineWithMemBus, SharedCoprocessorBus};
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
     Load32Instruction, Store32Instruction,
@@ -46,11 +46,23 @@ pub struct BasicMachine {
     mem: MemoryChip,
     #[chip]
     alu_u32: ALU32Chip,
+    // TODO: Not needed with current Interactions API?
+    // #[bus(cpu, mem)]
+    // cpu_mem_bus: CpuMemBus,
+    // #[bus(cpu, alu_u32)]
+    // cpu_alu_u32_bus: SharedCoprocessorBus,
+}
 
-    #[bus(cpu, mem)]
-    cpu_mem_bus: CpuMemBus,
-    #[bus(cpu, alu_u32)]
-    cpu_alu_u32_bus: SharedCoprocessorBus,
+impl MachineWithGeneralBus for BasicMachine {
+    fn general_bus(&self) -> usize {
+        0
+    }
+}
+
+impl MachineWithMemBus for BasicMachine {
+    fn mem_bus(&self) -> usize {
+        1
+    }
 }
 
 impl MachineWithCpuChip for BasicMachine {
