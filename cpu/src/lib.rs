@@ -71,19 +71,27 @@ where
             let is_read = VirtualPairCol::single_main(channel.is_read);
             let addr = VirtualPairCol::single_main(channel.addr);
             let value = channel.value.0.map(|v| VirtualPairCol::single_main(v));
+
             let mut fields = vec![is_read, addr];
             fields.extend(value);
+
             Interaction {
                 fields,
                 count: VirtualPairCol::single_main(channel.used),
                 argument_index: machine.mem_bus(),
             }
         });
+
         let send_general = Interaction {
-            fields: vec![],
+            fields: CPU_COL_INDICES
+                .chip_channel
+                .iter_flat()
+                .map(VirtualPairCol::single_main)
+                .collect(),
             count: VirtualPairCol::single_main(CPU_COL_INDICES.opcode_flags.is_bus_op),
-            argument_index: 0,
+            argument_index: machine.general_bus(),
         };
+
         mem_sends.chain(iter::once(send_general)).collect()
     }
 }

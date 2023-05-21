@@ -1,4 +1,5 @@
 use core::borrow::{Borrow, BorrowMut};
+use core::iter;
 use core::mem::{size_of, transmute};
 use valida_derive::AlignedBorrow;
 use valida_machine::{Operands, Word, CPU_MEMORY_CHANNELS};
@@ -66,6 +67,15 @@ pub struct ChipChannelCols<T> {
     pub read_value_1: Word<T>,
     pub read_value_2: Word<T>,
     pub write_value: Word<T>,
+}
+
+impl<T: Copy> ChipChannelCols<T> {
+    pub(crate) fn iter_flat(&self) -> impl Iterator<Item = T> {
+        iter::once(self.opcode)
+            .chain(self.read_value_1.0.into_iter())
+            .chain(self.read_value_2.0.into_iter())
+            .chain(self.write_value.0.into_iter())
+    }
 }
 
 impl<T: Copy> CpuCols<T> {

@@ -46,11 +46,11 @@ pub struct BasicMachine {
     mem: MemoryChip,
     #[chip]
     alu_u32: ALU32Chip,
-
-    #[bus]
-    cpu_mem_bus: CpuMemBus,
-    #[bus]
-    cpu_alu_u32_bus: SharedCoprocessorBus,
+    // TODO: Not needed with current Interactions API?
+    // #[bus(cpu, mem)]
+    // cpu_mem_bus: CpuMemBus,
+    // #[bus(cpu, alu_u32)]
+    // cpu_alu_u32_bus: SharedCoprocessorBus,
 }
 
 impl MachineWithGeneralBus for BasicMachine {

@@ -129,7 +129,7 @@ where
         fields.extend(value);
 
         let receive = Interaction {
-            fields: vec![],
+            fields,
             count: VirtualPairCol::single_main(MEM_COL_MAP.is_real),
             argument_index: machine.mem_bus(),
         };
