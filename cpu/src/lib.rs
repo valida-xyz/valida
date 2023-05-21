@@ -70,7 +70,7 @@ where
             let channel = &CPU_COL_INDICES.mem_channels[i];
             let is_read = VirtualPairCol::single_main(channel.is_read);
             let addr = VirtualPairCol::single_main(channel.addr);
-            let value = channel.value.0.map(|v| VirtualPairCol::single_main(v));
+            let value = channel.value.0.map(VirtualPairCol::single_main);
 
             let mut fields = vec![is_read, addr];
             fields.extend(value);
