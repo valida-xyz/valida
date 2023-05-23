@@ -18,8 +18,8 @@ impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for ALU32Stark {
 
         // Limb weights modulo 2^32
         let mut base_m: [AB::Exp; 4] = unsafe { MaybeUninit::uninit().assume_init() };
-        for (i, b) in [1u32, 1 << 8, 1 << 16, 1 << 24].into_iter().enumerate() {
-            base_m[3 - i] = AB::Exp::from(AB::F::from_canonical_u32(b));
+        for (i, b) in [1 << 24, 1 << 16, 1 << 8, 1].into_iter().enumerate() {
+            base_m[i] = AB::Exp::from(AB::F::from_canonical_u32(b));
         }
 
         // Partially reduced summation of input product limbs (mod 2^32)
@@ -42,11 +42,14 @@ impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for ALU32Stark {
             .when_transition()
             .assert_eq(pi_prime - sigma_prime, local.s * base_m[1].clone());
 
-        // Range checks
+        // Range check counter
         builder
-            .when_transition()
-            .assert_eq(local.counter + AB::Exp::from(AB::F::ONE), next.counter);
-
+            .when_first_row()
+            .assert_eq(local.counter, AB::Exp::from(AB::F::ONE));
+        builder.when_transition().assert_zero(
+            (local.counter - next.counter)
+                * (local.counter + AB::Exp::from(AB::F::ONE) - next.counter),
+        );
         builder.when_last_row().assert_eq(
             local.counter,
             AB::Exp::from(AB::F::from_canonical_u32(1 << 10)),
