@@ -277,7 +277,7 @@ mod tests {
 
         assert_eq!(
             *machine.mem().cells.get(&Fp::from_canonical_u32(4)).unwrap(), // Return value
-            Word::from([
+            Word([
                 Fp::from_canonical_u8(0),
                 Fp::from_canonical_u8(1),
                 Fp::from_canonical_u8(37),

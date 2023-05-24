@@ -24,29 +24,22 @@ impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for Sub32Stark {
         let borrow_2 = sub_2.clone() - local.output[1];
         let borrow_3 = sub_3.clone() - local.output[0];
 
+        // if borrow_0:
+        //   input_1 - input_2 - output
+
         // First byte
+        builder.assert_zero(borrow_0.clone() * (base.clone() - sub_0 - local.output[3]));
         builder
-            .when_transition()
-            .assert_zero(borrow_0.clone() * (base.clone() - sub_0 - local.output[3]));
-        builder
-            .when_transition()
             .assert_zero(borrow_0 * (sub_1.clone() - local.output[2] - AB::Exp::from(AB::F::ONE)));
 
         // Second byte
+        builder.assert_zero(borrow_1.clone() * (base.clone() - sub_1 - local.output[2]));
         builder
-            .when_transition()
-            .assert_zero(borrow_1.clone() * (base.clone() - sub_1 - local.output[2]));
-        builder
-            .when_transition()
             .assert_zero(borrow_1 * (sub_2.clone() - local.output[1] - AB::Exp::from(AB::F::ONE)));
 
         // Third byte
-        builder
-            .when_transition()
-            .assert_zero(borrow_2.clone() * (base.clone() - sub_2 - local.output[1]));
-        builder
-            .when_transition()
-            .assert_zero(borrow_2 * (sub_3 - local.output[0] - AB::Exp::from(AB::F::ONE)));
+        builder.assert_zero(borrow_2.clone() * (base.clone() - sub_2 - local.output[1]));
+        builder.assert_zero(borrow_2 * (sub_3 - local.output[0] - AB::Exp::from(AB::F::ONE)));
 
         todo!()
     }

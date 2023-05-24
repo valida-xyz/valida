@@ -7,13 +7,13 @@ use alloc::collections::BTreeMap;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::mem::transmute;
-use p3_air::VirtualPairCol;
-use p3_field::{AbstractField, Field, PrimeField, PrimeField32, PrimeField64};
-use p3_matrix::dense::RowMajorMatrix;
-use p3_mersenne_31::Mersenne31 as Fp;
 use valida_bus::MachineWithMemBus;
 use valida_machine::chip::Interaction;
 use valida_machine::{Chip, Machine, Word};
+
+use p3_air::VirtualPairCol;
+use p3_field::{AbstractField, Field, PrimeField, PrimeField32, PrimeField64};
+use p3_matrix::dense::RowMajorMatrix;
 
 pub mod columns;
 mod stark;
@@ -53,7 +53,7 @@ pub trait MachineWithMemoryChip: Machine {
     fn mem_mut(&mut self) -> &mut MemoryChip<Self::F>;
 }
 
-impl<F: PrimeField64> MemoryChip<F> {
+impl<F: PrimeField> MemoryChip<F> {
     pub fn new() -> Self {
         Self {
             cells: BTreeMap::new(),
@@ -83,10 +83,9 @@ impl<F: PrimeField64> MemoryChip<F> {
     }
 }
 
-impl<F, M> Chip<M> for MemoryChip<F>
+impl<M> Chip<M> for MemoryChip<M::F>
 where
-    F: PrimeField64,
-    M: MachineWithMemoryChip<F = F> + MachineWithMemBus,
+    M: MachineWithMemoryChip + MachineWithMemBus,
 {
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F> {
         let mut ops = self
@@ -95,7 +94,7 @@ where
             .flat_map(|(clk, ops)| {
                 ops.iter()
                     .map(|op| (*clk, *op))
-                    .collect::<Vec<(F, Operation<F>)>>()
+                    .collect::<Vec<(M::F, Operation<M::F>)>>()
             })
             .collect::<Vec<_>>();
 
