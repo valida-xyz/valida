@@ -5,6 +5,7 @@ use p3_air::{Air, PermutationAirBuilder};
 use p3_field::PrimeField;
 use p3_matrix::Matrix;
 
+#[derive(Default)]
 pub struct Add32Stark {}
 
 impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for Add32Stark {

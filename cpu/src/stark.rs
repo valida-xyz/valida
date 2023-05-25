@@ -4,6 +4,7 @@ use p3_air::{Air, AirBuilder};
 use p3_field::AbstractField;
 use p3_matrix::Matrix;
 
+#[derive(Default)]
 pub struct CpuStark;
 
 impl<AB: AirBuilder> Air<AB> for CpuStark {

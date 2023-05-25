@@ -3,18 +3,18 @@
 extern crate alloc;
 
 use valida_alu_u32::{
-    add::{Add32Chip, Add32Instruction, MachineWithAdd32Chip},
-    mul::{MachineWithMul32Chip, Mul32Chip, Mul32Instruction},
+    add::{stark::Add32Stark, Add32Chip, Add32Instruction, MachineWithAdd32Chip},
+    mul::{stark::Mul32Stark, MachineWithMul32Chip, Mul32Chip, Mul32Instruction},
 };
 use valida_bus::{MachineWithGeneralBus, MachineWithMemBus};
 use valida_cpu::{
-    BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
-    Load32Instruction, Store32Instruction,
+    stark::CpuStark, BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction,
+    JalvInstruction, Load32Instruction, Store32Instruction,
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
-use valida_machine::{Instruction, Machine, ProgramROM};
-use valida_memory::{MachineWithMemoryChip, MemoryChip};
+use valida_machine::{Chip, Instruction, Machine, ProgramROM};
+use valida_memory::{stark::MemoryStark, MachineWithMemoryChip, MemoryChip};
 
 #[derive(Machine, Default)]
 pub struct BasicMachine {
@@ -40,13 +40,13 @@ pub struct BasicMachine {
     #[instruction(mul_u32)]
     mul32: Mul32Instruction,
 
-    #[chip]
+    #[chip(CpuStark)]
     cpu: CpuChip,
-    #[chip]
+    #[chip(MemoryStark)]
     mem: MemoryChip,
-    #[chip]
+    #[chip(Add32Stark)]
     add_u32: Add32Chip,
-    #[chip]
+    #[chip(Mul32Stark)]
     mul_u32: Mul32Chip,
 }
 
@@ -266,6 +266,7 @@ mod tests {
         let rom = ProgramROM::new(program);
         machine.cpu_mut().fp = 0x1000;
         machine.run(rom);
+        machine.prove();
 
         assert_eq!(machine.cpu().clock, 191);
         assert_eq!(machine.cpu().operations.len(), 141);

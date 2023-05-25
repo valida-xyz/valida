@@ -17,7 +17,7 @@ use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
 
 pub mod columns;
-mod stark;
+pub mod stark;
 
 #[derive(Copy, Clone)]
 pub enum Operation {

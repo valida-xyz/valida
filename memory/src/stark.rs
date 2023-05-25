@@ -4,6 +4,7 @@ use p3_air::{Air, AirBuilder, PermutationAirBuilder};
 use p3_field::AbstractField;
 use p3_matrix::Matrix;
 
+#[derive(Default)]
 pub struct MemoryStark {}
 
 impl<AB: PermutationAirBuilder> Air<AB> for MemoryStark {

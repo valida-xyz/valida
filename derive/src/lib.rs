@@ -3,7 +3,7 @@
 extern crate alloc;
 
 use alloc::format;
-use alloc::string::ToString;
+use alloc::string::{String, ToString};
 use alloc::vec;
 use alloc::vec::Vec;
 use proc_macro::TokenStream;
@@ -137,8 +137,38 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
 }
 
 fn prove_method(chips: &[&Field]) -> TokenStream2 {
+    let generate_trace = chips
+        .iter()
+        .map(|chip| {
+            let chip_name = chip.ident.as_ref().unwrap();
+            let chip_trace_name = Ident::new(&format!("{}_trace", chip_name), chip_name.span());
+            quote! {
+                let #chip_trace_name = self.#chip_name().generate_trace(self);
+            }
+        })
+        .collect::<TokenStream2>();
+    let prove_starks = chips
+        .iter()
+        .map(|chip| {
+            let chip_name = chip.ident.as_ref().unwrap();
+            let chip_trace_name = Ident::new(&format!("{}_trace", chip_name), chip_name.span());
+            let chip_stark: TokenStream2 =
+                remove_outer_parentheses(chip.attrs[0].tokens.clone().into())
+                    .unwrap()
+                    .into();
+            let chip_stark_name: TokenStream2 =
+                camel_to_snake_case(chip_stark.clone().into()).into();
+
+            quote! {
+                let #chip_stark_name = #chip_stark::default();
+                //::valida_machine::__internal::prove(&#chip_stark_name, #chip_trace_name);
+            }
+        })
+        .collect::<TokenStream2>();
     quote! {
         fn prove(&self) {
+            #generate_trace
+            #prove_starks
         }
     }
 }
@@ -177,4 +207,39 @@ pub fn aligned_borrow_derive(input: TokenStream) -> TokenStream {
         }
     };
     methods.into()
+}
+
+fn remove_outer_parentheses(ts: TokenStream) -> Option<TokenStream> {
+    let mut iter = ts.into_iter();
+    if let Some(proc_macro::TokenTree::Group(group)) = iter.next() {
+        if group.delimiter() == proc_macro::Delimiter::Parenthesis {
+            Some(group.stream())
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
+
+fn camel_to_snake_case(input: TokenStream) -> TokenStream {
+    let mut output = String::new();
+
+    if let Some(proc_macro::TokenTree::Ident(ident)) = input.into_iter().next() {
+        for (i, c) in ident.to_string().chars().enumerate() {
+            if c.is_uppercase() {
+                if i != 0 {
+                    output.push('_');
+                }
+                for lowercase in c.to_lowercase() {
+                    output.push(lowercase);
+                }
+            } else {
+                output.push(c);
+            }
+        }
+    }
+
+    let output_ident = quote::format_ident!("{}", output);
+    quote::quote! { #output_ident }.into()
 }

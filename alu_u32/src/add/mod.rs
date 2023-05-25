@@ -11,7 +11,7 @@ use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
 
 pub mod columns;
-mod stark;
+pub mod stark;
 
 #[derive(Clone)]
 pub enum Operation {
@@ -28,7 +28,7 @@ impl<M> Chip<M> for Add32Chip
 where
     M: MachineWithAdd32Chip,
 {
-    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F> {
+    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
             .operations
             .par_iter()
