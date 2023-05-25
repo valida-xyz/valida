@@ -161,7 +161,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
 
             quote! {
                 let #chip_stark_name = #chip_stark::default();
-                //::valida_machine::__internal::prove(&#chip_stark_name, #chip_trace_name);
+                ::valida_machine::__internal::prove(&#chip_stark_name, #chip_trace_name);
             }
         })
         .collect::<TokenStream2>();
