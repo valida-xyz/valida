@@ -1,8 +1,10 @@
 use crate::{Machine, Operands};
-use p3_air::VirtualPairCol;
-use p3_field::Field;
+use alloc::vec;
+use alloc::vec::Vec;
 
+use p3_air::VirtualPairCol;
 use p3_field::ExtensionField;
+use p3_field::Field;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_mersenne_31::Mersenne31 as Fp;
 

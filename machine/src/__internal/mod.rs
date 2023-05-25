@@ -1,11 +1,11 @@
 use crate::config::StarkConfig;
+use core::marker::PhantomData;
 use p3_air::Air;
 use p3_air::TwoRowMatrixView;
 use p3_field::Field;
 use p3_field::SymbolicField;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_mersenne_31::Mersenne31;
-use std::marker::PhantomData;
 
 pub type DefaultField = Mersenne31;
 

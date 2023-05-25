@@ -34,16 +34,6 @@ impl From<u32> for Word<u8> {
     }
 }
 
-impl From<Word<u32>> for Word<u8> {
-    fn from(word: Word<u32>) -> Self {
-        let mut new_word = Word::<u8>::default();
-        for i in 0..MEMORY_CELL_BYTES {
-            new_word[i] = word[i] as u8;
-        }
-        new_word
-    }
-}
-
 impl Add for Word<u8> {
     type Output = Self;
     fn add(self, other: Self) -> Self {
@@ -57,7 +47,10 @@ impl Add for Word<u8> {
 impl Sub for Word<u8> {
     type Output = Self;
     fn sub(self, other: Self) -> Self {
-        todo!()
+        let b: u32 = self.into();
+        let c: u32 = other.into();
+        let res = b - c;
+        res.into()
     }
 }
 

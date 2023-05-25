@@ -1,7 +1,7 @@
 use super::columns::Sub32Cols;
 use core::borrow::Borrow;
 
-use p3_air::{Air, AirBuilder, PermutationAirBuilder};
+use p3_air::{Air, PermutationAirBuilder};
 use p3_field::PrimeField;
 use p3_matrix::Matrix;
 
@@ -23,9 +23,6 @@ impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for Sub32Stark {
         let borrow_1 = sub_1.clone() - local.output[2];
         let borrow_2 = sub_2.clone() - local.output[1];
         let borrow_3 = sub_3.clone() - local.output[0];
-
-        // if borrow_0:
-        //   input_1 - input_2 - output
 
         // First byte
         builder.assert_zero(borrow_0.clone() * (base.clone() - sub_0 - local.output[3]));

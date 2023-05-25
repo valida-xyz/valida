@@ -8,6 +8,7 @@ use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Wor
 
 use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
+use p3_maybe_rayon::*;
 
 pub mod columns;
 mod stark;
@@ -30,7 +31,7 @@ where
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
             .operations
-            .iter()
+            .par_iter()
             .map(|op| self.op_to_row::<M::F, M>(op))
             .flatten()
             .collect::<Vec<_>>();
@@ -100,6 +101,5 @@ where
             .push(Operation::Add32(a, b, c));
         state.cpu_mut().clock += 1;
         state.cpu_mut().pc += 1;
-        // TODO: Set register log in the CPU as well
     }
 }

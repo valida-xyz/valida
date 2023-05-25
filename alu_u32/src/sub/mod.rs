@@ -4,11 +4,11 @@ use alloc::vec::Vec;
 use columns::{Sub32Cols, NUM_SUB_COLS};
 use core::mem::transmute;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Instruction, Operands, Word};
+use valida_machine::{instructions, Chip, Instruction, Operands, Word};
 
 use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
-use valida_machine::Chip;
+use p3_maybe_rayon::*;
 
 pub mod columns;
 mod stark;
@@ -31,7 +31,7 @@ where
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
             .operations
-            .iter()
+            .par_iter()
             .map(|op| self.op_to_row::<M::F, M>(op))
             .collect::<Vec<_>>();
         RowMajorMatrix::new(rows.concat(), NUM_SUB_COLS)
@@ -72,6 +72,25 @@ where
     const OPCODE: u32 = 8;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        todo!()
+        let clk = state.cpu().clock;
+        let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
+        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
+        let b = state.mem_mut().read(clk, read_addr_1, true);
+        let c = if ops.is_imm() == 1 {
+            (ops.c() as u32).into()
+        } else {
+            let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
+            state.mem_mut().read(clk, read_addr_2, true)
+        };
+
+        let a = b - c;
+        state.mem_mut().write(clk, write_addr, a, true);
+
+        state
+            .sub_u32_mut()
+            .operations
+            .push(Operation::Sub32(a, b, c));
+        state.cpu_mut().clock += 1;
+        state.cpu_mut().pc += 1;
     }
 }

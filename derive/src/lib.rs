@@ -138,7 +138,8 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
 
 fn prove_method(chips: &[&Field]) -> TokenStream2 {
     quote! {
-        fn prove(&self) {}
+        fn prove(&self) {
+        }
     }
 }
 

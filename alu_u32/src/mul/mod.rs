@@ -2,13 +2,14 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 use columns::{Mul32Cols, NUM_MUL_COLS};
+use core::marker::Sync;
 use core::mem::transmute;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Instruction, Interaction, Operands, Word};
+use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 
 use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
-use valida_machine::Chip;
+use p3_maybe_rayon::*;
 
 pub mod columns;
 mod stark;
@@ -26,12 +27,12 @@ pub struct Mul32Chip {
 
 impl<M> Chip<M> for Mul32Chip
 where
-    M: MachineWithMul32Chip,
+    M: MachineWithMul32Chip + Sync,
 {
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
             .operations
-            .iter()
+            .par_iter()
             .cloned()
             .map(|op| self.op_to_row(op, machine))
             .collect::<Vec<_>>();
@@ -94,7 +95,7 @@ where
         state
             .mul_u32_mut()
             .operations
-            .push(Operation::Mul32(a, Word::from(b), Word::from(c)));
+            .push(Operation::Mul32(a, b, c));
         state.cpu_mut().clock += 1;
         state.cpu_mut().pc += 1;
     }

@@ -14,6 +14,7 @@ use valida_machine::{Chip, Machine, Word};
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
+use p3_maybe_rayon::*;
 
 pub mod columns;
 mod stark;
@@ -106,7 +107,7 @@ where
         Self::insert_dummy_reads(&mut ops);
 
         let mut rows = ops
-            .into_iter()
+            .into_par_iter()
             .enumerate()
             .map(|(n, (clk, op))| self.op_to_row::<M::F, M>(n, clk as usize, op))
             .collect::<Vec<_>>();

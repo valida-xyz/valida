@@ -1,4 +1,6 @@
 use alloc::collections::BTreeMap;
+use alloc::vec;
+use alloc::vec::Vec;
 use itertools::Itertools;
 
 use p3_air::{AirBuilder, PermutationAirBuilder};

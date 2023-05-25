@@ -1,8 +1,11 @@
+#![no_std]
+
 // TODO: Convert memory from big endian to little endian
 
 extern crate alloc;
 extern crate self as valida_machine;
 
+use alloc::vec::Vec;
 pub use p3_field::{AbstractField, Field, PrimeField, PrimeField32, PrimeField64};
 
 pub mod __internal;

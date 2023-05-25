@@ -6,15 +6,16 @@ use crate::columns::{CpuCols, CPU_COL_INDICES, NUM_CPU_COLS};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::iter;
+use core::marker::Sync;
 use core::mem::transmute;
-use p3_air::VirtualPairCol;
-use valida_machine::{instructions, Chip, Instruction, Operands, Word};
+use valida_bus::{MachineWithGeneralBus, MachineWithMemBus};
+use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 
+use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
-use valida_bus::{MachineWithGeneralBus, MachineWithMemBus};
-use valida_machine::chip::Interaction;
+use p3_maybe_rayon::*;
 
 pub mod columns;
 mod stark;
@@ -48,15 +49,14 @@ pub struct Registers {
 
 impl<M> Chip<M> for CpuChip
 where
-    M: MachineWithMemoryChip + MachineWithGeneralBus + MachineWithMemBus,
+    M: MachineWithMemoryChip + MachineWithGeneralBus + MachineWithMemBus + Sync,
 {
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
             .operations
-            .iter()
-            .cloned()
+            .par_iter()
             .enumerate()
-            .map(|(n, op)| self.op_to_row(n, op, machine))
+            .map(|(n, op)| self.op_to_row(n, &op, machine))
             .collect::<Vec<_>>();
         RowMajorMatrix::new(rows.concat(), NUM_CPU_COLS)
     }
@@ -96,7 +96,7 @@ impl CpuChip {
     fn op_to_row<F: PrimeField, M: MachineWithMemoryChip<F = F>>(
         &self,
         clk: usize,
-        op: Operation,
+        op: &Operation,
         machine: &M,
     ) -> [F; NUM_CPU_COLS]
     where
@@ -124,7 +124,7 @@ impl CpuChip {
             }
             Operation::Bus(opcode) => {
                 cols.opcode_flags.is_bus_op = F::ONE;
-                cols.chip_channel.opcode = F::from_canonical_u32(opcode);
+                cols.chip_channel.opcode = F::from_canonical_u32(*opcode);
                 // TODO: Set other chip channel fields in an additional trace pass,
                 // or read this information from the machine and set it here?
             }

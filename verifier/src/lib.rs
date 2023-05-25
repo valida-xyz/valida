@@ -1,3 +1,5 @@
+#![no_std]
+
 // use valida_machine::config::Config;
 // use valida_machine::Machine;
 //
