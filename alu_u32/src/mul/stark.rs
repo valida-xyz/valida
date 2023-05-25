@@ -36,12 +36,8 @@ impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for Mul32Stark {
         let sigma_prime = sigma_m::<2, AB>(&base_m[..2], local.output);
 
         // Congruence checks
-        builder
-            .when_transition()
-            .assert_eq(pi - sigma, local.r * AB::Exp::from(AB::F::TWO));
-        builder
-            .when_transition()
-            .assert_eq(pi_prime - sigma_prime, local.s * base_m[1].clone());
+        builder.assert_eq(pi - sigma, local.r * AB::Exp::from(AB::F::TWO));
+        builder.assert_eq(pi_prime - sigma_prime, local.s * base_m[1].clone());
 
         // Range check counter
         builder

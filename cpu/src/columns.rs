@@ -48,6 +48,8 @@ pub struct InstructionCols<F> {
 pub struct OpcodeFlagCols<T> {
     pub is_imm32: T,
     pub is_bus_op: T,
+    pub is_load: T,
+    pub is_store: T,
     pub is_beq: T,
     pub is_bne: T,
     pub is_jal: T,
