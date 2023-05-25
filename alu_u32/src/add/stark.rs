@@ -24,6 +24,6 @@ impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for Add32Stark {
         builder.assert_zero(carry_2.clone() * (base.clone() + carry_2.clone()));
         builder.assert_zero(carry_3.clone() * (base.clone() + carry_3.clone()));
 
-        // TODO: Range check input_1, input_2, and output ([0,256]) in local interactions
+        // TODO: Range check output ([0,256]) using preprocessed lookup table
     }
 }

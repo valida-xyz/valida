@@ -6,17 +6,15 @@ use valida_alu_u32::{
     add::{Add32Chip, Add32Instruction, MachineWithAdd32Chip},
     mul::{MachineWithMul32Chip, Mul32Chip, Mul32Instruction},
 };
-use valida_bus::{CpuMemBus, MachineWithGeneralBus, MachineWithMemBus, SharedCoprocessorBus};
+use valida_bus::{MachineWithGeneralBus, MachineWithMemBus};
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
     Load32Instruction, Store32Instruction,
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
-use valida_machine::{Fp, Instruction, Machine, ProgramROM};
+use valida_machine::{Instruction, Machine, ProgramROM};
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
-
-// TODO: Emit instruction members in the derive macro instead of manually including
 
 #[derive(Machine, Default)]
 pub struct BasicMachine {
@@ -43,13 +41,13 @@ pub struct BasicMachine {
     mul32: Mul32Instruction,
 
     #[chip]
-    cpu: CpuChip<Fp>,
+    cpu: CpuChip,
     #[chip]
-    mem: MemoryChip<Fp>,
+    mem: MemoryChip,
     #[chip]
-    add_u32: Add32Chip<Fp>,
+    add_u32: Add32Chip,
     #[chip]
-    mul_u32: Mul32Chip<Fp>,
+    mul_u32: Mul32Chip,
 }
 
 impl MachineWithGeneralBus for BasicMachine {
@@ -65,41 +63,41 @@ impl MachineWithMemBus for BasicMachine {
 }
 
 impl MachineWithCpuChip for BasicMachine {
-    fn cpu(&self) -> &CpuChip<Fp> {
+    fn cpu(&self) -> &CpuChip {
         &self.cpu
     }
 
-    fn cpu_mut(&mut self) -> &mut CpuChip<Fp> {
+    fn cpu_mut(&mut self) -> &mut CpuChip {
         &mut self.cpu
     }
 }
 
 impl MachineWithMemoryChip for BasicMachine {
-    fn mem(&self) -> &MemoryChip<Fp> {
+    fn mem(&self) -> &MemoryChip {
         &self.mem
     }
 
-    fn mem_mut(&mut self) -> &mut MemoryChip<Fp> {
+    fn mem_mut(&mut self) -> &mut MemoryChip {
         &mut self.mem
     }
 }
 
 impl MachineWithAdd32Chip for BasicMachine {
-    fn add_u32(&self) -> &Add32Chip<Fp> {
+    fn add_u32(&self) -> &Add32Chip {
         &self.add_u32
     }
 
-    fn add_u32_mut(&mut self) -> &mut Add32Chip<Fp> {
+    fn add_u32_mut(&mut self) -> &mut Add32Chip {
         &mut self.add_u32
     }
 }
 
 impl MachineWithMul32Chip for BasicMachine {
-    fn mul_u32(&self) -> &Mul32Chip<Fp> {
+    fn mul_u32(&self) -> &Mul32Chip {
         &self.mul_u32
     }
 
-    fn mul_u32_mut(&mut self) -> &mut Mul32Chip<Fp> {
+    fn mul_u32_mut(&mut self) -> &mut Mul32Chip {
         &mut self.mul_u32
     }
 }
@@ -108,8 +106,6 @@ impl MachineWithMul32Chip for BasicMachine {
 mod tests {
     use super::*;
     use alloc::vec;
-    use p3_field::PrimeField;
-    use p3_mersenne_31::Mersenne31 as Fp;
     use valida_machine::Operands;
     use valida_machine::{InstructionWord, Word};
 
@@ -138,31 +134,31 @@ mod tests {
         program.extend([
             InstructionWord {
                 opcode: <Imm32Instruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[-4, 0, 0, 0, 0]),
+                operands: Operands([-4, 0, 0, 0, 0]),
             },
             InstructionWord {
                 opcode: <Imm32Instruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[-8, 0, 0, 0, 25]),
+                operands: Operands([-8, 0, 0, 0, 25]),
             },
             InstructionWord {
                 opcode: <Store32Instruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[0, -16, -8, 0, 0]),
+                operands: Operands([0, -16, -8, 0, 0]),
             },
             InstructionWord {
                 opcode: <Imm32Instruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[-20, 0, 0, 0, 28]),
+                operands: Operands([-20, 0, 0, 0, 28]),
             },
             InstructionWord {
                 opcode: <JalInstruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[-28, fib_bb0, -28, 0, 0]),
+                operands: Operands([-28, fib_bb0, -28, 0, 0]),
             },
             InstructionWord {
                 opcode: <Store32Instruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[0, -12, -24, 0, 0]),
+                operands: Operands([0, -12, -24, 0, 0]),
             },
             InstructionWord {
                 opcode: <Store32Instruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[0, 4, -12, 0, 0]),
+                operands: Operands([0, 4, -12, 0, 0]),
             },
             InstructionWord {
                 opcode: 0,
@@ -180,23 +176,23 @@ mod tests {
         program.extend([
             InstructionWord {
                 opcode: <Store32Instruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[0, -4, 12, 0, 0]),
+                operands: Operands([0, -4, 12, 0, 0]),
             },
             InstructionWord {
                 opcode: <Imm32Instruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[-8, 0, 0, 0, 0]),
+                operands: Operands([-8, 0, 0, 0, 0]),
             },
             InstructionWord {
                 opcode: <Imm32Instruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[-12, 0, 0, 0, 1]),
+                operands: Operands([-12, 0, 0, 0, 1]),
             },
             InstructionWord {
                 opcode: <Imm32Instruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[-16, 0, 0, 0, 0]),
+                operands: Operands([-16, 0, 0, 0, 0]),
             },
             InstructionWord {
                 opcode: <BeqInstruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[fib_bb0_1, 0, 0, 0, 0]),
+                operands: Operands([fib_bb0_1, 0, 0, 0, 0]),
             },
         ]);
 
@@ -206,11 +202,11 @@ mod tests {
         program.extend([
             InstructionWord {
                 opcode: <BneInstruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[fib_bb0_2, -16, -4, 0, 0]),
+                operands: Operands([fib_bb0_2, -16, -4, 0, 0]),
             },
             InstructionWord {
                 opcode: <BeqInstruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[fib_bb0_4, 0, 0, 0, 0]),
+                operands: Operands([fib_bb0_4, 0, 0, 0, 0]),
             },
         ]);
 
@@ -222,19 +218,19 @@ mod tests {
         program.extend([
             InstructionWord {
                 opcode: <Add32Instruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[-20, -8, -12, 0, 0]),
+                operands: Operands([-20, -8, -12, 0, 0]),
             },
             InstructionWord {
                 opcode: <Store32Instruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[0, -8, -12, 0, 0]),
+                operands: Operands([0, -8, -12, 0, 0]),
             },
             InstructionWord {
                 opcode: <Store32Instruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[0, -12, -20, 0, 0]),
+                operands: Operands([0, -12, -20, 0, 0]),
             },
             InstructionWord {
                 opcode: <BeqInstruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[fib_bb0_3, 0, 0, 0, 0]),
+                operands: Operands([fib_bb0_3, 0, 0, 0, 0]),
             },
         ]);
 
@@ -244,11 +240,11 @@ mod tests {
         program.extend([
             InstructionWord {
                 opcode: <Add32Instruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[-16, -16, 1, 0, 1]),
+                operands: Operands([-16, -16, 1, 0, 1]),
             },
             InstructionWord {
                 opcode: <BeqInstruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[fib_bb0_1, 0, 0, 0, 0]),
+                operands: Operands([fib_bb0_1, 0, 0, 0, 0]),
             },
         ]);
 
@@ -258,31 +254,27 @@ mod tests {
         program.extend([
             InstructionWord {
                 opcode: <Store32Instruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[0, 4, -8, 0, 0]),
+                operands: Operands([0, 4, -8, 0, 0]),
             },
             InstructionWord {
                 opcode: <JalvInstruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[-4, 0, 8, 0, 0]),
+                operands: Operands([-4, 0, 8, 0, 0]),
             },
         ]);
 
         let mut machine = BasicMachine::default();
         let rom = ProgramROM::new(program);
+        machine.cpu_mut().fp = 0x1000;
         machine.run(rom);
 
-        assert_eq!(machine.cpu().clock, Fp::from_canonical_usize(191));
+        assert_eq!(machine.cpu().clock, 191);
         assert_eq!(machine.cpu().operations.len(), 141);
         assert_eq!(machine.mem().operations.len(), 191);
         assert_eq!(machine.add_u32().operations.len(), 50);
 
         assert_eq!(
-            *machine.mem().cells.get(&Fp::from_canonical_u32(4)).unwrap(), // Return value
-            Word([
-                Fp::from_canonical_u8(0),
-                Fp::from_canonical_u8(1),
-                Fp::from_canonical_u8(37),
-                Fp::from_canonical_u8(17)
-            ])  // 25th fibonacci number (75025)
+            *machine.mem().cells.get(&(0x1000 + 4)).unwrap(), // Return value
+            Word([0, 1, 37, 17,])                             // 25th fibonacci number (75025)
         );
     }
 
@@ -291,11 +283,11 @@ mod tests {
         let program = vec![
             InstructionWord {
                 opcode: <Imm32Instruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::<Fp>::from_i32_slice(&[-4, 0, 0, 0, 42]),
+                operands: Operands([-4, 0, 0, 0, 42]),
             },
             InstructionWord {
                 opcode: <Store32Instruction as Instruction<BasicMachine>>::OPCODE,
-                operands: Operands::from_i32_slice(&[0, -8, -4, 0, 0]),
+                operands: Operands([0, -8, -4, 0, 0]),
             },
             InstructionWord {
                 opcode: 0,
@@ -305,26 +297,19 @@ mod tests {
 
         let mut machine = BasicMachine::default();
         let rom = ProgramROM::new(program);
+        machine.cpu_mut().fp = 0x1000;
         machine.run(rom);
 
-        assert_eq!(machine.cpu().pc, Fp::from_canonical_u32(2));
-        assert_eq!(machine.cpu().fp, Fp::from_canonical_u32(0));
-        assert_eq!(machine.cpu().clock, Fp::from_canonical_u32(2));
+        assert_eq!(machine.cpu().pc, 2);
+        assert_eq!(machine.cpu().fp, 0x1000);
+        assert_eq!(machine.cpu().clock, 2);
         assert_eq!(
-            *machine
-                .mem()
-                .cells
-                .get(&-Fp::from_canonical_u32(4))
-                .unwrap(),
-            Word::from(Fp::from_canonical_u32(42))
+            *machine.mem().cells.get(&(0x1000 - 4)).unwrap(),
+            Word([0, 0, 0, 42])
         );
         assert_eq!(
-            *machine
-                .mem()
-                .cells
-                .get(&-Fp::from_canonical_u32(8))
-                .unwrap(),
-            Word::from(Fp::from_canonical_u32(42))
+            *machine.mem().cells.get(&(0x1000 - 8)).unwrap(),
+            Word([0, 0, 0, 42])
         );
     }
 }

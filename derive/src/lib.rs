@@ -113,7 +113,7 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
         .collect::<TokenStream2>();
 
     quote! {
-        fn run(&mut self, program: ProgramROM<Self::F>) {
+        fn run(&mut self, program: ProgramROM<i32>) {
             loop {
                 // Fetch
                 let pc = self.cpu().pc;

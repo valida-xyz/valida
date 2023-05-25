@@ -1,11 +1,9 @@
-#![feature(generic_const_exprs)]
+// TODO: Convert memory from big endian to little endian
 
 extern crate alloc;
-
 extern crate self as valida_machine;
 
 pub use p3_field::{AbstractField, Field, PrimeField, PrimeField32, PrimeField64};
-pub use p3_mersenne_31::Mersenne31 as Fp;
 
 pub mod __internal;
 pub mod chip;
@@ -30,18 +28,18 @@ pub struct InstructionWord<F> {
 
 pub struct ProgramROM<F>(Vec<InstructionWord<F>>);
 
-impl<F: PrimeField64> ProgramROM<F> {
+impl<F> ProgramROM<F> {
     pub fn new(instructions: Vec<InstructionWord<F>>) -> Self {
         Self(instructions)
     }
 
-    pub fn get_instruction(&self, pc: F) -> &InstructionWord<F> {
-        &self.0[pc.as_canonical_u64() as usize]
+    pub fn get_instruction(&self, pc: u32) -> &InstructionWord<F> {
+        &self.0[pc as usize]
     }
 }
 
 #[derive(Copy, Clone, Default)]
-pub struct Operands<F>([F; 5]);
+pub struct Operands<F>(pub [F; 5]);
 
 impl<F: Copy> Operands<F> {
     pub fn a(&self) -> F {
@@ -77,7 +75,7 @@ impl<F: PrimeField> Operands<F> {
 
 pub trait Machine {
     type F: PrimeField64;
-    fn run(&mut self, program: ProgramROM<Self::F>);
+    fn run(&mut self, program: ProgramROM<i32>);
     fn prove(&self);
     fn verify();
 }

@@ -11,7 +11,7 @@ use p3_air::VirtualPairCol;
 use valida_machine::{instructions, Chip, Instruction, Operands, Word};
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 
-use p3_field::{AbstractField, PrimeField, PrimeField64};
+use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
 use valida_bus::{MachineWithGeneralBus, MachineWithMemBus};
 use valida_machine::chip::Interaction;
@@ -20,7 +20,7 @@ pub mod columns;
 mod stark;
 
 #[derive(Clone)]
-pub enum Operation<F> {
+pub enum Operation {
     Store32,
     Load32,
     Jal,
@@ -28,25 +28,25 @@ pub enum Operation<F> {
     Beq,
     Bne,
     Imm32,
-    Bus(F),
+    Bus(u32),
 }
 
 #[derive(Default)]
-pub struct CpuChip<F> {
-    pub clock: F,
-    pub pc: F,
-    pub fp: F,
-    pub registers: Vec<Registers<F>>,
-    pub operations: Vec<Operation<F>>,
+pub struct CpuChip {
+    pub clock: u32,
+    pub pc: u32,
+    pub fp: u32,
+    pub registers: Vec<Registers>,
+    pub operations: Vec<Operation>,
 }
 
 #[derive(Default)]
-pub struct Registers<F> {
-    pc: F,
-    fp: F,
+pub struct Registers {
+    pc: u32,
+    fp: u32,
 }
 
-impl<M> Chip<M> for CpuChip<M::F>
+impl<M> Chip<M> for CpuChip
 where
     M: MachineWithMemoryChip + MachineWithGeneralBus + MachineWithMemBus,
 {
@@ -92,11 +92,11 @@ where
     }
 }
 
-impl<F: PrimeField> CpuChip<F> {
-    fn op_to_row<M: MachineWithMemoryChip<F = F>>(
+impl CpuChip {
+    fn op_to_row<F: PrimeField, M: MachineWithMemoryChip<F = F>>(
         &self,
         clk: usize,
-        op: Operation<F>,
+        op: Operation,
         machine: &M,
     ) -> [F; NUM_CPU_COLS]
     where
@@ -105,8 +105,8 @@ impl<F: PrimeField> CpuChip<F> {
         let mut row = [F::ZERO; NUM_CPU_COLS];
         let mut cols: &mut CpuCols<F> = unsafe { transmute(&mut row) };
 
-        cols.pc = self.registers[clk].pc;
-        cols.fp = self.registers[clk].fp;
+        cols.pc = F::from_canonical_u32(self.registers[clk].pc);
+        cols.fp = F::from_canonical_u32(self.registers[clk].fp);
 
         self.set_memory_trace_values(clk, cols, machine);
 
@@ -124,7 +124,7 @@ impl<F: PrimeField> CpuChip<F> {
             }
             Operation::Bus(opcode) => {
                 cols.opcode_flags.is_bus_op = F::ONE;
-                cols.chip_channel.opcode = opcode;
+                cols.chip_channel.opcode = F::from_canonical_u32(opcode);
                 // TODO: Set other chip channel fields in an additional trace pass,
                 // or read this information from the machine and set it here?
             }
@@ -133,7 +133,7 @@ impl<F: PrimeField> CpuChip<F> {
         row
     }
 
-    fn set_memory_trace_values<M: MachineWithMemoryChip<F = F>>(
+    fn set_memory_trace_values<F: PrimeField, M: MachineWithMemoryChip<F = F>>(
         &self,
         _clk: usize,
         cols: &mut CpuCols<F>,
@@ -147,19 +147,19 @@ impl<F: PrimeField> CpuChip<F> {
                     MemoryOperation::Read(addr, value) => {
                         if is_first_read {
                             cols.mem_channels[0].used = F::ONE;
-                            cols.mem_channels[0].addr = *addr;
-                            cols.mem_channels[0].value = *value;
+                            cols.mem_channels[0].addr = F::from_canonical_u32(*addr);
+                            cols.mem_channels[0].value = value.to_field();
                             is_first_read = false;
                         } else {
                             cols.mem_channels[1].used = F::ONE;
-                            cols.mem_channels[1].addr = *addr;
-                            cols.mem_channels[1].value = *value;
+                            cols.mem_channels[1].addr = F::from_canonical_u32(*addr);
+                            cols.mem_channels[1].value = value.to_field();
                         }
                     }
                     MemoryOperation::Write(addr, value) => {
                         cols.mem_channels[2].used = F::ONE;
-                        cols.mem_channels[2].addr = *addr;
-                        cols.mem_channels[2].value = *value;
+                        cols.mem_channels[2].addr = F::from_canonical_u32(*addr);
+                        cols.mem_channels[2].value = value.to_field();
                     }
                     _ => {}
                 }
@@ -169,8 +169,8 @@ impl<F: PrimeField> CpuChip<F> {
 }
 
 pub trait MachineWithCpuChip: MachineWithMemoryChip {
-    fn cpu(&self) -> &CpuChip<Self::F>;
-    fn cpu_mut(&mut self) -> &mut CpuChip<Self::F>;
+    fn cpu(&self) -> &CpuChip;
+    fn cpu_mut(&mut self) -> &mut CpuChip;
 }
 
 instructions!(
@@ -183,166 +183,159 @@ instructions!(
     Imm32Instruction
 );
 
-impl<F, M> Instruction<M> for Load32Instruction
+impl<M> Instruction<M> for Load32Instruction
 where
-    F: PrimeField,
-    M: MachineWithCpuChip<F = F>,
+    M: MachineWithCpuChip,
 {
     const OPCODE: u32 = 1;
 
-    fn execute(state: &mut M, ops: Operands<F>) {
+    fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
-        let read_addr_1 = state.cpu().fp + ops.c();
+        let read_addr_1 = (state.cpu().fp as i32 + ops.c()) as u32;
         let read_addr_2 = state.mem_mut().read(clk, read_addr_1, true);
-        let write_addr = state.cpu().fp + ops.a();
-        let cell = state.mem_mut().read(clk, read_addr_2.to_value(), true);
+        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
+        let cell = state.mem_mut().read(clk, read_addr_2.into(), true);
         state.mem_mut().write(clk, write_addr, cell, true);
-        state.cpu_mut().pc += F::ONE;
-        state.cpu_mut().clock += F::ONE;
+        state.cpu_mut().pc += 1;
+        state.cpu_mut().clock += 1;
         state.cpu_mut().operations.push(Operation::Load32);
         set_pc_and_fp(state);
     }
 }
 
-impl<F, M> Instruction<M> for Store32Instruction
+impl<M> Instruction<M> for Store32Instruction
 where
-    F: PrimeField,
-    M: MachineWithCpuChip<F = F>,
+    M: MachineWithCpuChip,
 {
     const OPCODE: u32 = 2;
 
-    fn execute(state: &mut M, ops: Operands<F>) {
+    fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
-        let read_addr = state.cpu().fp + ops.c();
-        let write_addr = state.cpu().fp + ops.b();
+        let read_addr = (state.cpu().fp as i32 + ops.c()) as u32;
+        let write_addr = (state.cpu().fp as i32 + ops.b()) as u32;
         let cell = state.mem_mut().read(clk, read_addr, true);
         state.mem_mut().write(clk, write_addr, cell, true);
-        state.cpu_mut().pc += F::ONE;
-        state.cpu_mut().clock += F::ONE;
+        state.cpu_mut().pc += 1;
+        state.cpu_mut().clock += 1;
         state.cpu_mut().operations.push(Operation::Store32);
         set_pc_and_fp(state);
     }
 }
 
-impl<F, M> Instruction<M> for JalInstruction
+impl<M> Instruction<M> for JalInstruction
 where
-    F: PrimeField,
-    M: MachineWithCpuChip<F = F>,
+    M: MachineWithCpuChip,
 {
     const OPCODE: u32 = 3;
 
-    fn execute(state: &mut M, ops: Operands<F>) {
+    fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
         // Store pc + 1 to local stack variable at offset a
-        let write_addr = state.cpu().fp + ops.a();
-        let next_pc = state.cpu().pc + F::ONE;
-        state.mem_mut().write(clk, write_addr, next_pc, true);
+        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
+        let next_pc = state.cpu().pc + 1;
+        state.mem_mut().write(clk, write_addr, next_pc.into(), true);
         // Set pc to the field element b
-        state.cpu_mut().pc = ops.b();
+        state.cpu_mut().pc = ops.b() as u32;
         // Set fp to fp + c
-        state.cpu_mut().fp += ops.c();
-        state.cpu_mut().clock += F::ONE;
+        state.cpu_mut().fp = (state.cpu().fp as i32 + ops.c()) as u32;
+        state.cpu_mut().clock += 1;
         state.cpu_mut().operations.push(Operation::Jal);
         set_pc_and_fp(state);
     }
 }
 
-impl<F, M> Instruction<M> for JalvInstruction
+impl<M> Instruction<M> for JalvInstruction
 where
-    F: PrimeField,
-    M: MachineWithCpuChip<F = F>,
+    M: MachineWithCpuChip,
 {
     const OPCODE: u32 = 4;
 
-    fn execute(state: &mut M, ops: Operands<F>) {
+    fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
         // Store pc + 1 to local stack variable at offset a
-        let write_addr = state.cpu().fp + ops.a();
-        let next_pc = state.cpu().pc + F::ONE;
-        state.mem_mut().write(clk, write_addr, next_pc, true);
+        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
+        let next_pc = state.cpu().pc + 1;
+        state.mem_mut().write(clk, write_addr, next_pc.into(), true);
         // Set pc to the field element [b]
-        let read_addr = state.cpu().fp + ops.b();
-        state.cpu_mut().pc = state.mem_mut().read(clk, read_addr, true).to_value();
+        let read_addr = (state.cpu().fp as i32 + ops.b()) as u32;
+        state.cpu_mut().pc = state.mem_mut().read(clk, read_addr, true).into();
         // Set fp to [c]
-        let read_addr = state.cpu().fp + ops.c();
-        let cell = state.mem_mut().read(clk, read_addr, true).to_value();
+        let read_addr = (state.cpu().fp as i32 + ops.c()) as u32;
+        let cell: u32 = state.mem_mut().read(clk, read_addr, true).into();
         state.cpu_mut().fp += cell;
-        state.cpu_mut().clock += F::ONE;
+        state.cpu_mut().clock += 1;
         state.cpu_mut().operations.push(Operation::Jalv);
         set_pc_and_fp(state);
     }
 }
 
-impl<F, M> Instruction<M> for BeqInstruction
+impl<M> Instruction<M> for BeqInstruction
 where
-    F: PrimeField,
-    M: MachineWithCpuChip<F = F>,
+    M: MachineWithCpuChip,
 {
     const OPCODE: u32 = 5;
 
-    fn execute(state: &mut M, ops: Operands<F>) {
+    fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
-        let read_addr_1 = state.cpu().fp + ops.b();
+        let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let cell_1 = state.mem_mut().read(clk, read_addr_1, true);
-        let cell_2 = if ops.is_imm() == F::ONE {
-            ops.c().into()
+        let cell_2 = if ops.is_imm() == 1 {
+            (ops.c() as u32).into()
         } else {
-            let read_addr_2 = state.cpu().fp + ops.c();
+            let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
             state.mem_mut().read(clk, read_addr_2, true)
         };
         if cell_1 == cell_2 {
-            state.cpu_mut().pc = ops.a();
+            state.cpu_mut().pc = ops.a() as u32;
         } else {
-            state.cpu_mut().pc = state.cpu().pc + F::ONE;
+            state.cpu_mut().pc = state.cpu().pc + 1;
         }
-        state.cpu_mut().clock += F::ONE;
+        state.cpu_mut().clock += 1;
         state.cpu_mut().operations.push(Operation::Beq);
         set_pc_and_fp(state);
     }
 }
 
-impl<F, M> Instruction<M> for BneInstruction
+impl<M> Instruction<M> for BneInstruction
 where
-    F: PrimeField,
-    M: MachineWithCpuChip<F = F>,
+    M: MachineWithCpuChip,
 {
     const OPCODE: u32 = 6;
 
-    fn execute(state: &mut M, ops: Operands<F>) {
+    fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
-        let read_addr_1 = state.cpu().fp + ops.b();
+        let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let cell_1 = state.mem_mut().read(clk, read_addr_1, true);
-        let cell_2 = if ops.is_imm() == F::ONE {
-            ops.c().into()
+        let cell_2 = if ops.is_imm() == 1 {
+            (ops.c() as u32).into()
         } else {
-            let read_addr_2 = state.cpu().fp + ops.c();
+            let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
             state.mem_mut().read(clk, read_addr_2, true)
         };
         if cell_1 != cell_2 {
-            state.cpu_mut().pc = ops.a();
+            state.cpu_mut().pc = ops.a() as u32;
         } else {
-            state.cpu_mut().pc = state.cpu().pc + F::ONE;
+            state.cpu_mut().pc = state.cpu().pc + 1;
         }
-        state.cpu_mut().clock += F::ONE;
+        state.cpu_mut().clock += 1;
         state.cpu_mut().operations.push(Operation::Bne);
         set_pc_and_fp(state);
     }
 }
 
-impl<F, M> Instruction<M> for Imm32Instruction
+impl<M> Instruction<M> for Imm32Instruction
 where
-    F: PrimeField,
-    M: MachineWithCpuChip<F = F>,
+    M: MachineWithCpuChip,
 {
     const OPCODE: u32 = 7;
 
-    fn execute(state: &mut M, ops: Operands<F>) {
+    fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
-        let write_addr = state.cpu().fp + ops.a();
-        let value = Word([ops.b(), ops.c(), ops.d(), ops.e()]);
-        state.mem_mut().write(clk, write_addr, value, true);
-        state.cpu_mut().pc += F::ONE;
-        state.cpu_mut().clock += F::ONE;
+        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
+        let value = Word([ops.b() as u8, ops.c() as u8, ops.d() as u8, ops.e() as u8]);
+        state.mem_mut().write(clk, write_addr, value.into(), true);
+        state.cpu_mut().pc += 1;
+        state.cpu_mut().clock += 1;
         state.cpu_mut().operations.push(Operation::Imm32);
         set_pc_and_fp(state);
     }
