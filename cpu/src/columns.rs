@@ -48,6 +48,7 @@ pub struct InstructionCols<F> {
 pub struct OpcodeFlagCols<T> {
     pub is_imm32: T,
     pub is_bus_op: T,
+    pub is_imm_op: T,
     pub is_load: T,
     pub is_store: T,
     pub is_beq: T,
@@ -82,14 +83,34 @@ impl<T: Copy> ChipChannelCols<T> {
 }
 
 impl<T: Copy> CpuCols<T> {
-    pub fn mem_read_1(&self) -> Word<T> {
+    pub fn read_addr_1(&self) -> T {
+        self.mem_channels[0].addr
+    }
+    pub fn read_addr_2(&self) -> T {
+        self.mem_channels[1].addr
+    }
+    pub fn write_addr(&self) -> T {
+        self.mem_channels[2].addr
+    }
+
+    pub fn read_value_1(&self) -> Word<T> {
         self.mem_channels[0].value
     }
-    pub fn mem_read_2(&self) -> Word<T> {
+    pub fn read_value_2(&self) -> Word<T> {
         self.mem_channels[1].value
     }
-    pub fn mem_write(&self) -> Word<T> {
+    pub fn write_value(&self) -> Word<T> {
         self.mem_channels[2].value
+    }
+
+    pub fn read_1_used(&self) -> T {
+        self.mem_channels[0].used
+    }
+    pub fn read_2_used(&self) -> T {
+        self.mem_channels[1].used
+    }
+    pub fn write_used(&self) -> T {
+        self.mem_channels[2].used
     }
 }
 
