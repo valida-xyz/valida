@@ -1,12 +1,16 @@
 extern crate alloc;
 
+use crate::Mul32Opcode;
+use alloc::vec;
 use alloc::vec::Vec;
-use columns::{Mul32Cols, NUM_MUL_COLS};
+use columns::{Mul32Cols, MUL_COL_MAP, NUM_MUL_COLS};
 use core::marker::Sync;
 use core::mem::transmute;
+use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 
+use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
@@ -27,7 +31,7 @@ pub struct Mul32Chip {
 
 impl<M> Chip<M> for Mul32Chip
 where
-    M: MachineWithMul32Chip + Sync,
+    M: MachineWithMul32Chip + MachineWithGeneralBus + Sync,
 {
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
@@ -37,6 +41,25 @@ where
             .map(|op| self.op_to_row(op, machine))
             .collect::<Vec<_>>();
         RowMajorMatrix::new(rows.concat(), NUM_MUL_COLS)
+    }
+
+    fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
+        let opcode = VirtualPairCol::single_main(MUL_COL_MAP.opcode);
+        let input_1 = MUL_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
+        let input_2 = MUL_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
+        let output = MUL_COL_MAP.output.0.map(VirtualPairCol::single_main);
+
+        let mut fields = vec![opcode];
+        fields.extend(input_1);
+        fields.extend(input_2);
+        fields.extend(output);
+
+        let receive = Interaction {
+            fields,
+            count: VirtualPairCol::one(),
+            argument_index: machine.general_bus(),
+        };
+        vec![receive]
     }
 
     fn local_sends(&self) -> Vec<Interaction<M::F>> {
@@ -55,9 +78,9 @@ impl Mul32Chip {
 
         match op {
             Operation::Mul32(a, b, c) => {
-                cols.input_1 = b.to_field();
-                cols.input_2 = c.to_field();
-                cols.output = a.to_field();
+                cols.input_1 = b.transform(F::from_canonical_u8);
+                cols.input_2 = c.transform(F::from_canonical_u8);
+                cols.output = a.transform(F::from_canonical_u8);
             }
         }
         row
@@ -75,7 +98,7 @@ impl<M> Instruction<M> for Mul32Instruction
 where
     M: MachineWithMul32Chip,
 {
-    const OPCODE: u32 = 10;
+    const OPCODE: u32 = Mul32Opcode;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;

@@ -11,6 +11,8 @@ pub struct Add32Cols<T> {
 
     /// Witnessed output
     pub output: Word<T>,
+
+    pub opcode: T,
 }
 
 pub const NUM_ADD_COLS: usize = size_of::<Add32Cols<u8>>();

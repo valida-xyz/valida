@@ -4,15 +4,29 @@ use core::ops::{Add, Index, IndexMut, Mul, Sub};
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Word<F>(pub [F; MEMORY_CELL_BYTES]);
 
-impl Word<u8> {
-    pub fn to_field<F: PrimeField>(&self) -> Word<F> {
-        let mut word = Word::<F>::default();
-        for i in 0..MEMORY_CELL_BYTES {
-            word[i] = F::from_canonical_u8(self[i]);
+impl<F: Copy> Word<F> {
+    pub fn transform<T, G>(self, mut f: G) -> Word<T>
+    where
+        G: FnMut(F) -> T,
+        T: Default + Copy,
+    {
+        let mut result: [T; MEMORY_CELL_BYTES] = [T::default(); MEMORY_CELL_BYTES];
+        for (i, item) in self.0.iter().enumerate() {
+            result[i] = f(*item);
         }
-        word
+        Word(result)
     }
 }
+
+//impl Word<u8> {
+//    pub fn to_field<F: PrimeField>(&self) -> Word<F> {
+//        let mut word = Word::<F>::default();
+//        for i in 0..MEMORY_CELL_BYTES {
+//            word[i] = F::from_canonical_u8(self[i]);
+//        }
+//        word
+//    }
+//}
 
 impl Into<u32> for Word<u8> {
     fn into(self) -> u32 {

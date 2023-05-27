@@ -1,4 +1,5 @@
 use super::columns::Mul32Cols;
+use crate::Mul32Opcode;
 use core::borrow::Borrow;
 use core::mem::MaybeUninit;
 use itertools::iproduct;
@@ -50,6 +51,12 @@ impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for Mul32Stark {
         builder.when_last_row().assert_eq(
             local.counter,
             AB::Exp::from(AB::F::from_canonical_u32(1 << 10)),
+        );
+
+        // Bus opcode constraint
+        builder.assert_eq(
+            local.opcode,
+            AB::Exp::from(AB::F::from_canonical_u32(Mul32Opcode)),
         );
     }
 }

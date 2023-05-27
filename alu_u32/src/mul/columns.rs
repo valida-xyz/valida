@@ -16,6 +16,7 @@ pub struct Mul32Cols<T> {
     pub r: T,
     pub s: T,
 
+    pub opcode: T,
     pub counter: T,
 }
 

@@ -88,7 +88,7 @@ impl<M> Chip<M> for MemoryChip
 where
     M: MachineWithMemoryChip + MachineWithMemBus,
 {
-    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F> {
+    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let mut ops = self
             .operations
             .iter()
@@ -152,17 +152,17 @@ impl MemoryChip {
             Operation::Read(addr, value) => {
                 cols.is_read = F::ONE;
                 cols.addr = F::from_canonical_u32(addr);
-                cols.value = value.to_field();
+                cols.value = value.transform(F::from_canonical_u8);
                 cols.is_read = F::ONE;
             }
             Operation::Write(addr, value) => {
                 cols.addr = F::from_canonical_u32(addr);
-                cols.value = value.to_field();
+                cols.value = value.transform(F::from_canonical_u8);
                 cols.is_read = F::ONE;
             }
             Operation::DummyRead(addr, value) => {
                 cols.addr = F::from_canonical_u32(addr);
-                cols.value = value.to_field();
+                cols.value = value.transform(F::from_canonical_u8);
             }
         }
 

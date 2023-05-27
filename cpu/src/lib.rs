@@ -29,7 +29,7 @@ pub enum Operation {
     Beq,
     Bne,
     Imm32,
-    Bus(u32),
+    Bus((u32, Word<u8>, Word<u8>, Word<u8>)),
 }
 
 #[derive(Default)]
@@ -111,22 +111,33 @@ impl CpuChip {
         self.set_memory_trace_values(clk, cols, machine);
 
         match op {
-            Operation::Store32 => {}
-            Operation::Load32 => {}
-            Operation::Jal => {}
-            Operation::Jalv => {}
+            Operation::Store32 => {
+                cols.opcode_flags.is_store = F::ONE;
+            }
+            Operation::Load32 => {
+                cols.opcode_flags.is_load = F::ONE;
+            }
+            Operation::Jal => {
+                cols.opcode_flags.is_jal = F::ONE;
+            }
+            Operation::Jalv => {
+                cols.opcode_flags.is_jalv = F::ONE;
+            }
             Operation::Beq => {
                 cols.opcode_flags.is_beq = F::ONE;
             }
-            Operation::Bne => {}
+            Operation::Bne => {
+                cols.opcode_flags.is_bne = F::ONE;
+            }
             Operation::Imm32 => {
                 cols.opcode_flags.is_imm32 = F::ONE;
             }
-            Operation::Bus(opcode) => {
+            Operation::Bus((opcode, read_value_1, read_value_2, write_value)) => {
                 cols.opcode_flags.is_bus_op = F::ONE;
                 cols.chip_channel.opcode = F::from_canonical_u32(*opcode);
-                // TODO: Set other chip channel fields in an additional trace pass,
-                // or read this information from the machine and set it here?
+                cols.chip_channel.read_value_1 = read_value_1.transform(F::from_canonical_u8);
+                cols.chip_channel.read_value_2 = read_value_2.transform(F::from_canonical_u8);
+                cols.chip_channel.write_value = write_value.transform(F::from_canonical_u8);
             }
         }
 
@@ -148,18 +159,18 @@ impl CpuChip {
                         if is_first_read {
                             cols.mem_channels[0].used = F::ONE;
                             cols.mem_channels[0].addr = F::from_canonical_u32(*addr);
-                            cols.mem_channels[0].value = value.to_field();
+                            cols.mem_channels[0].value = value.transform(F::from_canonical_u8);
                             is_first_read = false;
                         } else {
                             cols.mem_channels[1].used = F::ONE;
                             cols.mem_channels[1].addr = F::from_canonical_u32(*addr);
-                            cols.mem_channels[1].value = value.to_field();
+                            cols.mem_channels[1].value = value.transform(F::from_canonical_u8);
                         }
                     }
                     MemoryOperation::Write(addr, value) => {
                         cols.mem_channels[2].used = F::ONE;
                         cols.mem_channels[2].addr = F::from_canonical_u32(*addr);
-                        cols.mem_channels[2].value = value.to_field();
+                        cols.mem_channels[2].value = value.transform(F::from_canonical_u8);
                     }
                     _ => {}
                 }

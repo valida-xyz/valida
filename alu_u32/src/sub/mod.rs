@@ -1,11 +1,15 @@
 extern crate alloc;
 
+use crate::Sub32Opcode;
+use alloc::vec;
 use alloc::vec::Vec;
-use columns::{Sub32Cols, NUM_SUB_COLS};
+use columns::{Sub32Cols, NUM_SUB_COLS, SUB_COL_MAP};
 use core::mem::transmute;
+use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Chip, Instruction, Operands, Word};
+use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 
+use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
@@ -26,7 +30,7 @@ pub struct Sub32Chip {
 
 impl<M> Chip<M> for Sub32Chip
 where
-    M: MachineWithSub32Chip,
+    M: MachineWithSub32Chip + MachineWithGeneralBus,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
@@ -35,6 +39,25 @@ where
             .map(|op| self.op_to_row::<M::F, M>(op))
             .collect::<Vec<_>>();
         RowMajorMatrix::new(rows.concat(), NUM_SUB_COLS)
+    }
+
+    fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
+        let opcode = VirtualPairCol::single_main(SUB_COL_MAP.opcode);
+        let input_1 = SUB_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
+        let input_2 = SUB_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
+        let output = SUB_COL_MAP.output.0.map(VirtualPairCol::single_main);
+
+        let mut fields = vec![opcode];
+        fields.extend(input_1);
+        fields.extend(input_2);
+        fields.extend(output);
+
+        let receive = Interaction {
+            fields,
+            count: VirtualPairCol::one(),
+            argument_index: machine.general_bus(),
+        };
+        vec![receive]
     }
 }
 
@@ -49,9 +72,9 @@ impl Sub32Chip {
 
         match op {
             Operation::Sub32(a, b, c) => {
-                cols.input_1 = b.to_field();
-                cols.input_2 = c.to_field();
-                cols.output = a.to_field();
+                cols.input_1 = b.transform(F::from_canonical_u8);
+                cols.input_2 = c.transform(F::from_canonical_u8);
+                cols.output = a.transform(F::from_canonical_u8);
             }
         }
         row
@@ -69,7 +92,7 @@ impl<M> Instruction<M> for Sub32Instruction
 where
     M: MachineWithSub32Chip,
 {
-    const OPCODE: u32 = 8;
+    const OPCODE: u32 = Sub32Opcode;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;

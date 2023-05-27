@@ -1,4 +1,5 @@
 use super::columns::Add32Cols;
+use super::Add32Opcode;
 use core::borrow::Borrow;
 
 use p3_air::{Air, PermutationAirBuilder};
@@ -24,6 +25,12 @@ impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for Add32Stark {
         builder.assert_zero(carry_1.clone() * (base.clone() + carry_1.clone()));
         builder.assert_zero(carry_2.clone() * (base.clone() + carry_2.clone()));
         builder.assert_zero(carry_3.clone() * (base.clone() + carry_3.clone()));
+
+        // Bus opcode constraint
+        builder.assert_eq(
+            local.opcode,
+            AB::Exp::from(AB::F::from_canonical_u32(Add32Opcode)),
+        );
 
         // TODO: Range check output ([0,256]) using preprocessed lookup table
     }

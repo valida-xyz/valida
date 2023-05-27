@@ -1,4 +1,5 @@
 use super::columns::Sub32Cols;
+use crate::Sub32Opcode;
 use core::borrow::Borrow;
 
 use p3_air::{Air, PermutationAirBuilder};
@@ -37,6 +38,12 @@ impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for Sub32Stark {
         // Third byte
         builder.assert_zero(borrow_2.clone() * (base.clone() - sub_2 - local.output[1]));
         builder.assert_zero(borrow_2 * (sub_3 - local.output[0] - AB::Exp::from(AB::F::ONE)));
+
+        // Bus opcode constraint
+        builder.assert_eq(
+            local.opcode,
+            AB::Exp::from(AB::F::from_canonical_u32(Sub32Opcode)),
+        );
 
         todo!()
     }
