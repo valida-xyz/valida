@@ -6,8 +6,10 @@
 
 #![no_std]
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
-#![forbid(rustdoc::broken_intra_doc_links)]
 #![forbid(missing_docs)]
+#![forbid(rustdoc::broken_intra_doc_links)]
+#![allow(incomplete_features)]
+#![feature(generic_const_exprs)]
 
 extern crate alloc;
 
@@ -15,6 +17,9 @@ use alloc::vec::Vec;
 use core::marker::PhantomData;
 use p3_matrix::dense::RowMajorMatrix;
 use valida_machine::Interaction;
+
+pub mod columns;
+pub mod stark;
 
 /// Sealed Trait Module
 mod sealed {
