@@ -69,7 +69,7 @@ impl<F: PrimeField> Operands<F> {
     pub fn from_i32_slice(slice: &[i32]) -> Self {
         let mut operands = [F::ZERO; 5];
         for (i, &operand) in slice.iter().enumerate() {
-            let abs = F::from_canonical_u32(operand.abs() as u32);
+            let abs = F::from_canonical_u32(operand.unsigned_abs());
             operands[i] = if operand < 0 { -abs } else { abs };
         }
         Self(operands)

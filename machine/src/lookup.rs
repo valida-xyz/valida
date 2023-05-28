@@ -158,7 +158,7 @@ impl<const N: usize, const M: usize> LogUp<N, M> {
                 row[0] = running_sum[n];
                 row[1] = multiplicities[0][n];
             }
-            return RowMajorMatrix::new(values, 2);
+            RowMajorMatrix::new(values, 2)
         } else if N == 2 {
             let mut values = vec![F::ZERO; main.height() * 3];
             for (n, row) in values.chunks_mut(3).enumerate() {
@@ -166,9 +166,9 @@ impl<const N: usize, const M: usize> LogUp<N, M> {
                 row[1] = multiplicities[0][n];
                 row[2] = looking_inv[0][n];
             }
-            return RowMajorMatrix::new(values, 3);
+            RowMajorMatrix::new(values, 3)
         } else {
-            panic!("Unreachable");
+            panic!("Unreachable")
         }
     }
 
@@ -195,7 +195,7 @@ impl<const N: usize, const M: usize> LogUp<N, M> {
 
         // Running sum constraints
         let mut lhs = perm_next[0] - perm_local[0];
-        let mut rhs = AB::Exp::from(AB::F::ZERO);
+        let mut rhs = AB::Expr::from(AB::F::ZERO);
         let m_0 = perm_local[1];
         let alpha = rand_elems[0].clone();
         if N == 1 {
@@ -203,14 +203,14 @@ impl<const N: usize, const M: usize> LogUp<N, M> {
             let t_0 = main_local[lookups[0].1]; // Looked
 
             lhs *= (f_0 + alpha.clone()) * (t_0 + alpha.clone());
-            rhs += t_0 + alpha.clone() - m_0 * (f_0 + alpha.clone());
+            rhs += t_0 + alpha.clone() - m_0 * (f_0 + alpha);
         } else if N == 2 {
             // This assumes that the looked columns are the same
             let q_0 = perm_local[2];
             let t_0 = main_local[lookups[0].1];
 
             lhs *= t_0 + alpha.clone();
-            rhs += m_0 + q_0 * (t_0 + alpha.clone());
+            rhs += m_0 + q_0 * (t_0 + alpha);
         }
         builder.when_transition().assert_eq(lhs, rhs);
         builder.when_first_row().assert_zero(perm_local[0]);
@@ -242,16 +242,16 @@ pub fn batch_invert<F: Field>(cols: &[Vec<F>]) -> Vec<Vec<F>> {
     res
 }
 
-fn count_elements<F: PrimeField>(v1: &Vec<F>, v2: &Vec<F>) -> Vec<F> {
+fn count_elements<F: PrimeField>(v1: &[F], v2: &[F]) -> Vec<F> {
     let mut map: BTreeMap<F, F> = BTreeMap::new();
 
     // Count elements in the first vector
-    for &item in v1.iter() {
+    for &item in v1 {
         *map.entry(item).or_insert(F::ZERO) += F::ONE;
     }
 
     // Construct the final vector
-    v2.into_iter()
-        .map(|item| *map.get(&item).unwrap_or(&F::ZERO))
+    v2.iter()
+        .map(|item| *map.get(item).unwrap_or(&F::ZERO))
         .collect()
 }

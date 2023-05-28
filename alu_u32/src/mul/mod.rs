@@ -74,7 +74,7 @@ impl Mul32Chip {
         M: MachineWithMul32Chip<F = F>,
     {
         let mut row = [F::ZERO; NUM_MUL_COLS];
-        let mut cols: &mut Mul32Cols<F> = unsafe { transmute(&mut row) };
+        let cols: &mut Mul32Cols<F> = unsafe { transmute(&mut row) };
 
         match op {
             Operation::Mul32(a, b, c) => {
@@ -112,11 +112,11 @@ where
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true).into()
+            state.mem_mut().read(clk, read_addr_2, true)
         };
 
         let a = b * c;
-        state.mem_mut().write(clk, write_addr, a.into(), true);
+        state.mem_mut().write(clk, write_addr, a, true);
 
         state
             .mul_u32_mut()

@@ -68,7 +68,7 @@ impl Sub32Chip {
         M: MachineWithSub32Chip<F = F>,
     {
         let mut row = [F::ZERO; NUM_SUB_COLS];
-        let mut cols: &mut Sub32Cols<F> = unsafe { transmute(&mut row) };
+        let cols: &mut Sub32Cols<F> = unsafe { transmute(&mut row) };
 
         match op {
             Operation::Sub32(a, b, c) => {

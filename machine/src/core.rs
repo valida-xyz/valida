@@ -22,17 +22,17 @@ impl<F: PrimeField> Word<F> {
     pub fn reduce(self) -> F {
         let mut result = F::ZERO;
         for (n, item) in self.0.into_iter().rev().enumerate() {
-            result = result + item * F::from_canonical_u32(1 << 8 * n);
+            result += item * F::from_canonical_u32(1 << (8 * n));
         }
         result
     }
 }
 
-impl Into<u32> for Word<u8> {
-    fn into(self) -> u32 {
+impl From<Word<u8>> for u32 {
+    fn from(word: Word<u8>) -> Self {
         let mut result = 0u32;
         for i in 0..MEMORY_CELL_BYTES {
-            result += (self[MEMORY_CELL_BYTES - i - 1] as u32) << (i * 8);
+            result += (word[MEMORY_CELL_BYTES - i - 1] as u32) << (i * 8);
         }
         result
     }

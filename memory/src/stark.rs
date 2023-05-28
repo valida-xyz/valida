@@ -33,14 +33,14 @@ impl MemoryStark {
             .assert_eq(next.diff, next.addr - local.addr);
         builder
             .when_transition()
-            .when_ne(local.addr_not_equal, AB::Exp::from(AB::F::ONE))
-            .assert_eq(next.diff, next.clk - local.clk - AB::Exp::from(AB::F::ONE));
+            .when_ne(local.addr_not_equal, AB::Expr::from(AB::F::ONE))
+            .assert_eq(next.diff, next.clk - local.clk - AB::Expr::from(AB::F::ONE));
 
         // Read/write
         // TODO: Record \sum_i (value'_i - value_i)^2 in trace and convert to a single constraint?
         for (value_next, value) in next.value.into_iter().zip(local.value.into_iter()) {
             let is_value_unchanged =
-                (local.addr - next.addr + AB::Exp::from(AB::F::ONE)) * (value_next - value);
+                (local.addr - next.addr + AB::Expr::from(AB::F::ONE)) * (value_next - value);
             builder
                 .when_transition()
                 .when(next.is_read)
@@ -50,6 +50,6 @@ impl MemoryStark {
         // Counter
         builder
             .when_transition()
-            .assert_eq(next.counter, local.counter + AB::Exp::from(AB::F::ONE));
+            .assert_eq(next.counter, local.counter + AB::Expr::from(AB::F::ONE));
     }
 }

@@ -21,10 +21,8 @@ where
         let local: &CpuCols<AB::Var> = main.row(0).borrow();
         let next: &CpuCols<AB::Var> = main.row(1).borrow();
 
-        let mut base: [AB::Exp; 4] = unsafe { MaybeUninit::uninit().assume_init() };
-        for (i, b) in [1 << 24, 1 << 16, 1 << 8, 1].into_iter().enumerate() {
-            base[i] = AB::Exp::from(AB::F::from_canonical_u32(b));
-        }
+        let base = [1 << 24, 1 << 16, 1 << 8, 1 << 0]
+            .map(|b| AB::Expr::from(AB::F::from_canonical_u32(b)));
 
         self.eval_pc(builder, local, next, &base);
         self.eval_fp(builder, local, next, &base);
@@ -35,7 +33,7 @@ where
         builder.when_first_row().assert_zero(local.clk);
         builder
             .when_transition()
-            .assert_eq(local.clk + AB::Exp::from(AB::F::ONE), next.clk);
+            .assert_eq(local.clk + AB::Expr::from(AB::F::ONE), next.clk);
     }
 }
 
@@ -45,7 +43,7 @@ impl CpuStark {
         builder: &mut AB,
         local: &CpuCols<AB::Var>,
         next: &CpuCols<AB::Var>,
-        base: &[AB::Exp; 4],
+        base: &[AB::Expr; 4],
     ) where
         F: PrimeField,
         AB: AirBuilder<F = F>,
@@ -69,23 +67,17 @@ impl CpuStark {
 
         // Read (1)
         builder
-            .when(is_load.clone() + is_store.clone())
+            .when(is_load + is_store)
             .assert_eq(local.read_addr_1(), addr_c.clone());
         builder
             .when(is_jalv + is_beq + is_bne)
             .assert_eq(local.read_addr_1(), addr_b.clone());
         builder
-            .when(
-                is_load.clone()
-                    + is_store.clone()
-                    + is_jalv.clone()
-                    + is_beq.clone()
-                    + is_bne.clone(),
-            )
+            .when(is_load + is_store + is_jalv + is_beq + is_bne)
             .assert_one(local.read_1_used());
 
         // Read (2)
-        builder.when(is_load.clone()).assert_eq(
+        builder.when(is_load).assert_eq(
             local.read_addr_2(),
             reduce::<F, AB>(base, local.read_value_1()),
         );
@@ -93,30 +85,22 @@ impl CpuStark {
             .when(is_jalv + is_imm_op * (is_beq + is_bne))
             .assert_eq(local.read_addr_2(), addr_c);
         builder
-            .when(
-                is_store.clone()
-                    + is_load.clone()
-                    + is_jalv.clone()
-                    + is_beq.clone()
-                    + is_bne.clone(),
-            )
+            .when(is_store + is_load + is_jalv + is_beq + is_bne)
             .assert_one(local.read_2_used());
 
         // Write
         builder
-            .when(is_load.clone() + is_jal.clone() + is_jalv.clone() + is_imm32.clone())
+            .when(is_load + is_jal + is_jalv + is_imm32)
             .assert_eq(local.write_addr(), addr_a);
-        builder
-            .when(is_store.clone())
-            .assert_eq(local.write_addr(), addr_b);
-        builder.when(is_load.clone() + is_store.clone()).assert_eq(
+        builder.when(is_store).assert_eq(local.write_addr(), addr_b);
+        builder.when(is_load + is_store).assert_eq(
             reduce::<F, AB>(base, local.read_value_2()),
             reduce::<F, AB>(base, local.write_value()),
         );
         builder
-            .when(is_jal.clone() + is_jalv.clone())
+            .when(is_jal + is_jalv)
             .assert_eq(reduce::<F, AB>(base, local.write_value()), next.pc);
-        builder.when(is_imm32.clone()).assert_eq(
+        builder.when(is_imm32).assert_eq(
             // For all imm32 instructions, program memory is trusted to have operand values
             // between 0 and 255.
             reduce::<F, AB>(base, local.write_value()),
@@ -131,13 +115,7 @@ impl CpuStark {
             ),
         );
         builder
-            .when(
-                is_store.clone()
-                    + is_load.clone()
-                    + is_jal.clone()
-                    + is_jalv.clone()
-                    + is_imm32.clone(),
-            )
+            .when(is_store + is_load + is_jal + is_jalv + is_imm32)
             .assert_one(local.write_used());
     }
 
@@ -146,7 +124,7 @@ impl CpuStark {
         builder: &mut AB,
         local: &CpuCols<AB::Var>,
         next: &CpuCols<AB::Var>,
-        base: &[AB::Exp; 4],
+        base: &[AB::Expr; 4],
     ) where
         F: PrimeField,
         AB: AirBuilder<F = F>,
@@ -168,13 +146,13 @@ impl CpuStark {
                 .into_iter()
                 .zip(next.read_value_2().0)
                 .map(|(a, b)| (a - b) * (a - b))
-                .sum::<AB::Exp>(),
+                .sum::<AB::Expr>(),
         );
         builder.assert_bool(local.not_equal);
         builder.assert_eq(local.not_equal, local.diff * local.diff_inv);
 
         // Branch manipulation
-        let equal = AB::Exp::from(AB::F::ONE) - local.not_equal;
+        let equal = AB::Expr::from(AB::F::ONE) - local.not_equal;
         let next_pc_if_branching = local.pc + local.instruction.operands.a();
         let beq_next_pc =
             equal.clone() * next_pc_if_branching.clone() + local.not_equal * incremented_pc.clone();
@@ -204,7 +182,7 @@ impl CpuStark {
         builder: &mut AB,
         local: &CpuCols<AB::Var>,
         next: &CpuCols<AB::Var>,
-        base: &[AB::Exp; 4],
+        base: &[AB::Expr; 4],
     ) where
         F: PrimeField,
         AB: AirBuilder<F = F>,
@@ -225,7 +203,7 @@ impl CpuStark {
         builder: &mut AB,
         local: &CpuCols<AB::Var>,
         _next: &CpuCols<AB::Var>,
-        _base: &[AB::Exp; 4],
+        _base: &[AB::Expr; 4],
     ) {
         // Word equality constraints (for branch instructions)
         builder.when(local.instruction.operands.is_imm()).assert_eq(
@@ -235,10 +213,10 @@ impl CpuStark {
                 .into_iter()
                 .zip(local.read_value_2())
                 .map(|(a, b)| (a - b) * (a - b))
-                .sum::<AB::Exp>(),
+                .sum::<AB::Expr>(),
         );
         builder
-            .when(AB::Exp::from(AB::F::ONE) - local.instruction.operands.is_imm())
+            .when(AB::Expr::from(AB::F::ONE) - local.instruction.operands.is_imm())
             .assert_eq(
                 local.diff,
                 local.read_value_1()[3] - local.instruction.operands.c(),
@@ -248,7 +226,10 @@ impl CpuStark {
     }
 }
 
-fn reduce<F: PrimeField, AB: AirBuilder<F = F>>(base: &[AB::Exp], input: Word<AB::Var>) -> AB::Exp {
+fn reduce<F: PrimeField, AB: AirBuilder<F = F>>(
+    base: &[AB::Expr],
+    input: Word<AB::Var>,
+) -> AB::Expr {
     input
         .into_iter()
         .enumerate()

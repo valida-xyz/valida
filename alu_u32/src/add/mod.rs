@@ -69,7 +69,7 @@ impl Add32Chip {
         M: MachineWithAdd32Chip<F = F>,
     {
         let mut row = [F::ZERO; NUM_ADD_COLS];
-        let mut cols: &mut Add32Cols<F> = unsafe { transmute(&mut row) };
+        let cols: &mut Add32Cols<F> = unsafe { transmute(&mut row) };
 
         match op {
             Operation::Add32(a, b, c) => {

@@ -56,7 +56,7 @@ where
             .operations
             .par_iter()
             .enumerate()
-            .map(|(n, op)| self.op_to_row(n, &op, machine))
+            .map(|(n, op)| self.op_to_row(n, op, machine))
             .collect::<Vec<_>>();
         RowMajorMatrix::new(rows.concat(), NUM_CPU_COLS)
     }
@@ -103,7 +103,7 @@ impl CpuChip {
         M: MachineWithMemoryChip,
     {
         let mut row = [F::ZERO; NUM_CPU_COLS];
-        let mut cols: &mut CpuCols<F> = unsafe { transmute(&mut row) };
+        let cols: &mut CpuCols<F> = unsafe { transmute(&mut row) };
 
         cols.pc = F::from_canonical_u32(self.registers[clk].pc);
         cols.fp = F::from_canonical_u32(self.registers[clk].fp);
@@ -368,7 +368,7 @@ where
         let clk = state.cpu().clock;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
         let value = Word([ops.b() as u8, ops.c() as u8, ops.d() as u8, ops.e() as u8]);
-        state.mem_mut().write(clk, write_addr, value.into(), true);
+        state.mem_mut().write(clk, write_addr, value, true);
         state.cpu_mut().pc += 1;
         state.cpu_mut().clock += 1;
         state.cpu_mut().operations.push(Operation::Imm32);
