@@ -1,6 +1,8 @@
 //! Posiedon2 STARK Columns
 
 use crate::Config;
+use p3_air::AirBuilder;
+use p3_field::PrimeField;
 use valida_derive::AlignedBorrow;
 use valida_util::indices_arr;
 
@@ -49,32 +51,32 @@ impl<
     #[inline]
     fn eval<AB>(
         &self,
-        initial_state: [AB::F; WIDTH],
-        beginning_full_round_constants: &[[AB::F; WIDTH]; HALF_FULL_ROUNDS],
-        partial_round_constants: &[AB::F; PARTIAL_ROUNDS],
-        ending_full_round_constants: &[[AB::F; WIDTH]; HALF_FULL_ROUNDS],
+        state: &mut [T; WIDTH],
+        beginning_full_round_constants: &[[AB::Expr; WIDTH]; HALF_FULL_ROUNDS],
+        partial_round_constants: &[AB::Expr; PARTIAL_ROUNDS],
+        ending_full_round_constants: &[[AB::Expr; WIDTH]; HALF_FULL_ROUNDS],
         builder: &mut AB,
-    ) -> [AB::F; WIDTH]
-    where
-        AB: AirBuilder,
-        AB::F: PrimeField,
+    ) where
+        AB: AirBuilder<Var = T>,
     {
-        let mut state = initial_state;
         for round in 0..HALF_FULL_ROUNDS {
-            state = beginning_full_rounds[round].eval(
+            *state = self.beginning_full_rounds[round].eval(
                 state,
                 &beginning_full_round_constants[round],
                 builder,
             );
         }
         for round in 0..PARTIAL_ROUNDS {
-            state = partial_rounds[round].eval(state, &partial_round_constants[round], builder);
+            *state =
+                self.partial_rounds[round].eval(state, &partial_round_constants[round], builder);
         }
         for round in 0..HALF_FULL_ROUNDS {
-            state =
-                ending_full_rounds[round].eval(state, &ending_full_round_constants[round], builder);
+            *state = self.ending_full_rounds[round].eval(
+                state,
+                &ending_full_round_constants[round],
+                builder,
+            );
         }
-        state
     }
 }
 
@@ -93,20 +95,19 @@ impl<T, const WIDTH: usize, const SBOX_REGISTERS: usize> FullRound<T, WIDTH, SBO
     #[inline]
     fn eval<AB>(
         &self,
-        state: &[AB::F; WIDTH],
-        round_constants: &[AB::F; WIDTH],
+        state: &[T; WIDTH],
+        round_constants: &[AB::Expr; WIDTH],
         builder: &mut AB,
-    ) -> [AB::F; WIDTH]
+    ) -> [T; WIDTH]
     where
-        AB: AirBuilder,
-        AB::F: PrimeField,
+        AB: AirBuilder<Var = T>,
     {
-        for i in 0..WIDTH {
-            builder.assert_eq(state[0][i], self.state[0][i]);
-        }
-        for (i, (s, r)) in self.state.iter().zip(round_constants.iter()).enumerate() {
-            self.sbox[i].eval(s + r, builder);
-        }
+        // for i in 0..WIDTH {
+        //     builder.assert_eq(state[i], self.state[i]);
+        // }
+        // for (i, (s, r)) in self.state.iter().zip(round_constants.iter()).enumerate() {
+        //     self.sbox[i].eval(*s + *r, builder);
+        // }
         // TODO: add matrix multiply
         todo!()
     }
@@ -127,18 +128,18 @@ impl<T, const WIDTH: usize, const SBOX_REGISTERS: usize> PartialRound<T, WIDTH, 
     #[inline]
     fn eval<AB>(
         &self,
-        state: &[AB::F; WIDTH],
-        round_constant: &AB::F,
+        state: &[T; WIDTH],
+        round_constant: &AB::Expr,
         builder: &mut AB,
-    ) -> [AB::F; WIDTH]
+    ) -> [T; WIDTH]
     where
-        AB: AirBuilder,
-        AB::F: PrimeField,
+        AB: AirBuilder<Var = T>,
     {
-        for i in 0..WIDTH {
-            builder.assert_eq(state[0][i], self.state[0][i]);
-        }
-        self.sbox.eval(self.state[0] + round_constant, builder);
+        // for i in 0..WIDTH {
+        //     builder.assert_eq(state[i], self.state[i]);
+        // }
+        // let state0 = self.sbox.eval(self.state[0] + round_constant, builder);
+
         // TODO: add matrix multiply
         todo!()
     }
@@ -161,16 +162,17 @@ impl<T, const REGISTERS: usize> SBox<T, REGISTERS> {
     /// registers than necessary. In general we should compute the smallest addition chain for the
     /// given S-BOX power.
     #[inline]
-    pub fn eval<AB>(&self, x: &AB::F, builder: &mut AB) -> AB::F
+    pub fn eval<AB>(&self, x: &AB::Expr, builder: &mut AB) -> T
     where
-        AB: AirBuilder,
-        AB::F: PrimeField,
+        T: Copy,
+        AB: AirBuilder<Var = T>,
     {
-        builder.assert_eq(self.0[0], cube(x));
-        for j in 1..SBOX_REGISTERS {
-            builder.assert_eq(self.0[j], self.0[j - 1] * x * x);
-        }
-        self.0[SBOX_REGISTERS - 1]
+        builder.assert_eq(self.0[0], x.clone() * x.clone() * x.clone());
+        // for j in 1..REGISTERS {
+        //     builder.assert_eq(self.0[j], self.0[j - 1] * x * x);
+        // }
+        // self.0[REGISTERS - 1]
+        todo!()
     }
 }
 
@@ -192,12 +194,3 @@ impl<T, const REGISTERS: usize> SBox<T, REGISTERS> {
 //     let indices = indices_arr::<NUM_COLUMNS>();
 //     unsafe { transmute::<[usize; NUM_COLUMNS], Columns<C, usize>>(indices) }
 // }
-
-///
-#[inline]
-fn cube<F>(x: F) -> F
-where
-    F: PrimeField,
-{
-    x * x * x
-}
