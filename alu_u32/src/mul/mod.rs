@@ -7,7 +7,7 @@ use columns::{Mul32Cols, MUL_COL_MAP, NUM_MUL_COLS};
 use core::marker::Sync;
 use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
-use valida_cpu::MachineWithCpuChip;
+use valida_cpu::{MachineWithCpuChip, Operation as CpuOperation};
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 
 use p3_air::VirtualPairCol;
@@ -102,11 +102,14 @@ where
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
+        let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
         let b = state.mem_mut().read(clk, read_addr_1, true);
         let c: Word<u8> = if ops.is_imm() == 1 {
-            (ops.c() as u32).into()
+            let c = (ops.c() as u32).into();
+            imm = Some(c);
+            c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
             state.mem_mut().read(clk, read_addr_2, true).into()
@@ -119,7 +122,9 @@ where
             .mul_u32_mut()
             .operations
             .push(Operation::Mul32(a, b, c));
+        state.cpu_mut().operations.push(CpuOperation::Bus(imm));
         state.cpu_mut().clock += 1;
         state.cpu_mut().pc += 1;
+        state.cpu_mut().set_pc_and_fp();
     }
 }

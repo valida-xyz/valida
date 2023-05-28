@@ -18,15 +18,15 @@ impl<F: Copy> Word<F> {
     }
 }
 
-//impl Word<u8> {
-//    pub fn to_field<F: PrimeField>(&self) -> Word<F> {
-//        let mut word = Word::<F>::default();
-//        for i in 0..MEMORY_CELL_BYTES {
-//            word[i] = F::from_canonical_u8(self[i]);
-//        }
-//        word
-//    }
-//}
+impl<F: PrimeField> Word<F> {
+    pub fn reduce(self) -> F {
+        let mut result = F::ZERO;
+        for (n, item) in self.0.into_iter().rev().enumerate() {
+            result = result + item * F::from_canonical_u32(1 << 8 * n);
+        }
+        result
+    }
+}
 
 impl Into<u32> for Word<u8> {
     fn into(self) -> u32 {

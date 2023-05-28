@@ -269,8 +269,8 @@ mod tests {
         machine.prove();
 
         assert_eq!(machine.cpu().clock, 191);
-        assert_eq!(machine.cpu().operations.len(), 141);
-        assert_eq!(machine.mem().operations.len(), 191);
+        assert_eq!(machine.cpu().operations.len(), 191);
+        assert_eq!(machine.mem().operations.values().flatten().count(), 401);
         assert_eq!(machine.add_u32().operations.len(), 50);
 
         assert_eq!(

@@ -26,10 +26,10 @@ pub enum Operation {
     Load32,
     Jal,
     Jalv,
-    Beq,
-    Bne,
+    Beq(Option<Word<u8>> /*imm*/),
+    Bne(Option<Word<u8>> /*imm*/),
     Imm32,
-    Bus((u32, Word<u8>, Word<u8>, Word<u8>)),
+    Bus(Option<Word<u8>> /*imm*/),
 }
 
 #[derive(Default)]
@@ -108,7 +108,7 @@ impl CpuChip {
         cols.pc = F::from_canonical_u32(self.registers[clk].pc);
         cols.fp = F::from_canonical_u32(self.registers[clk].fp);
 
-        self.set_memory_trace_values(clk, cols, machine);
+        self.set_memory_channel_values(clk, cols, machine);
 
         match op {
             Operation::Store32 => {
@@ -123,37 +123,37 @@ impl CpuChip {
             Operation::Jalv => {
                 cols.opcode_flags.is_jalv = F::ONE;
             }
-            Operation::Beq => {
+            Operation::Beq(imm) => {
                 cols.opcode_flags.is_beq = F::ONE;
+                self.set_imm_value(cols, *imm);
             }
-            Operation::Bne => {
+            Operation::Bne(imm) => {
                 cols.opcode_flags.is_bne = F::ONE;
+                self.set_imm_value(cols, *imm);
             }
             Operation::Imm32 => {
                 cols.opcode_flags.is_imm32 = F::ONE;
             }
-            Operation::Bus((opcode, read_value_1, read_value_2, write_value)) => {
+            Operation::Bus(imm) => {
                 cols.opcode_flags.is_bus_op = F::ONE;
-                cols.chip_channel.opcode = F::from_canonical_u32(*opcode);
-                cols.chip_channel.read_value_1 = read_value_1.transform(F::from_canonical_u8);
-                cols.chip_channel.read_value_2 = read_value_2.transform(F::from_canonical_u8);
-                cols.chip_channel.write_value = write_value.transform(F::from_canonical_u8);
+                self.set_imm_value(cols, *imm);
+                self.set_bus_channel_values(cols);
             }
         }
 
         row
     }
 
-    fn set_memory_trace_values<F: PrimeField, M: MachineWithMemoryChip<F = F>>(
+    fn set_memory_channel_values<F: PrimeField, M: MachineWithMemoryChip<F = F>>(
         &self,
-        _clk: usize,
+        clk: usize,
         cols: &mut CpuCols<F>,
         machine: &M,
     ) {
         let memory = machine.mem();
-        for (_, ops) in memory.operations.iter() {
+        for ops in memory.operations.get(&(clk as u32)).iter() {
             let mut is_first_read = true;
-            for op in ops {
+            for op in ops.iter() {
                 match op {
                     MemoryOperation::Read(addr, value) => {
                         if is_first_read {
@@ -175,6 +175,24 @@ impl CpuChip {
                     _ => {}
                 }
             }
+        }
+    }
+
+    fn set_bus_channel_values<F: PrimeField>(&self, cols: &mut CpuCols<F>) {
+        cols.chip_channel.opcode = cols.instruction.opcode;
+        cols.chip_channel.read_value_1 = cols.read_value_1();
+        if cols.opcode_flags.is_imm_op == F::ONE {
+            cols.chip_channel.read_value_2 = cols.imm;
+        } else {
+            cols.chip_channel.read_value_2 = cols.read_value_2();
+        }
+        cols.chip_channel.write_value = cols.write_value();
+    }
+
+    fn set_imm_value<F: PrimeField>(&self, cols: &mut CpuCols<F>, imm: Option<Word<u8>>) {
+        if let Some(imm) = imm {
+            cols.opcode_flags.is_imm_op = F::ONE;
+            cols.imm = imm.transform(F::from_canonical_u8);
         }
     }
 }
@@ -210,7 +228,7 @@ where
         state.cpu_mut().pc += 1;
         state.cpu_mut().clock += 1;
         state.cpu_mut().operations.push(Operation::Load32);
-        set_pc_and_fp(state);
+        state.cpu_mut().set_pc_and_fp();
     }
 }
 
@@ -229,7 +247,7 @@ where
         state.cpu_mut().pc += 1;
         state.cpu_mut().clock += 1;
         state.cpu_mut().operations.push(Operation::Store32);
-        set_pc_and_fp(state);
+        state.cpu_mut().set_pc_and_fp();
     }
 }
 
@@ -251,7 +269,7 @@ where
         state.cpu_mut().fp = (state.cpu().fp as i32 + ops.c()) as u32;
         state.cpu_mut().clock += 1;
         state.cpu_mut().operations.push(Operation::Jal);
-        set_pc_and_fp(state);
+        state.cpu_mut().set_pc_and_fp();
     }
 }
 
@@ -276,7 +294,7 @@ where
         state.cpu_mut().fp += cell;
         state.cpu_mut().clock += 1;
         state.cpu_mut().operations.push(Operation::Jalv);
-        set_pc_and_fp(state);
+        state.cpu_mut().set_pc_and_fp();
     }
 }
 
@@ -288,10 +306,13 @@ where
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
+        let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let cell_1 = state.mem_mut().read(clk, read_addr_1, true);
         let cell_2 = if ops.is_imm() == 1 {
-            (ops.c() as u32).into()
+            let c = (ops.c() as u32).into();
+            imm = Some(c);
+            c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
             state.mem_mut().read(clk, read_addr_2, true)
@@ -302,8 +323,8 @@ where
             state.cpu_mut().pc = state.cpu().pc + 1;
         }
         state.cpu_mut().clock += 1;
-        state.cpu_mut().operations.push(Operation::Beq);
-        set_pc_and_fp(state);
+        state.cpu_mut().operations.push(Operation::Beq(imm));
+        state.cpu_mut().set_pc_and_fp();
     }
 }
 
@@ -315,10 +336,13 @@ where
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
+        let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let cell_1 = state.mem_mut().read(clk, read_addr_1, true);
         let cell_2 = if ops.is_imm() == 1 {
-            (ops.c() as u32).into()
+            let c = (ops.c() as u32).into();
+            imm = Some(c);
+            c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
             state.mem_mut().read(clk, read_addr_2, true)
@@ -329,8 +353,8 @@ where
             state.cpu_mut().pc = state.cpu().pc + 1;
         }
         state.cpu_mut().clock += 1;
-        state.cpu_mut().operations.push(Operation::Bne);
-        set_pc_and_fp(state);
+        state.cpu_mut().operations.push(Operation::Bne(imm));
+        state.cpu_mut().set_pc_and_fp();
     }
 }
 
@@ -348,14 +372,16 @@ where
         state.cpu_mut().pc += 1;
         state.cpu_mut().clock += 1;
         state.cpu_mut().operations.push(Operation::Imm32);
-        set_pc_and_fp(state);
+        state.cpu_mut().set_pc_and_fp();
     }
 }
 
-fn set_pc_and_fp(state: &mut impl MachineWithCpuChip) {
-    let registers = Registers {
-        pc: state.cpu().pc,
-        fp: state.cpu().fp,
-    };
-    state.cpu_mut().registers.push(registers);
+impl CpuChip {
+    pub fn set_pc_and_fp(&mut self) {
+        let registers = Registers {
+            pc: self.pc,
+            fp: self.fp,
+        };
+        self.registers.push(registers);
+    }
 }

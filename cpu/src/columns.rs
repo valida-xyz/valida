@@ -17,6 +17,9 @@ pub struct CpuCols<T> {
     /// Frame pointer.
     pub fp: T,
 
+    /// An immediate value
+    pub imm: Word<T>,
+
     /// The instruction that was read, i.e. `program_code[pc]`.
     pub instruction: InstructionCols<T>,
 
