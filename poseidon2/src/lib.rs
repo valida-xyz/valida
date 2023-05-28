@@ -2,7 +2,7 @@
 //!
 //! Implementation of the Poseidon2 Permutation from <https://eprint.iacr.org/2023/323>.
 
-// TODO: Flatten the Round Constants in the Permutation
+// TODO: Flatten all the Round Constants in the Permutation
 
 #![no_std]
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
@@ -27,12 +27,6 @@ pub trait Width: sealed::Sealed {
     /// Width of the Permutation
     const WIDTH: usize;
 
-    /// Internal Matrix Diagonal Type
-    ///
-    /// This type is used by the `matmul_internal` function to define the diagonal of the internal
-    /// matrix.
-    type InternalMatrixDiagonal<F>;
-
     /// Computes the external matrix multiplication for the Poseidon2 Permutation.
     ///
     /// # Unchecked Lengths
@@ -47,7 +41,7 @@ pub trait Width: sealed::Sealed {
     ///
     /// This function does not check that the lengths of the `state` slice nor `diagonal` are
     /// equal to the `WIDTH` constant. This should be checked by the caller.
-    fn matmul_internal<F>(state: &mut [F], diagonal: &Self::InternalMatrixDiagonal<F>);
+    fn matmul_internal<F>(state: &mut [F], diagonal: &[F]);
 }
 
 /// Poseidon2 Width Constant
@@ -58,11 +52,6 @@ impl<const T: u8> sealed::Sealed for WIDTH<T> {}
 
 impl Width for WIDTH<2> {
     const WIDTH: usize = 2;
-
-    /// Fixed Internal Matrix
-    ///
-    /// For the `WIDTH = 2` case we use the `[[2, 1], [1, 3]]` matrix.
-    type InternalMatrixDiagonal<F> = ();
 
     /// Computes the external matrix multiplication for the Poseidon2 Permutation using the
     /// `circ(2, 1)` matrix.
@@ -75,9 +64,11 @@ impl Width for WIDTH<2> {
         todo!()
     }
 
-    ///
+    // TODO: Finish comment
+    //
+    // /// For the `WIDTH = 2` case we use the `[[2, 1], [1, 3]]` matrix.
     #[inline]
-    fn matmul_internal<F>(state: &mut [F], _: &Self::InternalMatrixDiagonal<F>) {
+    fn matmul_internal<F>(state: &mut [F], _: &[F]) {
         // let mut sum = state[0];
         // sum.add_assign(&state[1]);
         // state[0].add_assign(&sum);
@@ -89,11 +80,6 @@ impl Width for WIDTH<2> {
 
 impl Width for WIDTH<3> {
     const WIDTH: usize = 3;
-
-    /// Fixed Internal Matrix
-    ///
-    /// For the `WIDTH = 3` case we use the `[[2, 1, 1], [1, 2, 1], [1, 1, 3]]` matrix.
-    type InternalMatrixDiagonal<F> = ();
 
     /// Computes the external matrix multiplication for the Poseidon2 Permutation using the
     /// `circ(2, 1, 1)` matrix.
@@ -108,9 +94,11 @@ impl Width for WIDTH<3> {
         todo!()
     }
 
-    ///
+    // TODO: Finish comment
+    //
+    // /// For the `WIDTH = 2` case we use the `[[2, 1], [1, 3]]` matrix.
     #[inline]
-    fn matmul_internal<F>(state: &mut [F], _: &Self::InternalMatrixDiagonal<F>) {
+    fn matmul_internal<F>(state: &mut [F], _: &[F]) {
         // let mut sum = state[0];
         // sum.add_assign(&state[1]);
         // sum.add_assign(&state[2]);
@@ -127,8 +115,6 @@ macro_rules! define_multiple_of_four_widths {
         $(
             impl Width for WIDTH<$width> {
                 const WIDTH: usize = $width;
-
-                type InternalMatrixDiagonal<F> = [F; $width];
 
                 ///
                 #[inline]
@@ -178,7 +164,7 @@ macro_rules! define_multiple_of_four_widths {
 
                 ///
                 #[inline]
-                fn matmul_internal<F>(state: &mut [F], diagonal: &Self::InternalMatrixDiagonal<F>) {
+                fn matmul_internal<F>(state: &mut [F], diagonal: &[F]) {
                     // let mut sum = state[0];
                     // state.iter().skip(1).for_each(|s| sum.add_assign(s));
                     // for i in 0..state.len() {
@@ -196,13 +182,13 @@ define_multiple_of_four_widths!(4, 8, 12, 16, 20, 24);
 
 /// Poseidon2 Valid S-BOX Degrees
 pub trait SBoxDegree: sealed::Sealed {
-    ///
+    /// Degree of the Permutation S-BOX
     const SBOX_DEGREE: usize;
 
-    ///
+    /// Computes the power of `value` to the `SBOX_DEGREE`.
     fn sbox_pow<F>(value: &mut F);
 
-    ///
+    /// Applies the S-BOX power to each element in `state`.
     #[inline]
     fn apply_sbox<F>(state: &mut [F]) {
         state.iter_mut().for_each(Self::sbox_pow);
@@ -302,8 +288,8 @@ where
     /// Internal Matrix Diagonal
     ///
     /// For the `WIDTH = 2` case we use the `[[2, 1], [1, 3]]` matrix and for the `WIDTH = 3` case
-    /// we use the `[[2, 1, 1], [1, 2, 1], [1, 1, 3]]` matrix. Any other values will fail
-    /// initialization with `Self::new`.
+    /// we use the `[[2, 1, 1], [1, 2, 1], [1, 1, 3]]` matrix. For those widths we keep an empty
+    /// vector for this field.
     pub internal_matrix_diagonal: Vec<C::Field>,
 }
 
@@ -311,25 +297,27 @@ impl<C> Permutation<C>
 where
     C: Config,
 {
-    ///
+    /// Permutation Width
     pub const WIDTH: usize = C::Width::WIDTH;
 
-    ///
+    /// S-BOX Degree
     pub const SBOX_DEGREE: usize = C::SBoxDegree::SBOX_DEGREE;
 
-    ///
+    /// Number of Full Rounds
     pub const FULL_ROUNDS: usize = C::FULL_ROUNDS;
 
-    ///
+    /// Number of Partial Rounds
     pub const PARTIAL_ROUNDS: usize = C::PARTIAL_ROUNDS;
 
-    ///
+    /// Half the Number of Full Rounds
     pub const HALF_FULL_ROUNDS: usize = C::FULL_ROUNDS / 2;
 
-    ///
+    /// Total Number of Rounds
     pub const ROUNDS: usize = C::FULL_ROUNDS + C::PARTIAL_ROUNDS;
 
-    ///
+    /// Builds a new Poseidon2 `Permutation` instance from the given parameters
+    /// checking that the lengths of the vectors are correct. See the [`Self::new_unchecked`]
+    /// for an unchecked constructor.
     #[inline]
     pub fn new(
         beginning_full_round_constants: Vec<C::Field>,
@@ -346,7 +334,11 @@ where
             Self::HALF_FULL_ROUNDS * Self::WIDTH
         );
         assert_eq!(partial_round_constants.len(), Self::PARTIAL_ROUNDS);
-        assert_eq!(internal_matrix_diagonal.len(), Self::WIDTH);
+        if Self::WIDTH == 2 || Self::WIDTH == 3 {
+            assert!(internal_matrix_diagonal.is_empty());
+        } else {
+            assert_eq!(internal_matrix_diagonal.len(), Self::WIDTH);
+        }
         Self::new_unchecked(
             beginning_full_round_constants,
             ending_full_round_constants,
@@ -355,7 +347,9 @@ where
         )
     }
 
-    ///
+    /// Builds a new Poseidon2 `Permutation` instance from the given parameters
+    /// without checking the vectors. See the [`Self::new`] method for more a checked
+    /// constructor.
     #[inline]
     pub fn new_unchecked(
         beginning_full_round_constants: Vec<C::Field>,
@@ -371,81 +365,45 @@ where
         }
     }
 
-    ///
+    /// Computes the Poseidon2 permutation on the given `state`.
     #[inline]
     pub fn permute(&self, state: &mut [C::Field]) {
         assert_eq!(state.len(), Self::WIDTH);
         for round in 0..Self::HALF_FULL_ROUNDS {
-            self.add_beginning_full_round_constants(state, round);
-            Self::apply_full_sbox(state);
-            Self::matmul_external(state);
+            Self::add_full_round_constants(state, round, &self.beginning_full_round_constants);
+            C::SBoxDegree::apply_sbox(state);
+            C::Width::matmul_external(state);
         }
         for round in 0..Self::PARTIAL_ROUNDS {
             self.add_partial_round_constant(state, round);
-            Self::apply_partial_sbox(state);
-            self.matmul_internal(state);
+            C::SBoxDegree::sbox_pow(&mut state[0]);
+            C::Width::matmul_internal(state, &self.internal_matrix_diagonal);
         }
         for round in 0..Self::HALF_FULL_ROUNDS {
-            self.add_ending_full_round_constants(state, round);
-            Self::apply_full_sbox(state);
-            Self::matmul_external(state);
+            Self::add_full_round_constants(state, round, &self.ending_full_round_constants);
+            C::SBoxDegree::apply_sbox(state);
+            C::Width::matmul_external(state);
         }
     }
 
-    ///
+    /// Adds the `round_constants` at the given `round` to the `state` for full rounds.
     #[inline]
-    fn add_beginning_full_round_constants(&self, state: &mut [C::Field], round: usize) {
-        // let range = round * Self::WIDTH..(round + 1) * Self::WIDTH;
-        // state
-        //     .iter_mut()
-        //     .zip(self.beginning_full_round_constants[range].iter())
-        //     .for_each(|(a, b)| a.add_assign(b));
-        todo!()
+    fn add_full_round_constants(
+        state: &mut [C::Field],
+        round: usize,
+        round_constants: &[C::Field],
+    ) {
+        let range = round * Self::WIDTH..(round + 1) * Self::WIDTH;
+        for (a, b) in state.iter_mut().zip(round_constants[range].iter()) {
+            // TODO: a.add_assign(b);
+            todo!()
+        }
     }
 
-    ///
+    /// Adds the round constant at index `round` to the `state` for partial rounds.
     #[inline]
     fn add_partial_round_constant(&self, state: &mut [C::Field], round: usize) {
-        // state[0].add_assign(&self.partial_round_constants[round]);
-        todo!()
-    }
-
-    ///
-    #[inline]
-    fn add_ending_full_round_constants(&self, state: &mut [C::Field], round: usize) {
-        // let range = round * Self::WIDTH..(round + 1) * Self::WIDTH;
-        // state
-        //     .iter_mut()
-        //     .zip(self.ending_full_round_constants[range].iter())
-        //     .for_each(|(a, b)| a.add_assign(b));
-        todo!()
-    }
-
-    ///
-    #[inline]
-    fn apply_full_sbox(state: &mut [C::Field]) {
-        C::SBoxDegree::apply_sbox(state);
-    }
-
-    ///
-    #[inline]
-    fn apply_partial_sbox(state: &mut [C::Field]) {
-        C::SBoxDegree::sbox_pow(&mut state[0]);
-    }
-
-    ///
-    #[inline]
-    fn matmul_external(state: &mut [C::Field]) {
-        C::Width::matmul_external(state);
-    }
-
-    ///
-    #[inline]
-    fn matmul_internal(&self, state: &mut [C::Field]) {
-        // C::Width::matmul_internal(
-        //     state,
-        //     C::Width::internal_matrix_diagonal_from_slice(&self.internal_matrix_diagonal),
-        // );
+        // TODO: state[0].add_assign(&self.partial_round_constants[round]);
         todo!()
     }
 }
