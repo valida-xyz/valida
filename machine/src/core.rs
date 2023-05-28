@@ -1,6 +1,7 @@
 use super::{Field, PrimeField, PrimeField64, MEMORY_CELL_BYTES};
 use core::ops::{Add, Index, IndexMut, Mul, Sub};
 
+/// Big-Endian Word
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Word<F>(pub [F; MEMORY_CELL_BYTES]);
 
