@@ -6,7 +6,7 @@ use alloc::vec::Vec;
 use columns::{Sub32Cols, NUM_SUB_COLS, SUB_COL_MAP};
 use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
-use valida_cpu::{MachineWithCpuChip, Operation as CpuOperation};
+use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 
 use p3_air::VirtualPairCol;
@@ -116,9 +116,6 @@ where
             .sub_u32_mut()
             .operations
             .push(Operation::Sub32(a, b, c));
-        state.cpu_mut().operations.push(CpuOperation::Bus(imm));
-        state.cpu_mut().clock += 1;
-        state.cpu_mut().pc += 1;
-        state.cpu_mut().set_pc_and_fp();
+        state.cpu_mut().process_bus_operation(imm);
     }
 }

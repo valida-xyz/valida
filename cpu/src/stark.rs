@@ -1,8 +1,7 @@
 use crate::columns::CpuCols;
-use crate::Store32Instruction;
 use core::borrow::Borrow;
 use core::mem::MaybeUninit;
-use valida_machine::{Instruction, Word};
+use valida_machine::Word;
 
 use p3_air::{Air, AirBuilder};
 use p3_field::{AbstractField, PrimeField};
@@ -58,6 +57,7 @@ impl CpuStark {
         let is_bne = local.opcode_flags.is_bne;
         let is_imm32 = local.opcode_flags.is_imm32;
         let is_imm_op = local.opcode_flags.is_imm_op;
+        let is_bus_op = local.opcode_flags.is_bus_op;
 
         let addr_a = local.fp + local.instruction.operands.a();
         let addr_b = local.fp + local.instruction.operands.b();
@@ -72,7 +72,7 @@ impl CpuStark {
             .when(is_load.clone() + is_store.clone())
             .assert_eq(local.read_addr_1(), addr_c.clone());
         builder
-            .when(is_jalv + is_beq + is_bne)
+            .when(is_jalv + is_beq + is_bne + is_bus_op.clone())
             .assert_eq(local.read_addr_1(), addr_b.clone());
         builder
             .when(
@@ -80,7 +80,8 @@ impl CpuStark {
                     + is_store.clone()
                     + is_jalv.clone()
                     + is_beq.clone()
-                    + is_bne.clone(),
+                    + is_bne.clone()
+                    + is_bus_op.clone(),
             )
             .assert_one(local.read_1_used());
 
@@ -90,7 +91,7 @@ impl CpuStark {
             reduce::<F, AB>(base, local.read_value_1()),
         );
         builder
-            .when(is_jalv + is_imm_op * (is_beq + is_bne))
+            .when(is_jalv + (AB::Exp::from(AB::F::ONE) - is_imm_op) * (is_beq + is_bne + is_bus_op))
             .assert_eq(local.read_addr_2(), addr_c);
         builder
             .when(
@@ -98,13 +99,20 @@ impl CpuStark {
                     + is_load.clone()
                     + is_jalv.clone()
                     + is_beq.clone()
-                    + is_bne.clone(),
+                    + is_bne.clone()
+                    + (AB::Exp::from(AB::F::ONE) - is_imm_op) * is_bus_op.clone(),
             )
             .assert_one(local.read_2_used());
 
         // Write
         builder
-            .when(is_load.clone() + is_jal.clone() + is_jalv.clone() + is_imm32.clone())
+            .when(
+                is_load.clone()
+                    + is_jal.clone()
+                    + is_jalv.clone()
+                    + is_imm32.clone()
+                    + is_bus_op.clone(),
+            )
             .assert_eq(local.write_addr(), addr_a);
         builder
             .when(is_store.clone())
@@ -114,6 +122,7 @@ impl CpuStark {
             reduce::<F, AB>(base, local.write_value()),
         );
         builder
+            .when_transition()
             .when(is_jal.clone() + is_jalv.clone())
             .assert_eq(reduce::<F, AB>(base, local.write_value()), next.pc);
         builder.when(is_imm32.clone()).assert_eq(
@@ -136,7 +145,8 @@ impl CpuStark {
                     + is_load.clone()
                     + is_jal.clone()
                     + is_jalv.clone()
-                    + is_imm32.clone(),
+                    + is_imm32.clone()
+                    + is_bus_op.clone(),
             )
             .assert_one(local.write_used());
     }
@@ -157,21 +167,6 @@ impl CpuStark {
             .when_transition()
             .when(should_increment_pc)
             .assert_eq(next.pc, incremented_pc.clone());
-
-        // Check if the first two operands are equal, in case we're doing a conditional branch.
-        // TODO: Code below assumes that they're coming from memory, not immediates.
-        builder.assert_eq(
-            local.diff,
-            local
-                .read_value_1()
-                .0
-                .into_iter()
-                .zip(next.read_value_2().0)
-                .map(|(a, b)| (a - b) * (a - b))
-                .sum::<AB::Exp>(),
-        );
-        builder.assert_bool(local.not_equal);
-        builder.assert_eq(local.not_equal, local.diff * local.diff_inv);
 
         // Branch manipulation
         let equal = AB::Exp::from(AB::F::ONE) - local.not_equal;
@@ -227,22 +222,27 @@ impl CpuStark {
         _next: &CpuCols<AB::Var>,
         _base: &[AB::Exp; 4],
     ) {
-        // Word equality constraints (for branch instructions)
+        // Check if the first two operand values are equal, in case we're doing a conditional branch.
+        builder
+            .when(AB::Exp::from(AB::F::ONE) - local.instruction.operands.is_imm())
+            .assert_eq(
+                local.diff,
+                local
+                    .read_value_1()
+                    .into_iter()
+                    .zip(local.read_value_2())
+                    .map(|(a, b)| (a - b) * (a - b))
+                    .sum::<AB::Exp>(),
+            );
         builder.when(local.instruction.operands.is_imm()).assert_eq(
             local.diff,
             local
                 .read_value_1()
                 .into_iter()
-                .zip(local.read_value_2())
+                .zip(local.imm)
                 .map(|(a, b)| (a - b) * (a - b))
                 .sum::<AB::Exp>(),
         );
-        builder
-            .when(AB::Exp::from(AB::F::ONE) - local.instruction.operands.is_imm())
-            .assert_eq(
-                local.diff,
-                local.read_value_1()[3] - local.instruction.operands.c(),
-            );
         builder.assert_bool(local.not_equal);
         builder.assert_eq(local.not_equal, local.diff * local.diff_inv);
     }

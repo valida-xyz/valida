@@ -107,6 +107,7 @@ impl CpuChip {
 
         cols.pc = F::from_canonical_u32(self.registers[clk].pc);
         cols.fp = F::from_canonical_u32(self.registers[clk].fp);
+        cols.clk = F::from_canonical_usize(clk);
 
         self.set_memory_channel_values(clk, cols, machine);
 
@@ -140,6 +141,8 @@ impl CpuChip {
                 self.set_bus_channel_values(cols);
             }
         }
+
+        // TODO: Set diff, diff_inv, and not_equal
 
         row
     }
@@ -226,9 +229,7 @@ where
         let cell = state.mem_mut().read(clk, read_addr_2.into(), true);
         state.mem_mut().write(clk, write_addr, cell, true);
         state.cpu_mut().pc += 1;
-        state.cpu_mut().clock += 1;
-        state.cpu_mut().operations.push(Operation::Load32);
-        state.cpu_mut().set_pc_and_fp();
+        state.cpu_mut().process_operation(Operation::Load32);
     }
 }
 
@@ -247,7 +248,7 @@ where
         state.cpu_mut().pc += 1;
         state.cpu_mut().clock += 1;
         state.cpu_mut().operations.push(Operation::Store32);
-        state.cpu_mut().set_pc_and_fp();
+        state.cpu_mut().save_register_state();
     }
 }
 
@@ -267,9 +268,7 @@ where
         state.cpu_mut().pc = ops.b() as u32;
         // Set fp to fp + c
         state.cpu_mut().fp = (state.cpu().fp as i32 + ops.c()) as u32;
-        state.cpu_mut().clock += 1;
-        state.cpu_mut().operations.push(Operation::Jal);
-        state.cpu_mut().set_pc_and_fp();
+        state.cpu_mut().process_operation(Operation::Jal);
     }
 }
 
@@ -292,9 +291,7 @@ where
         let read_addr = (state.cpu().fp as i32 + ops.c()) as u32;
         let cell: u32 = state.mem_mut().read(clk, read_addr, true).into();
         state.cpu_mut().fp += cell;
-        state.cpu_mut().clock += 1;
-        state.cpu_mut().operations.push(Operation::Jalv);
-        state.cpu_mut().set_pc_and_fp();
+        state.cpu_mut().process_operation(Operation::Jalv);
     }
 }
 
@@ -322,9 +319,7 @@ where
         } else {
             state.cpu_mut().pc = state.cpu().pc + 1;
         }
-        state.cpu_mut().clock += 1;
-        state.cpu_mut().operations.push(Operation::Beq(imm));
-        state.cpu_mut().set_pc_and_fp();
+        state.cpu_mut().process_operation(Operation::Beq(imm));
     }
 }
 
@@ -352,9 +347,7 @@ where
         } else {
             state.cpu_mut().pc = state.cpu().pc + 1;
         }
-        state.cpu_mut().clock += 1;
-        state.cpu_mut().operations.push(Operation::Bne(imm));
-        state.cpu_mut().set_pc_and_fp();
+        state.cpu_mut().process_operation(Operation::Bne(imm));
     }
 }
 
@@ -370,14 +363,23 @@ where
         let value = Word([ops.b() as u8, ops.c() as u8, ops.d() as u8, ops.e() as u8]);
         state.mem_mut().write(clk, write_addr, value.into(), true);
         state.cpu_mut().pc += 1;
-        state.cpu_mut().clock += 1;
-        state.cpu_mut().operations.push(Operation::Imm32);
-        state.cpu_mut().set_pc_and_fp();
+        state.cpu_mut().process_operation(Operation::Imm32);
     }
 }
 
 impl CpuChip {
-    pub fn set_pc_and_fp(&mut self) {
+    pub fn process_bus_operation(&mut self, imm: Option<Word<u8>>) {
+        self.pc += 1;
+        self.process_operation(Operation::Bus(imm));
+    }
+
+    pub fn process_operation(&mut self, op: Operation) {
+        self.operations.push(op);
+        self.clock += 1;
+        self.save_register_state();
+    }
+
+    pub fn save_register_state(&mut self) {
         let registers = Registers {
             pc: self.pc,
             fp: self.fp,
