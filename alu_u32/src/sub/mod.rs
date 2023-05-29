@@ -54,7 +54,7 @@ where
 
         let receive = Interaction {
             fields,
-            count: VirtualPairCol::one(),
+            count: VirtualPairCol::single_main(SUB_COL_MAP.opcode),
             argument_index: machine.general_bus(),
         };
         vec![receive]
