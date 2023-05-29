@@ -19,9 +19,9 @@ impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for Mul32Stark {
         let next: &Mul32Cols<AB::Var> = main.row(1).borrow();
 
         // Limb weights modulo 2^32
-        let mut base_m: [AB::Exp; 4] = unsafe { MaybeUninit::uninit().assume_init() };
+        let mut base_m: [AB::Expr; 4] = unsafe { MaybeUninit::uninit().assume_init() };
         for (i, b) in [1 << 24, 1 << 16, 1 << 8, 1].into_iter().enumerate() {
-            base_m[i] = AB::Exp::from(AB::F::from_canonical_u32(b));
+            base_m[i] = AB::Expr::from(AB::F::from_canonical_u32(b));
         }
 
         // Partially reduced summation of input product limbs (mod 2^32)
@@ -37,35 +37,35 @@ impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for Mul32Stark {
         let sigma_prime = sigma_m::<2, AB>(&base_m[..2], local.output);
 
         // Congruence checks
-        builder.assert_eq(pi - sigma, local.r * AB::Exp::from(AB::F::TWO));
+        builder.assert_eq(pi - sigma, local.r * AB::Expr::from(AB::F::TWO));
         builder.assert_eq(pi_prime - sigma_prime, local.s * base_m[1].clone());
 
         // Range check counter
         builder
             .when_first_row()
-            .assert_eq(local.counter, AB::Exp::from(AB::F::ONE));
+            .assert_eq(local.counter, AB::Expr::from(AB::F::ONE));
         builder.when_transition().assert_zero(
             (local.counter - next.counter)
-                * (local.counter + AB::Exp::from(AB::F::ONE) - next.counter),
+                * (local.counter + AB::Expr::from(AB::F::ONE) - next.counter),
         );
         builder.when_last_row().assert_eq(
             local.counter,
-            AB::Exp::from(AB::F::from_canonical_u32(1 << 10)),
+            AB::Expr::from(AB::F::from_canonical_u32(1 << 10)),
         );
 
         // Bus opcode constraint
         builder.assert_eq(
             local.opcode,
-            AB::Exp::from(AB::F::from_canonical_u32(Mul32Opcode)),
+            AB::Expr::from(AB::F::from_canonical_u32(Mul32Opcode)),
         );
     }
 }
 
 fn pi_m<const N: usize, AB: PermutationAirBuilder>(
-    base: &[AB::Exp],
+    base: &[AB::Expr],
     input_1: Word<AB::Var>,
     input_2: Word<AB::Var>,
-) -> AB::Exp {
+) -> AB::Expr {
     iproduct!(0..N, 0..N)
         .filter(|(i, j)| i + j < N)
         .map(|(i, j)| base[i + j].clone() * input_1[i] * input_2[j])
@@ -73,9 +73,9 @@ fn pi_m<const N: usize, AB: PermutationAirBuilder>(
 }
 
 fn sigma_m<const N: usize, AB: PermutationAirBuilder>(
-    base: &[AB::Exp],
+    base: &[AB::Expr],
     input: Word<AB::Var>,
-) -> AB::Exp {
+) -> AB::Expr {
     input
         .into_iter()
         .enumerate()

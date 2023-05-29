@@ -20,9 +20,9 @@ where
         let local: &CpuCols<AB::Var> = main.row(0).borrow();
         let next: &CpuCols<AB::Var> = main.row(1).borrow();
 
-        let mut base: [AB::Exp; 4] = unsafe { MaybeUninit::uninit().assume_init() };
+        let mut base: [AB::Expr; 4] = unsafe { MaybeUninit::uninit().assume_init() };
         for (i, b) in [1 << 24, 1 << 16, 1 << 8, 1].into_iter().enumerate() {
-            base[i] = AB::Exp::from(AB::F::from_canonical_u32(b));
+            base[i] = AB::Expr::from(AB::F::from_canonical_u32(b));
         }
 
         self.eval_pc(builder, local, next, &base);
@@ -34,12 +34,12 @@ where
         builder.when_first_row().assert_zero(local.clk);
         builder
             .when_transition()
-            .assert_eq(local.clk + AB::Exp::from(AB::F::ONE), next.clk);
+            .assert_eq(local.clk + AB::Expr::from(AB::F::ONE), next.clk);
         builder
             .when(local.opcode_flags.is_bus_op_with_mem)
             .assert_eq(local.clk, local.chip_channel.clk_or_zero);
         builder
-            .when(AB::Exp::from(AB::F::ONE) - local.opcode_flags.is_bus_op_with_mem)
+            .when(AB::Expr::from(AB::F::ONE) - local.opcode_flags.is_bus_op_with_mem)
             .assert_zero(local.chip_channel.clk_or_zero);
 
         // Immediate value constraints (TODO: we'd need to range check read_value_2 in
@@ -57,7 +57,7 @@ impl CpuStark {
         builder: &mut AB,
         local: &CpuCols<AB::Var>,
         next: &CpuCols<AB::Var>,
-        base: &[AB::Exp; 4],
+        base: &[AB::Expr; 4],
     ) where
         F: PrimeField,
         AB: AirBuilder<F = F>,
@@ -104,7 +104,7 @@ impl CpuStark {
             reduce::<F, AB>(base, local.read_value_1()),
         );
         builder
-            .when(is_jalv + (AB::Exp::from(AB::F::ONE) - is_imm_op) * (is_beq + is_bne + is_bus_op))
+            .when(is_jalv + (AB::Expr::from(AB::F::ONE) - is_imm_op) * (is_beq + is_bne + is_bus_op))
             .assert_eq(local.read_addr_2(), addr_c);
         builder
             .when(
@@ -113,7 +113,7 @@ impl CpuStark {
                     + is_jalv.clone()
                     + is_beq.clone()
                     + is_bne.clone()
-                    + (AB::Exp::from(AB::F::ONE) - is_imm_op) * is_bus_op.clone(),
+                    + (AB::Expr::from(AB::F::ONE) - is_imm_op) * is_bus_op.clone(),
             )
             .assert_one(local.read_2_used());
 
@@ -138,7 +138,7 @@ impl CpuStark {
                     .into_iter()
                     .zip(local.write_value())
                     .map(|(a, b)| (a - b) * (a - b))
-                    .sum::<AB::Exp>(),
+                    .sum::<AB::Expr>(),
             );
         builder
             .when_transition()
@@ -150,7 +150,7 @@ impl CpuStark {
                 .into_iter()
                 .zip(local.instruction.operands.imm32())
                 .map(|(a, b)| (a - b) * (a - b))
-                .sum::<AB::Exp>(),
+                .sum::<AB::Expr>(),
         );
         builder
             .when(
@@ -169,7 +169,7 @@ impl CpuStark {
         builder: &mut AB,
         local: &CpuCols<AB::Var>,
         next: &CpuCols<AB::Var>,
-        base: &[AB::Exp; 4],
+        base: &[AB::Expr; 4],
     ) where
         F: PrimeField,
         AB: AirBuilder<F = F>,
@@ -182,7 +182,7 @@ impl CpuStark {
             .assert_eq(next.pc, incremented_pc.clone());
 
         // Branch manipulation
-        let equal = AB::Exp::from(AB::F::ONE) - local.not_equal;
+        let equal = AB::Expr::from(AB::F::ONE) - local.not_equal;
         let next_pc_if_branching = local.pc + local.instruction.operands.a();
         let beq_next_pc =
             equal.clone() * next_pc_if_branching.clone() + local.not_equal * incremented_pc.clone();
@@ -212,7 +212,7 @@ impl CpuStark {
         builder: &mut AB,
         local: &CpuCols<AB::Var>,
         next: &CpuCols<AB::Var>,
-        base: &[AB::Exp; 4],
+        base: &[AB::Expr; 4],
     ) where
         F: PrimeField,
         AB: AirBuilder<F = F>,
@@ -233,7 +233,7 @@ impl CpuStark {
         builder: &mut AB,
         local: &CpuCols<AB::Var>,
         _next: &CpuCols<AB::Var>,
-        _base: &[AB::Exp; 4],
+        _base: &[AB::Expr; 4],
     ) {
         // Check if the first two operand values are equal, in case we're doing a conditional branch.
         // (when is_imm == 1, the second read value is guaranteed to be an immediate value)
@@ -244,14 +244,14 @@ impl CpuStark {
                 .into_iter()
                 .zip(local.read_value_2())
                 .map(|(a, b)| (a - b) * (a - b))
-                .sum::<AB::Exp>(),
+                .sum::<AB::Expr>(),
         );
         builder.assert_bool(local.not_equal);
         builder.assert_eq(local.not_equal, local.diff * local.diff_inv);
     }
 }
 
-fn reduce<F: PrimeField, AB: AirBuilder<F = F>>(base: &[AB::Exp], input: Word<AB::Var>) -> AB::Exp {
+fn reduce<F: PrimeField, AB: AirBuilder<F = F>>(base: &[AB::Expr], input: Word<AB::Var>) -> AB::Expr {
     input
         .into_iter()
         .enumerate()
