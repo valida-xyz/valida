@@ -63,6 +63,9 @@ impl<F: Copy> Operands<F> {
     pub fn is_imm(&self) -> F {
         self.0[4]
     }
+    pub fn imm32(&self) -> Word<F> {
+        Word([self.0[0], self.0[1], self.0[2], self.0[3]])
+    }
 }
 
 impl<F: PrimeField> Operands<F> {

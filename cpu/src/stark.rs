@@ -4,7 +4,7 @@ use core::mem::MaybeUninit;
 use valida_machine::Word;
 
 use p3_air::{Air, AirBuilder};
-use p3_field::{AbstractField, PrimeField};
+use p3_field::PrimeField;
 use p3_matrix::Matrix;
 
 #[derive(Default)]
@@ -35,6 +35,19 @@ where
         builder
             .when_transition()
             .assert_eq(local.clk + AB::Exp::from(AB::F::ONE), next.clk);
+        builder
+            .when(local.opcode_flags.is_bus_op_with_mem)
+            .assert_eq(local.clk, local.chip_channel.clk_or_zero);
+        builder
+            .when(AB::Exp::from(AB::F::ONE) - local.opcode_flags.is_bus_op_with_mem)
+            .assert_zero(local.chip_channel.clk_or_zero);
+
+        // Immediate value constraints (TODO: we'd need to range check read_value_2 in
+        // this case)
+        builder.when(local.opcode_flags.is_imm_op).assert_eq(
+            local.instruction.operands.c(),
+            reduce::<F, AB>(&base, local.read_value_2()),
+        );
     }
 }
 
@@ -69,11 +82,11 @@ impl CpuStark {
 
         // Read (1)
         builder
-            .when(is_load.clone() + is_store.clone())
-            .assert_eq(local.read_addr_1(), addr_c.clone());
-        builder
             .when(is_jalv + is_beq + is_bne + is_bus_op.clone())
             .assert_eq(local.read_addr_1(), addr_b.clone());
+        builder
+            .when(is_load.clone() + is_store.clone())
+            .assert_eq(local.read_addr_1(), addr_c.clone());
         builder
             .when(
                 is_load.clone()
@@ -117,27 +130,27 @@ impl CpuStark {
         builder
             .when(is_store.clone())
             .assert_eq(local.write_addr(), addr_b);
-        builder.when(is_load.clone() + is_store.clone()).assert_eq(
-            reduce::<F, AB>(base, local.read_value_2()),
-            reduce::<F, AB>(base, local.write_value()),
-        );
+        builder
+            .when(is_load.clone() + is_store.clone())
+            .assert_zero(
+                local
+                    .read_value_2()
+                    .into_iter()
+                    .zip(local.write_value())
+                    .map(|(a, b)| (a - b) * (a - b))
+                    .sum::<AB::Exp>(),
+            );
         builder
             .when_transition()
             .when(is_jal.clone() + is_jalv.clone())
-            .assert_eq(reduce::<F, AB>(base, local.write_value()), next.pc);
-        builder.when(is_imm32.clone()).assert_eq(
-            // For all imm32 instructions, program memory is trusted to have operand values
-            // between 0 and 255.
-            reduce::<F, AB>(base, local.write_value()),
-            reduce::<F, AB>(
-                base,
-                Word([
-                    local.instruction.operands.0[0],
-                    local.instruction.operands.0[1],
-                    local.instruction.operands.0[2],
-                    local.instruction.operands.0[3],
-                ]),
-            ),
+            .assert_eq(next.pc, reduce::<F, AB>(base, local.write_value()));
+        builder.when(is_imm32.clone()).assert_zero(
+            local
+                .write_value()
+                .into_iter()
+                .zip(local.instruction.operands.imm32())
+                .map(|(a, b)| (a - b) * (a - b))
+                .sum::<AB::Exp>(),
         );
         builder
             .when(
@@ -223,23 +236,13 @@ impl CpuStark {
         _base: &[AB::Exp; 4],
     ) {
         // Check if the first two operand values are equal, in case we're doing a conditional branch.
-        builder
-            .when(AB::Exp::from(AB::F::ONE) - local.instruction.operands.is_imm())
-            .assert_eq(
-                local.diff,
-                local
-                    .read_value_1()
-                    .into_iter()
-                    .zip(local.read_value_2())
-                    .map(|(a, b)| (a - b) * (a - b))
-                    .sum::<AB::Exp>(),
-            );
-        builder.when(local.instruction.operands.is_imm()).assert_eq(
+        // (when is_imm == 1, the second read value is guaranteed to be an immediate value)
+        builder.assert_eq(
             local.diff,
             local
                 .read_value_1()
                 .into_iter()
-                .zip(local.imm)
+                .zip(local.read_value_2())
                 .map(|(a, b)| (a - b) * (a - b))
                 .sum::<AB::Exp>(),
         );

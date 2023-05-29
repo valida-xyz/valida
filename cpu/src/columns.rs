@@ -17,9 +17,6 @@ pub struct CpuCols<T> {
     /// Frame pointer.
     pub fp: T,
 
-    /// An immediate value
-    pub imm: Word<T>,
-
     /// The instruction that was read, i.e. `program_code[pc]`.
     pub instruction: InstructionCols<T>,
 
@@ -37,7 +34,7 @@ pub struct CpuCols<T> {
     /// Channels to the memory bus.
     pub mem_channels: [MemoryChannelCols<T>; CPU_MEMORY_CHANNELS],
 
-    /// Channel to the shared chip bus.
+    /// Channel to the general bus.
     pub chip_channel: ChipChannelCols<T>,
 }
 
@@ -49,8 +46,8 @@ pub struct InstructionCols<F> {
 
 #[derive(Default)]
 pub struct OpcodeFlagCols<T> {
-    pub is_imm32: T,
     pub is_bus_op: T,
+    pub is_bus_op_with_mem: T,
     pub is_imm_op: T,
     pub is_load: T,
     pub is_store: T,
@@ -58,6 +55,7 @@ pub struct OpcodeFlagCols<T> {
     pub is_bne: T,
     pub is_jal: T,
     pub is_jalv: T,
+    pub is_imm32: T,
 }
 
 #[derive(Default)]
@@ -70,19 +68,7 @@ pub struct MemoryChannelCols<T> {
 
 #[derive(Default)]
 pub struct ChipChannelCols<T> {
-    pub opcode: T,
-    pub read_value_1: Word<T>,
-    pub read_value_2: Word<T>,
-    pub write_value: Word<T>,
-}
-
-impl<T: Copy> ChipChannelCols<T> {
-    pub(crate) fn iter_flat(&self) -> impl Iterator<Item = T> {
-        iter::once(self.opcode)
-            .chain(self.read_value_1.0.into_iter())
-            .chain(self.read_value_2.0.into_iter())
-            .chain(self.write_value.0.into_iter())
-    }
+    pub clk_or_zero: T,
 }
 
 impl<T: Copy> CpuCols<T> {

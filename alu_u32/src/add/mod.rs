@@ -117,6 +117,6 @@ where
             .add_u32_mut()
             .operations
             .push(Operation::Add32(a, b, c));
-        state.cpu_mut().process_bus_operation(imm);
+        state.cpu_mut().push_bus_op(imm);
     }
 }

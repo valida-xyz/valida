@@ -37,7 +37,6 @@ where
         let rows = self
             .operations
             .par_iter()
-            .cloned()
             .map(|op| self.op_to_row(op, machine))
             .collect::<Vec<_>>();
         RowMajorMatrix::new(rows.concat(), NUM_MUL_COLS)
@@ -68,7 +67,7 @@ where
 }
 
 impl Mul32Chip {
-    fn op_to_row<F, M>(&self, op: Operation, _machine: &M) -> [F; NUM_MUL_COLS]
+    fn op_to_row<F, M>(&self, op: &Operation, _machine: &M) -> [F; NUM_MUL_COLS]
     where
         F: PrimeField,
         M: MachineWithMul32Chip<F = F>,
@@ -122,6 +121,6 @@ where
             .mul_u32_mut()
             .operations
             .push(Operation::Mul32(a, b, c));
-        state.cpu_mut().process_bus_operation(imm);
+        state.cpu_mut().push_bus_op(imm);
     }
 }
