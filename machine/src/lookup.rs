@@ -195,7 +195,7 @@ impl<const N: usize, const M: usize> LogUp<N, M> {
 
         // Running sum constraints
         let mut lhs = perm_next[0] - perm_local[0];
-        let mut rhs = AB::Exp::from(AB::F::ZERO);
+        let mut rhs = AB::Expr::from(AB::F::ZERO);
         let m_0 = perm_local[1];
         let alpha = rand_elems[0].clone();
         if N == 1 {
