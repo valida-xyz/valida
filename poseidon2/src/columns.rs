@@ -1,6 +1,7 @@
 //! Posiedon2 STARK Columns
 
-use crate::Config;
+use crate::PermutationLinearLayer;
+use core::marker::PhantomData;
 use p3_air::AirBuilder;
 use p3_field::PrimeField;
 use valida_derive::AlignedBorrow;
@@ -8,49 +9,47 @@ use valida_util::indices_arr;
 
 /// Columns for Single-Row Poseidon2 STARK
 ///
-/// The columns of the STARK are divided into two parts: state registers and S-BOX registers.
-/// Because the matrix multiplications are linear functions, we don't need auxiliary registers for
-/// the intermediate values.
-///
-/// As an example, let's consider a `WIDTH = 3` and `SBOX_DEGREE = 5` instance.
-///
-/// |  0 |  1 |  2 |         3 |         4 |         5 |         6 |         7 |         8 |
-/// |----|----|----|-----------|-----------|-----------|-----------|-----------|-----------|
-/// | s0 | s1 | s2 | (s0+r0)^3 | (s1+r1)^3 | (s2+r2)^3 | (s0+r0)^5 | (s1+r1)^5 | (s2+r2)^5 |
-///
-/// Because the S-BOX is a quintic function but we only have degree 3 constraints, we split the
-/// computation into the first degree 3 part and then the second degree 2 part. After this part,
-/// we import the right most columns into the matrix multiplication which write to the next state
-/// section. Each section has `WIDTH`-many state columns
+/// The columns of the STARK are divided into the three different round sections of the Poseidon2
+/// Permutation: beginning full rounds, partial rounds, and ending full rounds. For the full
+/// rounds we store an [`SBox`] columnset for each state variable, and for the partial rounds we
+/// store only for the first state variable. Because the matrix multiplications are linear
+/// functions, we need only keep auxiliary columns for the S-BOX computations.
 #[repr(C)]
 pub struct Columns<
     T,
+    L,
     const WIDTH: usize,
     const SBOX_DEGREE: usize,
     const SBOX_REGISTERS: usize,
     const HALF_FULL_ROUNDS: usize,
     const PARTIAL_ROUNDS: usize,
-> {
+> where
+    L: PermutationLinearLayer,
+{
     /// Beginning Full Rounds
-    pub beginning_full_rounds: [FullRound<T, WIDTH, SBOX_DEGREE, SBOX_REGISTERS>; HALF_FULL_ROUNDS],
+    pub beginning_full_rounds:
+        [FullRound<T, L, WIDTH, SBOX_DEGREE, SBOX_REGISTERS>; HALF_FULL_ROUNDS],
 
     /// Partial Rounds
-    pub partial_rounds: [PartialRound<T, WIDTH, SBOX_DEGREE, SBOX_REGISTERS>; PARTIAL_ROUNDS],
+    pub partial_rounds: [PartialRound<T, L, WIDTH, SBOX_DEGREE, SBOX_REGISTERS>; PARTIAL_ROUNDS],
 
     /// Ending Full Rounds
-    pub ending_full_rounds: [FullRound<T, WIDTH, SBOX_DEGREE, SBOX_REGISTERS>; HALF_FULL_ROUNDS],
+    pub ending_full_rounds: [FullRound<T, L, WIDTH, SBOX_DEGREE, SBOX_REGISTERS>; HALF_FULL_ROUNDS],
 }
 
 impl<
         T,
+        L,
         const WIDTH: usize,
         const SBOX_DEGREE: usize,
         const SBOX_REGISTERS: usize,
         const HALF_FULL_ROUNDS: usize,
         const PARTIAL_ROUNDS: usize,
-    > Columns<T, WIDTH, SBOX_DEGREE, SBOX_REGISTERS, HALF_FULL_ROUNDS, PARTIAL_ROUNDS>
+    > Columns<T, L, WIDTH, SBOX_DEGREE, SBOX_REGISTERS, HALF_FULL_ROUNDS, PARTIAL_ROUNDS>
+where
+    L: PermutationLinearLayer,
 {
-    ///
+    /// Evaluates all the columns of the Poseidon2 STARK.
     #[inline]
     pub fn eval<AB>(
         &self,
@@ -58,44 +57,111 @@ impl<
         beginning_full_round_constants: &[[AB::Expr; WIDTH]; HALF_FULL_ROUNDS],
         partial_round_constants: &[AB::Expr; PARTIAL_ROUNDS],
         ending_full_round_constants: &[[AB::Expr; WIDTH]; HALF_FULL_ROUNDS],
+        internal_matrix_diagonal: &[AB::Expr; WIDTH],
         builder: &mut AB,
     ) where
         T: Copy,
         AB: AirBuilder<Var = T>,
     {
-        // TODO: Add initial linear layer (matmul_external)
-        // matmul_external(state);
+        assert_eq!(
+            L::WIDTH,
+            WIDTH,
+            "The WIDTH for this STARK does not match the Linear Layer WIDTH."
+        );
+        L::matmul_external(state);
         for round in 0..HALF_FULL_ROUNDS {
-            self.beginning_full_rounds[round].eval(
-                state,
-                &beginning_full_round_constants[round],
-                builder,
-            );
+            self.eval_beginning_full_round(state, round, beginning_full_round_constants, builder);
         }
         for round in 0..PARTIAL_ROUNDS {
-            self.partial_rounds[round].eval(state, &partial_round_constants[round], builder);
-        }
-        for round in 0..HALF_FULL_ROUNDS {
-            self.ending_full_rounds[round].eval(
+            self.eval_partial_round(
                 state,
-                &ending_full_round_constants[round],
+                round,
+                partial_round_constants,
+                internal_matrix_diagonal,
                 builder,
             );
         }
+        for round in 0..HALF_FULL_ROUNDS {
+            self.eval_ending_full_round(state, round, ending_full_round_constants, builder);
+        }
+    }
+
+    /// Evaluates a beginning full round with index `round` and `round_constants`.
+    #[inline]
+    fn eval_beginning_full_round<AB>(
+        &self,
+        state: &mut [AB::Expr; WIDTH],
+        round: usize,
+        round_constants: &[AB::Expr; WIDTH],
+        builder: &mut AB,
+    ) where
+        T: Copy,
+        AB: AirBuilder<Var = T>,
+    {
+        self.beginning_full_rounds[round].eval(state, &round_constants[round], builder);
+    }
+
+    /// Evaluates a partial round with index `round`, `round_constants`, and `internal_matrix_diagonal`.
+    #[inline]
+    fn eval_partial_round<AB>(
+        &self,
+        state: &mut [AB::Expr; WIDTH],
+        round: usize,
+        round_constants: &[AB::Expr; WIDTH],
+        internal_matrix_diagonal: &[AB::Expr; WIDTH],
+        builder: &mut AB,
+    ) where
+        T: Copy,
+        AB: AirBuilder<Var = T>,
+    {
+        self.partial_rounds[round].eval(
+            state,
+            &round_constants[round],
+            internal_matrix_diagonal,
+            builder,
+        );
+    }
+
+    /// Evaluates an ending full round with index `round` and `round_constants`.
+    #[inline]
+    fn eval_ending_full_round<AB>(
+        &self,
+        state: &mut [AB::Expr; WIDTH],
+        round: usize,
+        round_constants: &[AB::Expr; WIDTH],
+        builder: &mut AB,
+    ) where
+        T: Copy,
+        AB: AirBuilder<Var = T>,
+    {
+        self.ending_full_rounds[round].eval(state, &round_constants[round], builder);
     }
 }
 
 /// Full Round Columns
 #[repr(C)]
-pub struct FullRound<T, const WIDTH: usize, const SBOX_DEGREE: usize, const SBOX_REGISTERS: usize> {
+pub struct FullRound<
+    T,
+    L,
+    const WIDTH: usize,
+    const SBOX_DEGREE: usize,
+    const SBOX_REGISTERS: usize,
+> where
+    L: PermutationLinearLayer,
+{
     /// S-BOX Columns
     pub sbox: [SBox<T, SBOX_DEGREE, SBOX_REGISTERS>; WIDTH],
+
+    /// Linear Layer Type Parameter
+    __: PhantomData<L>,
 }
 
-impl<T, const WIDTH: usize, const SBOX_DEGREE: usize, const SBOX_REGISTERS: usize>
-    FullRound<T, WIDTH, SBOX_DEGREE, SBOX_REGISTERS>
+impl<T, L, const WIDTH: usize, const SBOX_DEGREE: usize, const SBOX_REGISTERS: usize>
+    FullRound<T, L, WIDTH, SBOX_DEGREE, SBOX_REGISTERS>
+where
+    L: PermutationLinearLayer,
 {
-    ///
+    /// Evaluates full-round columns of the Poseidon2 STARK.
     #[inline]
     pub fn eval<AB>(
         &self,
@@ -110,9 +176,7 @@ impl<T, const WIDTH: usize, const SBOX_DEGREE: usize, const SBOX_REGISTERS: usiz
             *s += r.clone();
             self.sbox[i].eval(s, builder);
         }
-        // TODO: add matrix multiply
-        // matmul_external(state);
-        todo!()
+        L::matmul_external(state);
     }
 }
 
@@ -120,23 +184,32 @@ impl<T, const WIDTH: usize, const SBOX_DEGREE: usize, const SBOX_REGISTERS: usiz
 #[repr(C)]
 pub struct PartialRound<
     T,
+    L,
     const WIDTH: usize,
     const SBOX_DEGREE: usize,
     const SBOX_REGISTERS: usize,
-> {
+> where
+    L: PermutationLinearLayer,
+{
     /// S-BOX Columns
     pub sbox: SBox<T, SBOX_DEGREE, SBOX_REGISTERS>,
+
+    /// Linear Layer Type Parameter
+    __: PhantomData<L>,
 }
 
-impl<T, const WIDTH: usize, const SBOX_DEGREE: usize, const SBOX_REGISTERS: usize>
-    PartialRound<T, WIDTH, SBOX_DEGREE, SBOX_REGISTERS>
+impl<T, L, const WIDTH: usize, const SBOX_DEGREE: usize, const SBOX_REGISTERS: usize>
+    PartialRound<T, L, WIDTH, SBOX_DEGREE, SBOX_REGISTERS>
+where
+    L: PermutationLinearLayer,
 {
-    ///
+    /// Evaluates partial-round columns of the Poseidon2 STARK.
     #[inline]
     pub fn eval<AB>(
         &self,
         state: &mut [AB::Expr; WIDTH],
         round_constant: &AB::Expr,
+        internal_matrix_diagonal: &[AB::Expr; WIDTH],
         builder: &mut AB,
     ) where
         T: Copy,
@@ -144,8 +217,7 @@ impl<T, const WIDTH: usize, const SBOX_DEGREE: usize, const SBOX_REGISTERS: usiz
     {
         state[0] += round_constant.clone();
         self.sbox.eval(&mut state[0], builder);
-        // TODO: add matrix multiply
-        todo!()
+        L::matmul_internal(state, internal_matrix_diagonal);
     }
 }
 
@@ -158,14 +230,25 @@ impl<T, const WIDTH: usize, const SBOX_DEGREE: usize, const SBOX_REGISTERS: usiz
 #[repr(C)]
 pub struct SBox<T, const DEGREE: usize, const REGISTERS: usize>(pub [T; REGISTERS]);
 
-impl<T, const DEGREE: usize, const REGISTERS: usize> SBox<T, DEGREE, REGISTERS> {
-    /// Degree-Register Table
+impl<T, const DEGREE: usize, const REGISTERS: usize> SBox<T, DEGREE, REGISTERS>
+where
+    T: Copy,
+{
+    /// Optimal Degree-Register Table
     ///
     /// This table encodes the optimal number of S-BOX registers needed for the degree, where the
-    /// degree is the index into this table. A zero is placed for entries that are ignored.
+    /// degree is the index into this table. A zero is placed for entries that are ignored. This
+    /// optimality value is asserted by the [`Self::eval`] method because it relies on using this
+    /// exact number of registers.
     pub const OPTIMAL_REGISTER_COUNT: [usize; 12] = [0, 0, 0, 1, 0, 2, 0, 3, 0, 0, 0, 3];
 
     /// Evaluates the S-BOX over a degree-`1` expression `x`.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if the number of `REGISTERS` is not chosen optimally for the given
+    /// `DEGREE` or if the `DEGREE` is not supported by the S-BOX. The supported degrees are
+    /// `3`, `5`, `7`, and `11`.
     ///
     /// # Efficiency Note
     ///
@@ -178,10 +261,12 @@ impl<T, const DEGREE: usize, const REGISTERS: usize> SBox<T, DEGREE, REGISTERS> 
     /// ```
     ///
     /// The intermediate powers are stored in the auxiliary column registers. To maximize the
-    /// efficiency of the registers we try to do three multiplications per round. This is not the
-    /// optimal number of multiplications for all possible degrees, but for the S-BOX powers we are
-    /// interested in for Poseidon2 (namely `3`, `5`, `7`, and `11`), we get the optimal number
-    /// with this algorithm with the following register table:
+    /// efficiency of the registers we try to do three multiplications per round. This algorithm
+    /// only multiplies the cube of `x` but a more optimal product would be to find the base-3
+    /// decomposition of the `DEGREE` and use that to generate the addition chain. Even this is not
+    /// the optimal number of multiplications for all possible degrees, but for the S-BOX powers we
+    /// are interested in for Poseidon2 (namely `3`, `5`, `7`, and `11`), we get the optimal number
+    /// with this algorithm. We use the following register table:
     ///
     /// | `DEGREE` | `REGISTERS` |
     /// |:--------:|:-----------:|
@@ -190,55 +275,40 @@ impl<T, const DEGREE: usize, const REGISTERS: usize> SBox<T, DEGREE, REGISTERS> 
     /// | `7`      | `3`         |
     /// | `11`     | `3`         |
     ///
-    /// We record this table in [`Self::OPTIMAL_REGISTER_COUNT`]. This algorithm does not perform
-    /// optimally for all possible degrees but provides a reasonable solution in most cases.
+    /// We record this table in [`Self::OPTIMAL_REGISTER_COUNT`] and this choice of registers is
+    /// enforced by this method.
     #[inline]
     pub fn eval<AB>(&self, x: &mut AB::Expr, builder: &mut AB)
     where
-        T: Copy,
         AB: AirBuilder<Var = T>,
     {
         assert_ne!(REGISTERS, 0, "The number of REGISTERS must be positive.");
-        assert!(
-            Self::is_unknown_or_optimal(),
+        assert!(DEGREE <= 11, "The DEGREE must be less than or equal to 11.");
+        assert_eq!(
+            REGISTERS,
+            Self::OPTIMAL_REGISTER_COUNT[DEGREE],
             "The number of REGISTERS must be optimal for the given DEGREE."
         );
-        let x_squared = x.clone() * x.clone();
-        let x_cubed = x_squared.clone() * x.clone();
-        self.load(0, x_cubed.clone(), builder);
+        let x2 = x.clone() * x.clone();
+        let x3 = x2.clone() * x.clone();
+        self.load(0, x3.clone(), builder);
         if REGISTERS == 1 {
             *x = self.0[0].into();
             return;
         }
-        if ((DEGREE - (DEGREE % 3)) / 3) % 3 == 0 {
+        if DEGREE == 11 {
             (1..REGISTERS - 1).for_each(|j| self.load_product(j, &[0, 0, j - 1], builder));
         } else {
             (1..REGISTERS - 1).for_each(|j| self.load_product(j, &[0, j - 1], builder));
         }
-        self.load(
-            REGISTERS - 1,
-            [x_cubed, x.clone(), x_squared][DEGREE % 3].clone()
-                * AB::Expr::from(self.0[REGISTERS - 2]),
-            builder,
-        );
+        self.load_last_product(x.clone(), x2, x3, builder);
         *x = self.0[REGISTERS - 1].into();
-    }
-
-    /// Returns `true` when the optimal `DEGREE` and `REGISTERS` are chosen correctly.
-    #[inline]
-    const fn is_unknown_or_optimal() -> bool {
-        if DEGREE > 11 {
-            return true;
-        }
-        let optimal_count = Self::OPTIMAL_REGISTER_COUNT[DEGREE];
-        optimal_count == REGISTERS || optimal_count == 0
     }
 
     /// Loads `value` into the `i`-th S-BOX register.
     #[inline]
     fn load<AB>(&self, i: usize, value: AB::Expr, builder: &mut AB)
     where
-        T: Copy,
         AB: AirBuilder<Var = T>,
     {
         builder.assert_eq(AB::Expr::from(self.0[i]), value);
@@ -248,7 +318,6 @@ impl<T, const DEGREE: usize, const REGISTERS: usize> SBox<T, DEGREE, REGISTERS> 
     #[inline]
     fn load_product<AB>(&self, i: usize, product: &[usize], builder: &mut AB)
     where
-        T: Copy,
         AB: AirBuilder<Var = T>,
     {
         assert!(
@@ -258,6 +327,20 @@ impl<T, const DEGREE: usize, const REGISTERS: usize> SBox<T, DEGREE, REGISTERS> 
         self.load(
             i,
             product.iter().map(|j| AB::Expr::from(self.0[*j])).product(),
+            builder,
+        );
+    }
+
+    /// Loads the final product into the last S-BOX register. The final term in the product is
+    /// `pow(x, DEGREE % 3)`.
+    #[inline]
+    fn load_last_product<AB>(&self, x: AB::Expr, x2: AB::Expr, x3: AB::Expr, builder: &mut AB)
+    where
+        AB: AirBuilder<Var = T>,
+    {
+        self.load(
+            REGISTERS - 1,
+            [x3, x, x2][DEGREE % 3].clone() * AB::Expr::from(self.0[REGISTERS - 2]),
             builder,
         );
     }

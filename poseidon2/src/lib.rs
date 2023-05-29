@@ -134,7 +134,7 @@ macro_rules! define_multiple_of_four_width_linear_layers {
             impl PermutationLinearLayer for LinearLayer<$width> {
                 const WIDTH: usize = $width;
 
-                ///
+                // TODO: Add documentation.
                 #[inline]
                 fn matmul_external<F>(state: &mut [F])
                 where
@@ -181,7 +181,7 @@ macro_rules! define_multiple_of_four_width_linear_layers {
                     }
                 }
 
-                ///
+                // TODO: Add documentation.
                 #[inline]
                 fn matmul_internal<F>(state: &mut [F], diagonal: &[F])
                 where
