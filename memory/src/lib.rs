@@ -63,12 +63,12 @@ impl MemoryChip {
     }
 
     pub fn read(&mut self, clk: u32, address: u32, log: bool) -> Word<u8> {
-        let value = self.cells.get(&address.into()).copied().unwrap();
+        let value = self.cells.get(&address).copied().unwrap();
         if log {
             self.operations
                 .entry(clk)
                 .or_insert_with(Vec::new)
-                .push(Operation::Read(address.into(), value));
+                .push(Operation::Read(address, value));
         }
         value
     }
@@ -80,7 +80,7 @@ impl MemoryChip {
                 .or_insert_with(Vec::new)
                 .push(Operation::Write(address, value));
         }
-        self.cells.insert(address, value.into());
+        self.cells.insert(address, value);
     }
 }
 
@@ -143,7 +143,7 @@ impl MemoryChip {
         op: Operation,
     ) -> [M::F; NUM_MEM_COLS] {
         let mut row = [F::ZERO; NUM_MEM_COLS];
-        let mut cols: &mut MemoryCols<F> = unsafe { transmute(&mut row) };
+        let cols: &mut MemoryCols<F> = unsafe { transmute(&mut row) };
 
         cols.clk = F::from_canonical_usize(clk);
         cols.counter = F::from_canonical_usize(n);
@@ -177,7 +177,7 @@ impl MemoryChip {
             if addr_diff != 0 {
                 continue;
             }
-            let clk_diff = (op2.0 - op1.0) as u32;
+            let clk_diff = op2.0 - op1.0;
             if clk_diff > table_len {
                 let num_dummy_ops = clk_diff / table_len;
                 for j in 0..num_dummy_ops {

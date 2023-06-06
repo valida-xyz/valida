@@ -19,10 +19,8 @@ impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for Mul32Stark {
         let next: &Mul32Cols<AB::Var> = main.row(1).borrow();
 
         // Limb weights modulo 2^32
-        let mut base_m: [AB::Expr; 4] = unsafe { MaybeUninit::uninit().assume_init() };
-        for (i, b) in [1 << 24, 1 << 16, 1 << 8, 1].into_iter().enumerate() {
-            base_m[i] = AB::Expr::from(AB::F::from_canonical_u32(b));
-        }
+        let base_m = [1 << 24, 1 << 16, 1 << 8, 1 << 0]
+            .map(|b| AB::Expr::from(AB::F::from_canonical_u32(b)));
 
         // Partially reduced summation of input product limbs (mod 2^32)
         let pi = pi_m::<4, AB>(&base_m, local.input_1, local.input_2);
