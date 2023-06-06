@@ -18,8 +18,8 @@ where
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
 
-        let local: &Columns<AB::Var> = main.row(0).borrow();
-        let next: &Columns<AB::Var> = main.row(1).borrow();
+        // TODO: let local: &Columns<AB::Var> = main.row(0).borrow();
+        // TODO: let next: &Columns<AB::Var> = main.row(1).borrow();
 
         todo!()
     }

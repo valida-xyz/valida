@@ -86,8 +86,7 @@ where
             CPU_COL_INDICES
                 .mem_channels
                 .iter()
-                .map(|c| c.value.into_iter().map(VirtualPairCol::single_main))
-                .flatten()
+                .flat_map(|c| c.value.into_iter().map(VirtualPairCol::single_main))
                 .collect::<Vec<_>>(),
         );
         fields.push(VirtualPairCol::single_main(

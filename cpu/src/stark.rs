@@ -79,20 +79,13 @@ impl CpuStark {
 
         // Read (1)
         builder
-            .when(is_jalv + is_beq + is_bne + is_bus_op.clone())
+            .when(is_jalv + is_beq + is_bne + is_bus_op)
             .assert_eq(local.read_addr_1(), addr_b.clone());
         builder
-            .when(is_load.clone() + is_store.clone())
+            .when(is_load + is_store)
             .assert_eq(local.read_addr_1(), addr_c.clone());
         builder
-            .when(
-                is_load.clone()
-                    + is_store.clone()
-                    + is_jalv.clone()
-                    + is_beq.clone()
-                    + is_bne.clone()
-                    + is_bus_op.clone(),
-            )
+            .when(is_load + is_store + is_jalv + is_beq + is_bne + is_bus_op)
             .assert_one(local.read_1_used());
 
         // Read (2)
@@ -107,43 +100,33 @@ impl CpuStark {
             .assert_eq(local.read_addr_2(), addr_c);
         builder
             .when(
-                is_store.clone()
-                    + is_load.clone()
-                    + is_jalv.clone()
-                    + is_beq.clone()
-                    + is_bne.clone()
-                    + (AB::Expr::from(AB::F::ONE) - is_imm_op) * is_bus_op.clone(),
+                is_store
+                    + is_load
+                    + is_jalv
+                    + is_beq
+                    + is_bne
+                    + (AB::Expr::from(AB::F::ONE) - is_imm_op) * is_bus_op,
             )
             .assert_one(local.read_2_used());
 
         // Write
         builder
-            .when(
-                is_load.clone()
-                    + is_jal.clone()
-                    + is_jalv.clone()
-                    + is_imm32.clone()
-                    + is_bus_op.clone(),
-            )
+            .when(is_load + is_jal + is_jalv + is_imm32 + is_bus_op)
             .assert_eq(local.write_addr(), addr_a);
-        builder
-            .when(is_store.clone())
-            .assert_eq(local.write_addr(), addr_b);
-        builder
-            .when(is_load.clone() + is_store.clone())
-            .assert_zero(
-                local
-                    .read_value_2()
-                    .into_iter()
-                    .zip(local.write_value())
-                    .map(|(a, b)| (a - b) * (a - b))
-                    .sum::<AB::Expr>(),
-            );
+        builder.when(is_store).assert_eq(local.write_addr(), addr_b);
+        builder.when(is_load + is_store).assert_zero(
+            local
+                .read_value_2()
+                .into_iter()
+                .zip(local.write_value())
+                .map(|(a, b)| (a - b) * (a - b))
+                .sum::<AB::Expr>(),
+        );
         builder
             .when_transition()
-            .when(is_jal.clone() + is_jalv.clone())
+            .when(is_jal + is_jalv)
             .assert_eq(next.pc, reduce::<F, AB>(base, local.write_value()));
-        builder.when(is_imm32.clone()).assert_zero(
+        builder.when(is_imm32).assert_zero(
             local
                 .write_value()
                 .into_iter()
@@ -152,14 +135,7 @@ impl CpuStark {
                 .sum::<AB::Expr>(),
         );
         builder
-            .when(
-                is_store.clone()
-                    + is_load.clone()
-                    + is_jal.clone()
-                    + is_jalv.clone()
-                    + is_imm32.clone()
-                    + is_bus_op.clone(),
-            )
+            .when(is_store + is_load + is_jal + is_jalv + is_imm32 + is_bus_op)
             .assert_one(local.write_used());
     }
 

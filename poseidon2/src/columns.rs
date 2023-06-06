@@ -92,7 +92,7 @@ where
         &self,
         state: &mut [AB::Expr; WIDTH],
         round: usize,
-        round_constants: &[AB::Expr; WIDTH],
+        round_constants: &[[AB::Expr; WIDTH]; HALF_FULL_ROUNDS],
         builder: &mut AB,
     ) where
         T: Copy,
@@ -107,7 +107,7 @@ where
         &self,
         state: &mut [AB::Expr; WIDTH],
         round: usize,
-        round_constants: &[AB::Expr; WIDTH],
+        round_constants: &[AB::Expr; PARTIAL_ROUNDS],
         internal_matrix_diagonal: &[AB::Expr; WIDTH],
         builder: &mut AB,
     ) where
@@ -128,7 +128,7 @@ where
         &self,
         state: &mut [AB::Expr; WIDTH],
         round: usize,
-        round_constants: &[AB::Expr; WIDTH],
+        round_constants: &[[AB::Expr; WIDTH]; HALF_FULL_ROUNDS],
         builder: &mut AB,
     ) where
         T: Copy,
