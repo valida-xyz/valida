@@ -7,7 +7,7 @@ use columns::{Mul32Cols, MUL_COL_MAP, NUM_MUL_COLS};
 use core::marker::Sync;
 use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
-use valida_cpu::{MachineWithCpuChip, Operation as CpuOperation};
+use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 
 use p3_air::VirtualPairCol;
@@ -37,7 +37,6 @@ where
         let rows = self
             .operations
             .par_iter()
-            .cloned()
             .map(|op| self.op_to_row(op, machine))
             .collect::<Vec<_>>();
         RowMajorMatrix::new(rows.concat(), NUM_MUL_COLS)
@@ -68,7 +67,7 @@ where
 }
 
 impl Mul32Chip {
-    fn op_to_row<F, M>(&self, op: Operation, _machine: &M) -> [F; NUM_MUL_COLS]
+    fn op_to_row<F, M>(&self, op: &Operation, _machine: &M) -> [F; NUM_MUL_COLS]
     where
         F: PrimeField,
         M: MachineWithMul32Chip<F = F>,
@@ -122,9 +121,6 @@ where
             .mul_u32_mut()
             .operations
             .push(Operation::Mul32(a, b, c));
-        state.cpu_mut().operations.push(CpuOperation::Bus(imm));
-        state.cpu_mut().clock += 1;
-        state.cpu_mut().pc += 1;
-        state.cpu_mut().set_pc_and_fp();
+        state.cpu_mut().push_bus_op(imm);
     }
 }

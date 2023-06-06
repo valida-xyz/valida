@@ -30,6 +30,7 @@ pub enum Operation {
     Bne(Option<Word<u8>> /*imm*/),
     Imm32,
     Bus(Option<Word<u8>> /*imm*/),
+    BusWithMemory(Option<Word<u8>> /*imm*/),
 }
 
 #[derive(Default)]
@@ -78,12 +79,22 @@ where
             }
         });
 
+        let mut fields = vec![VirtualPairCol::single_main(
+            CPU_COL_INDICES.instruction.opcode,
+        )];
+        fields.extend(
+            CPU_COL_INDICES
+                .mem_channels
+                .iter()
+                .map(|c| c.value.into_iter().map(VirtualPairCol::single_main))
+                .flatten()
+                .collect::<Vec<_>>(),
+        );
+        fields.push(VirtualPairCol::single_main(
+            CPU_COL_INDICES.chip_channel.clk_or_zero,
+        ));
         let send_general = Interaction {
-            fields: CPU_COL_INDICES
-                .chip_channel
-                .iter_flat()
-                .map(VirtualPairCol::single_main)
-                .collect(),
+            fields,
             count: VirtualPairCol::single_main(CPU_COL_INDICES.opcode_flags.is_bus_op),
             argument_index: machine.general_bus(),
         };
@@ -107,6 +118,7 @@ impl CpuChip {
 
         cols.pc = F::from_canonical_u32(self.registers[clk].pc);
         cols.fp = F::from_canonical_u32(self.registers[clk].fp);
+        cols.clk = F::from_canonical_usize(clk);
 
         self.set_memory_channel_values(clk, cols, machine);
 
@@ -137,9 +149,15 @@ impl CpuChip {
             Operation::Bus(imm) => {
                 cols.opcode_flags.is_bus_op = F::ONE;
                 self.set_imm_value(cols, *imm);
-                self.set_bus_channel_values(cols);
+            }
+            Operation::BusWithMemory(imm) => {
+                cols.opcode_flags.is_bus_op = F::ONE;
+                cols.opcode_flags.is_bus_op_with_mem = F::ONE;
+                self.set_imm_value(cols, *imm);
             }
         }
+
+        // TODO: Set diff, diff_inv, and not_equal
 
         row
     }
@@ -178,21 +196,10 @@ impl CpuChip {
         }
     }
 
-    fn set_bus_channel_values<F: PrimeField>(&self, cols: &mut CpuCols<F>) {
-        cols.chip_channel.opcode = cols.instruction.opcode;
-        cols.chip_channel.read_value_1 = cols.read_value_1();
-        if cols.opcode_flags.is_imm_op == F::ONE {
-            cols.chip_channel.read_value_2 = cols.imm;
-        } else {
-            cols.chip_channel.read_value_2 = cols.read_value_2();
-        }
-        cols.chip_channel.write_value = cols.write_value();
-    }
-
     fn set_imm_value<F: PrimeField>(&self, cols: &mut CpuCols<F>, imm: Option<Word<u8>>) {
         if let Some(imm) = imm {
             cols.opcode_flags.is_imm_op = F::ONE;
-            cols.imm = imm.transform(F::from_canonical_u8);
+            cols.mem_channels[1].value = imm.transform(F::from_canonical_u8);
         }
     }
 }
@@ -226,9 +233,7 @@ where
         let cell = state.mem_mut().read(clk, read_addr_2.into(), true);
         state.mem_mut().write(clk, write_addr, cell, true);
         state.cpu_mut().pc += 1;
-        state.cpu_mut().clock += 1;
-        state.cpu_mut().operations.push(Operation::Load32);
-        state.cpu_mut().set_pc_and_fp();
+        state.cpu_mut().push_op(Operation::Load32);
     }
 }
 
@@ -245,9 +250,7 @@ where
         let cell = state.mem_mut().read(clk, read_addr, true);
         state.mem_mut().write(clk, write_addr, cell, true);
         state.cpu_mut().pc += 1;
-        state.cpu_mut().clock += 1;
-        state.cpu_mut().operations.push(Operation::Store32);
-        state.cpu_mut().set_pc_and_fp();
+        state.cpu_mut().push_op(Operation::Store32);
     }
 }
 
@@ -267,9 +270,7 @@ where
         state.cpu_mut().pc = ops.b() as u32;
         // Set fp to fp + c
         state.cpu_mut().fp = (state.cpu().fp as i32 + ops.c()) as u32;
-        state.cpu_mut().clock += 1;
-        state.cpu_mut().operations.push(Operation::Jal);
-        state.cpu_mut().set_pc_and_fp();
+        state.cpu_mut().push_op(Operation::Jal);
     }
 }
 
@@ -292,9 +293,7 @@ where
         let read_addr = (state.cpu().fp as i32 + ops.c()) as u32;
         let cell: u32 = state.mem_mut().read(clk, read_addr, true).into();
         state.cpu_mut().fp += cell;
-        state.cpu_mut().clock += 1;
-        state.cpu_mut().operations.push(Operation::Jalv);
-        state.cpu_mut().set_pc_and_fp();
+        state.cpu_mut().push_op(Operation::Jalv);
     }
 }
 
@@ -322,9 +321,7 @@ where
         } else {
             state.cpu_mut().pc = state.cpu().pc + 1;
         }
-        state.cpu_mut().clock += 1;
-        state.cpu_mut().operations.push(Operation::Beq(imm));
-        state.cpu_mut().set_pc_and_fp();
+        state.cpu_mut().push_op(Operation::Beq(imm));
     }
 }
 
@@ -352,9 +349,7 @@ where
         } else {
             state.cpu_mut().pc = state.cpu().pc + 1;
         }
-        state.cpu_mut().clock += 1;
-        state.cpu_mut().operations.push(Operation::Bne(imm));
-        state.cpu_mut().set_pc_and_fp();
+        state.cpu_mut().push_op(Operation::Bne(imm));
     }
 }
 
@@ -370,14 +365,28 @@ where
         let value = Word([ops.b() as u8, ops.c() as u8, ops.d() as u8, ops.e() as u8]);
         state.mem_mut().write(clk, write_addr, value, true);
         state.cpu_mut().pc += 1;
-        state.cpu_mut().clock += 1;
-        state.cpu_mut().operations.push(Operation::Imm32);
-        state.cpu_mut().set_pc_and_fp();
+        state.cpu_mut().push_op(Operation::Imm32);
     }
 }
 
 impl CpuChip {
-    pub fn set_pc_and_fp(&mut self) {
+    pub fn push_bus_op_with_memory(&mut self, imm: Option<Word<u8>>) {
+        self.pc += 1;
+        self.push_op(Operation::BusWithMemory(imm));
+    }
+
+    pub fn push_bus_op(&mut self, imm: Option<Word<u8>>) {
+        self.pc += 1;
+        self.push_op(Operation::Bus(imm));
+    }
+
+    pub fn push_op(&mut self, op: Operation) {
+        self.operations.push(op);
+        self.clock += 1;
+        self.save_register_state();
+    }
+
+    pub fn save_register_state(&mut self) {
         let registers = Registers {
             pc: self.pc,
             fp: self.fp,

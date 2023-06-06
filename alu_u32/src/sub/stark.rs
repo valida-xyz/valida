@@ -36,7 +36,7 @@ impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for Sub32Stark {
             .assert_zero(borrow_1 * (sub_2.clone() - local.output[1] - AB::Expr::from(AB::F::ONE)));
 
         // Third byte
-        builder.assert_zero(borrow_2.clone() * (base - sub_2 - local.output[1]));
+        builder.assert_zero(borrow_2.clone() * (base.clone() - sub_2 - local.output[1]));
         builder.assert_zero(borrow_2 * (sub_3 - local.output[0] - AB::Expr::from(AB::F::ONE)));
 
         // Bus opcode constraint

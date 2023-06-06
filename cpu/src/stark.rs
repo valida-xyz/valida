@@ -1,11 +1,10 @@
 use crate::columns::CpuCols;
-use crate::Store32Instruction;
 use core::borrow::Borrow;
 use core::mem::MaybeUninit;
-use valida_machine::{Instruction, Word};
+use valida_machine::Word;
 
 use p3_air::{Air, AirBuilder};
-use p3_field::{AbstractField, PrimeField};
+use p3_field::PrimeField;
 use p3_matrix::Matrix;
 
 #[derive(Default)]
@@ -20,7 +19,6 @@ where
         let main = builder.main();
         let local: &CpuCols<AB::Var> = main.row(0).borrow();
         let next: &CpuCols<AB::Var> = main.row(1).borrow();
-
         let base = [1 << 24, 1 << 16, 1 << 8, 1 << 0]
             .map(|b| AB::Expr::from(AB::F::from_canonical_u32(b)));
 
@@ -34,6 +32,19 @@ where
         builder
             .when_transition()
             .assert_eq(local.clk + AB::Expr::from(AB::F::ONE), next.clk);
+        builder
+            .when(local.opcode_flags.is_bus_op_with_mem)
+            .assert_eq(local.clk, local.chip_channel.clk_or_zero);
+        builder
+            .when(AB::Expr::from(AB::F::ONE) - local.opcode_flags.is_bus_op_with_mem)
+            .assert_zero(local.chip_channel.clk_or_zero);
+
+        // Immediate value constraints (TODO: we'd need to range check read_value_2 in
+        // this case)
+        builder.when(local.opcode_flags.is_imm_op).assert_eq(
+            local.instruction.operands.c(),
+            reduce::<F, AB>(&base, local.read_value_2()),
+        );
     }
 }
 
@@ -56,6 +67,7 @@ impl CpuStark {
         let is_bne = local.opcode_flags.is_bne;
         let is_imm32 = local.opcode_flags.is_imm32;
         let is_imm_op = local.opcode_flags.is_imm_op;
+        let is_bus_op = local.opcode_flags.is_bus_op;
 
         let addr_a = local.fp + local.instruction.operands.a();
         let addr_b = local.fp + local.instruction.operands.b();
@@ -67,13 +79,20 @@ impl CpuStark {
 
         // Read (1)
         builder
-            .when(is_load + is_store)
-            .assert_eq(local.read_addr_1(), addr_c.clone());
-        builder
-            .when(is_jalv + is_beq + is_bne)
+            .when(is_jalv + is_beq + is_bne + is_bus_op.clone())
             .assert_eq(local.read_addr_1(), addr_b.clone());
         builder
-            .when(is_load + is_store + is_jalv + is_beq + is_bne)
+            .when(is_load.clone() + is_store.clone())
+            .assert_eq(local.read_addr_1(), addr_c.clone());
+        builder
+            .when(
+                is_load.clone()
+                    + is_store.clone()
+                    + is_jalv.clone()
+                    + is_beq.clone()
+                    + is_bne.clone()
+                    + is_bus_op.clone(),
+            )
             .assert_one(local.read_1_used());
 
         // Read (2)
@@ -82,40 +101,65 @@ impl CpuStark {
             reduce::<F, AB>(base, local.read_value_1()),
         );
         builder
-            .when(is_jalv + is_imm_op * (is_beq + is_bne))
+            .when(
+                is_jalv + (AB::Expr::from(AB::F::ONE) - is_imm_op) * (is_beq + is_bne + is_bus_op),
+            )
             .assert_eq(local.read_addr_2(), addr_c);
         builder
-            .when(is_store + is_load + is_jalv + is_beq + is_bne)
+            .when(
+                is_store.clone()
+                    + is_load.clone()
+                    + is_jalv.clone()
+                    + is_beq.clone()
+                    + is_bne.clone()
+                    + (AB::Expr::from(AB::F::ONE) - is_imm_op) * is_bus_op.clone(),
+            )
             .assert_one(local.read_2_used());
 
         // Write
         builder
-            .when(is_load + is_jal + is_jalv + is_imm32)
+            .when(
+                is_load.clone()
+                    + is_jal.clone()
+                    + is_jalv.clone()
+                    + is_imm32.clone()
+                    + is_bus_op.clone(),
+            )
             .assert_eq(local.write_addr(), addr_a);
-        builder.when(is_store).assert_eq(local.write_addr(), addr_b);
-        builder.when(is_load + is_store).assert_eq(
-            reduce::<F, AB>(base, local.read_value_2()),
-            reduce::<F, AB>(base, local.write_value()),
+        builder
+            .when(is_store.clone())
+            .assert_eq(local.write_addr(), addr_b);
+        builder
+            .when(is_load.clone() + is_store.clone())
+            .assert_zero(
+                local
+                    .read_value_2()
+                    .into_iter()
+                    .zip(local.write_value())
+                    .map(|(a, b)| (a - b) * (a - b))
+                    .sum::<AB::Expr>(),
+            );
+        builder
+            .when_transition()
+            .when(is_jal.clone() + is_jalv.clone())
+            .assert_eq(next.pc, reduce::<F, AB>(base, local.write_value()));
+        builder.when(is_imm32.clone()).assert_zero(
+            local
+                .write_value()
+                .into_iter()
+                .zip(local.instruction.operands.imm32())
+                .map(|(a, b)| (a - b) * (a - b))
+                .sum::<AB::Expr>(),
         );
         builder
-            .when(is_jal + is_jalv)
-            .assert_eq(reduce::<F, AB>(base, local.write_value()), next.pc);
-        builder.when(is_imm32).assert_eq(
-            // For all imm32 instructions, program memory is trusted to have operand values
-            // between 0 and 255.
-            reduce::<F, AB>(base, local.write_value()),
-            reduce::<F, AB>(
-                base,
-                Word([
-                    local.instruction.operands.0[0],
-                    local.instruction.operands.0[1],
-                    local.instruction.operands.0[2],
-                    local.instruction.operands.0[3],
-                ]),
-            ),
-        );
-        builder
-            .when(is_store + is_load + is_jal + is_jalv + is_imm32)
+            .when(
+                is_store.clone()
+                    + is_load.clone()
+                    + is_jal.clone()
+                    + is_jalv.clone()
+                    + is_imm32.clone()
+                    + is_bus_op.clone(),
+            )
             .assert_one(local.write_used());
     }
 
@@ -135,21 +179,6 @@ impl CpuStark {
             .when_transition()
             .when(should_increment_pc)
             .assert_eq(next.pc, incremented_pc.clone());
-
-        // Check if the first two operands are equal, in case we're doing a conditional branch.
-        // TODO: Code below assumes that they're coming from memory, not immediates.
-        builder.assert_eq(
-            local.diff,
-            local
-                .read_value_1()
-                .0
-                .into_iter()
-                .zip(next.read_value_2().0)
-                .map(|(a, b)| (a - b) * (a - b))
-                .sum::<AB::Expr>(),
-        );
-        builder.assert_bool(local.not_equal);
-        builder.assert_eq(local.not_equal, local.diff * local.diff_inv);
 
         // Branch manipulation
         let equal = AB::Expr::from(AB::F::ONE) - local.not_equal;
@@ -205,8 +234,9 @@ impl CpuStark {
         _next: &CpuCols<AB::Var>,
         _base: &[AB::Expr; 4],
     ) {
-        // Word equality constraints (for branch instructions)
-        builder.when(local.instruction.operands.is_imm()).assert_eq(
+        // Check if the first two operand values are equal, in case we're doing a conditional branch.
+        // (when is_imm == 1, the second read value is guaranteed to be an immediate value)
+        builder.assert_eq(
             local.diff,
             local
                 .read_value_1()
@@ -215,12 +245,6 @@ impl CpuStark {
                 .map(|(a, b)| (a - b) * (a - b))
                 .sum::<AB::Expr>(),
         );
-        builder
-            .when(AB::Expr::from(AB::F::ONE) - local.instruction.operands.is_imm())
-            .assert_eq(
-                local.diff,
-                local.read_value_1()[3] - local.instruction.operands.c(),
-            );
         builder.assert_bool(local.not_equal);
         builder.assert_eq(local.not_equal, local.diff * local.diff_inv);
     }
