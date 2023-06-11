@@ -46,7 +46,7 @@ impl Operation {
 pub struct MemoryChip<M: Machine + ?Sized> {
     pub cells: BTreeMap<u32, Word<u8>>,
     pub operations: BTreeMap<u32, Vec<Operation>>,
-    lookup_data: Option<LookupData<M>>,
+    lookup_data: Option<LookupData<M::F, M::EF>>,
 }
 
 pub trait MachineWithMemoryChip: Machine {

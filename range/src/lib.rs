@@ -17,7 +17,7 @@ pub mod stark;
 pub struct RangeCheckerChip<M: Machine + ?Sized> {
     pub count: BTreeMap<u32, u32>,
     pub range_max: u32,
-    lookup_data: Option<LookupData<M>>,
+    lookup_data: Option<LookupData<M::F, M::EF>>,
 }
 
 impl<F, M> Chip<M> for RangeCheckerChip<M>

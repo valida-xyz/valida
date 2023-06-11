@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 
 use itertools::repeat_n;
 use p3_air::{AirBuilder, PermutationAirBuilder, VirtualPairCol};
-use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Powers};
+use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Powers, PrimeField};
 use p3_matrix::{dense::RowMajorMatrix, Matrix};
 
 pub trait Chip<M: Machine> {
@@ -28,20 +28,26 @@ pub trait Chip<M: Machine> {
         vec![]
     }
 
-    fn lookup_data(&self) -> Option<LookupData<M>> {
+    fn lookup_data<F: AbstractField, EF: AbstractExtensionField<F>>(
+        &self,
+    ) -> Option<LookupData<F, EF>> {
         None
     }
 
-    fn set_lookup_data(&mut self, _lookup_data: LookupData<M>) {}
+    fn set_lookup_data<F: AbstractField, EF: AbstractExtensionField<F>>(
+        &mut self,
+        _lookup_data: LookupData<F, EF>,
+    ) {
+    }
 }
 
-pub struct Interaction<F: Field> {
+pub struct Interaction<F: AbstractField> {
     pub fields: Vec<VirtualPairCol<F>>,
     pub count: VirtualPairCol<F>,
     pub argument_index: BusArgumentIndex,
 }
 
-impl<F: Field> Interaction<F> {
+impl<F: AbstractField> Interaction<F> {
     fn argument_index(&self) -> usize {
         match self.argument_index {
             BusArgumentIndex::Local(i) => i,
@@ -64,14 +70,14 @@ pub enum BusArgumentIndex {
     Global(usize),
 }
 
-pub struct LookupData<M: Machine + ?Sized> {
-    pub interactions: Vec<(Interaction<M::F>, InteractionType)>,
+pub struct LookupData<F: AbstractField, EF: AbstractExtensionField<F>> {
+    pub interactions: Vec<(Interaction<F>, InteractionType)>,
 
     /// A map from bus ID to the indices of the quotient columns sent/received on that bus.
     pub bus_map: BTreeMap<BusArgumentIndex, Vec<ColumnIndex>>,
 
     /// The final value of the running sum column
-    pub cumulative_sum: M::EF,
+    pub cumulative_sum: EF,
 }
 
 type ColumnIndex = usize;
@@ -166,9 +172,10 @@ pub fn generate_permutation_trace<F: Field, M: Machine<F = F>, C: Chip<M>>(
 }
 
 pub fn eval_permutation_constraints<
-    AB: PermutationAirBuilder<F = M::F, EF = EF>,
-    EF: ExtensionField<M::F> + From<AB::Expr>,
-    M: Machine<EF = EF>,
+    F: PrimeField,
+    AB: PermutationAirBuilder<F = F, EF = EF>,
+    EF: AbstractExtensionField<AB::Expr> + From<AB::Expr>,
+    M: Machine,
     C: Chip<M>,
 >(
     chip: &C,
@@ -177,33 +184,33 @@ pub fn eval_permutation_constraints<
     let rand_elems = builder.permutation_randomness().to_vec();
 
     let main = builder.main();
-    let main_local = main.row(0);
+    let main_local: &[AB::Var] = main.row(0);
 
     let perm = builder.permutation();
     let perm_width = perm.width();
-    let perm_local = perm.row(0);
-    let perm_next = perm.row(1);
+    let perm_local: &[AB::EF] = perm.row(0);
+    let perm_next: &[AB::EF] = perm.row(1);
 
-    let phi_local = perm_local[perm_width - 1];
-    let phi_next = perm_next[perm_width - 1];
+    let phi_local = perm_local[perm_width - 1].clone();
+    let phi_next = perm_next[perm_width - 1].clone();
 
-    let lookup_data = chip.lookup_data().unwrap();
+    let lookup_data = &chip.lookup_data::<AB::Expr, EF>().unwrap();
 
     let (alphas, betas) = generate_rlc_elements(&lookup_data.interactions, &rand_elems);
 
-    let lhs = phi_next - phi_local;
-    let mut rhs = EF::from_base(AB::F::ZERO);
+    let lhs = phi_next - phi_local.clone();
+    let mut rhs = EF::from_base(AB::Expr::from(AB::F::ZERO));
     for (m, (interaction, interaction_type)) in lookup_data.interactions.iter().enumerate() {
         let idx = lookup_data.bus_map[&interaction.argument_index][m];
 
         // Quotient constraints
-        let mut rlc = EF::from_base(AB::F::ZERO);
+        let mut rlc = EF::from_base(AB::Expr::from(AB::F::ZERO));
         for (field, beta) in interaction.fields.iter().zip(betas.clone()) {
             let elem: EF = field.apply::<AB::Expr, AB::Var>(&[], main_local).into();
             rlc += beta * elem;
         }
-        rlc += alphas[m];
-        builder.assert_eq_ext(rlc, perm_local[idx]);
+        rlc += alphas[m].clone();
+        builder.assert_eq_ext(rlc, perm_local[idx].clone());
 
         // Build the RHS of the permutation constraint
         let mult: EF = interaction
@@ -212,10 +219,10 @@ pub fn eval_permutation_constraints<
             .into();
         match interaction_type {
             InteractionType::LocalSend | InteractionType::GlobalSend => {
-                rhs += mult * perm_local[idx];
+                rhs += mult * perm_local[idx].clone();
             }
             InteractionType::LocalReceive | InteractionType::GlobalReceive => {
-                rhs -= mult * perm_local[idx];
+                rhs -= mult * perm_local[idx].clone();
             }
         }
     }
@@ -225,7 +232,7 @@ pub fn eval_permutation_constraints<
     builder.when_first_row().assert_zero_ext(phi_local);
     builder
         .when_last_row()
-        .assert_eq_ext(perm_local[0], lookup_data.cumulative_sum);
+        .assert_eq_ext(perm_local[0].clone(), lookup_data.cumulative_sum.clone());
 }
 
 fn reduce_row<F: Field, EF: ExtensionField<F>>(
@@ -242,8 +249,8 @@ fn reduce_row<F: Field, EF: ExtensionField<F>>(
     rlc
 }
 
-fn generate_rlc_elements<F: Field, EF: AbstractExtensionField<F>>(
-    all_interactions: &[(Interaction<F>, InteractionType)],
+fn generate_rlc_elements<F: AbstractField, EF: AbstractExtensionField<F>>(
+    interactions: &[(Interaction<F>, InteractionType)],
     random_elements: &[EF],
 ) -> (Vec<EF>, Powers<EF>) {
     let alphas = {
@@ -251,7 +258,7 @@ fn generate_rlc_elements<F: Field, EF: AbstractExtensionField<F>>(
             base: random_elements[0].clone(),
             current: EF::from_base(F::ONE),
         };
-        all_interactions
+        interactions
             .iter()
             .map(|(interaction, _)| {
                 powers

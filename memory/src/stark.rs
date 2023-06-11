@@ -2,20 +2,20 @@ use crate::columns::MemoryCols;
 use crate::{MachineWithMemBus, MachineWithMemoryChip, MemoryChip};
 use core::borrow::Borrow;
 use p3_air::{Air, AirBuilder, PermutationAirBuilder};
-use p3_field::{AbstractField, ExtensionField, PrimeField};
+use p3_field::{AbstractExtensionField, AbstractField, PrimeField};
 use p3_matrix::Matrix;
 use valida_machine::{chip, Machine};
 
 impl<F, EF, AB, M> Air<AB> for MemoryChip<M>
 where
     F: PrimeField,
-    EF: ExtensionField<F> + From<AB::Expr>,
+    EF: AbstractExtensionField<AB::Expr> + From<AB::Expr> + Sync,
     AB: PermutationAirBuilder<F = F, EF = EF>,
     M: MachineWithMemoryChip<F = F, EF = EF> + MachineWithMemBus,
 {
     fn eval(&self, builder: &mut AB) {
         self.eval_main(builder);
-        chip::eval_permutation_constraints::<AB, EF, M, Self>(self, builder);
+        chip::eval_permutation_constraints::<F, AB, EF, M, Self>(self, builder);
     }
 }
 
