@@ -74,6 +74,7 @@ fn impl_machine_given_instructions_and_chips(
     quote! {
         impl Machine for #machine {
             type F = ::valida_machine::__internal::DefaultField;
+            type EF = ::valida_machine::__internal::DefaultField; // FIXME
             #run
             #prove
             #verify
@@ -113,13 +114,16 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
         .collect::<TokenStream2>();
 
     quote! {
-        fn run(&mut self, program: ProgramROM<i32>) {
+        fn run(&mut self, program: ProgramROM<i32>, public_memory: PublicMemory<u8>) {
             loop {
                 // Fetch
                 let pc = self.cpu().pc;
                 let instruction = program.get_instruction(pc);
                 let opcode = instruction.opcode;
                 let ops = instruction.operands;
+
+                // Extend dynamic memory with public memory
+                self.mem_mut().cells.extend(public_memory.cells.iter());
 
                 // A zero opcode signals the end of the program
                 if opcode == 0 {
@@ -147,28 +151,28 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             }
         })
         .collect::<TokenStream2>();
-    let prove_starks = chips
-        .iter()
-        .map(|chip| {
-            let chip_name = chip.ident.as_ref().unwrap();
-            let chip_trace_name = Ident::new(&format!("{}_trace", chip_name), chip_name.span());
-            let chip_stark: TokenStream2 =
-                remove_outer_parentheses(chip.attrs[0].tokens.clone().into())
-                    .unwrap()
-                    .into();
-            let chip_stark_name: TokenStream2 =
-                camel_to_snake_case(chip_stark.clone().into()).into();
+    //let prove_starks = chips
+    //    .iter()
+    //    .map(|chip| {
+    //        let chip_name = chip.ident.as_ref().unwrap();
+    //        let chip_trace_name = Ident::new(&format!("{}_trace", chip_name), chip_name.span());
+    //        let chip_stark: TokenStream2 =
+    //            remove_outer_parentheses(chip.attrs[0].tokens.clone().into())
+    //                .unwrap()
+    //                .into();
+    //        let chip_stark_name: TokenStream2 =
+    //            camel_to_snake_case(chip_stark.clone().into()).into();
 
-            quote! {
-                let #chip_stark_name = #chip_stark::default();
-                //::valida_machine::__internal::prove(&#chip_stark_name, #chip_trace_name);
-            }
-        })
-        .collect::<TokenStream2>();
+    //        quote! {
+    //            let #chip_stark_name = #chip_stark::default();
+    //            //::valida_machine::__internal::prove(&#chip_stark_name, #chip_trace_name);
+    //        }
+    //    })
+    //    .collect::<TokenStream2>();
     quote! {
         fn prove(&self) {
             #generate_trace
-            #prove_starks
+            //#prove_starks
         }
     }
 }

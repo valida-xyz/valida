@@ -11,6 +11,7 @@ valida-cpu = { path = "../cpu" }
 valida-derive = { path = "../derive" }
 valida-machine = { path = "../machine" }
 valida-memory = { path = "../memory" }
+valida-range = { path = "../range" }
 
 [dev-dependencies]
 p3-mersenne-31 = { path = "../../Plonky3/mersenne-31" }

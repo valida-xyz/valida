@@ -7,7 +7,10 @@ use columns::{Add32Cols, ADD_COL_MAP, NUM_ADD_COLS};
 use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
+use valida_machine::{
+    instructions, Chip, Instruction, Interaction, Operands, Word, MEMORY_CELL_BYTES,
+};
+use valida_range::MachineWithRangeChip;
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
@@ -39,6 +42,7 @@ where
             .map(|op| self.op_to_row::<M::F, M>(op))
             .flatten()
             .collect::<Vec<_>>();
+
         RowMajorMatrix::new(rows, NUM_ADD_COLS)
     }
 
@@ -66,7 +70,6 @@ impl Add32Chip {
     fn op_to_row<F, M>(&self, op: &Operation) -> [F; NUM_ADD_COLS]
     where
         F: PrimeField,
-        M: MachineWithAdd32Chip<F = F>,
     {
         let mut row = [F::ZERO; NUM_ADD_COLS];
         let mut cols: &mut Add32Cols<F> = unsafe { transmute(&mut row) };
@@ -91,7 +94,7 @@ instructions!(Add32Instruction);
 
 impl<M> Instruction<M> for Add32Instruction
 where
-    M: MachineWithAdd32Chip,
+    M: MachineWithAdd32Chip + MachineWithRangeChip,
 {
     const OPCODE: u32 = Add32Opcode;
 
@@ -112,6 +115,16 @@ where
 
         let a = b + c;
         state.mem_mut().write(clk, write_addr, a, true);
+
+        // Record the output of the operation (a) in the range check chip
+        for i in 0..MEMORY_CELL_BYTES {
+            state
+                .range_mut()
+                .count
+                .entry(a[i].into())
+                .and_modify(|c| *c += 1)
+                .or_insert(1);
+        }
 
         state
             .add_u32_mut()

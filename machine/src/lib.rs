@@ -5,18 +5,18 @@
 extern crate alloc;
 extern crate self as valida_machine;
 
+use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
-pub use p3_field::{AbstractField, Field, PrimeField, PrimeField32, PrimeField64};
+pub use p3_field::{AbstractField, ExtensionField, Field, PrimeField, PrimeField32, PrimeField64};
 
 pub mod __internal;
 pub mod chip;
 pub mod config;
 pub mod core;
-pub mod lookup;
 pub mod proof;
 
 pub use crate::core::Word;
-pub use chip::{Chip, Instruction, Interaction};
+pub use chip::{BusArgumentIndex, Chip, Interaction, InteractionType, LookupData};
 
 pub const OPERAND_ELEMENTS: usize = 5;
 pub const INSTRUCTION_ELEMENTS: usize = OPERAND_ELEMENTS + 1;
@@ -24,21 +24,15 @@ pub const CPU_MEMORY_CHANNELS: usize = 3;
 pub const MEMORY_CELL_BYTES: usize = 4;
 pub const LOOKUP_DEGREE_BOUND: usize = 3;
 
+pub trait Instruction<M: Machine> {
+    const OPCODE: u32;
+
+    fn execute(state: &mut M, ops: Operands<i32>);
+}
+
 pub struct InstructionWord<F> {
     pub opcode: u32,
     pub operands: Operands<F>,
-}
-
-pub struct ProgramROM<F>(Vec<InstructionWord<F>>);
-
-impl<F> ProgramROM<F> {
-    pub fn new(instructions: Vec<InstructionWord<F>>) -> Self {
-        Self(instructions)
-    }
-
-    pub fn get_instruction(&self, pc: u32) -> &InstructionWord<F> {
-        &self.0[pc as usize]
-    }
 }
 
 #[derive(Copy, Clone, Default)]
@@ -79,9 +73,28 @@ impl<F: PrimeField> Operands<F> {
     }
 }
 
+#[derive(Default)]
+pub struct ProgramROM<F>(Vec<InstructionWord<F>>);
+
+impl<F> ProgramROM<F> {
+    pub fn new(instructions: Vec<InstructionWord<F>>) -> Self {
+        Self(instructions)
+    }
+
+    pub fn get_instruction(&self, pc: u32) -> &InstructionWord<F> {
+        &self.0[pc as usize]
+    }
+}
+
+#[derive(Default)]
+pub struct PublicMemory<F> {
+    pub cells: BTreeMap<u32, Word<F>>,
+}
+
 pub trait Machine {
     type F: PrimeField64;
-    fn run(&mut self, program: ProgramROM<i32>);
+    type EF: ExtensionField<Self::F>;
+    fn run(&mut self, program: ProgramROM<i32>, public_memory: PublicMemory<u8>);
     fn prove(&self);
     fn verify();
 }

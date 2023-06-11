@@ -30,7 +30,9 @@ pub struct MemoryCols<T> {
     /// A boolean flag indicating whether addr' - addr == 0
     pub addr_not_equal: T,
 
+    /// Counter and lookup multiplicities for local range check
     pub counter: T,
+    pub counter_mult: T,
 }
 
 pub const NUM_MEM_COLS: usize = size_of::<MemoryCols<u8>>();

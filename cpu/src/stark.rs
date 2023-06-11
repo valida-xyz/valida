@@ -104,7 +104,9 @@ impl CpuStark {
             reduce::<F, AB>(base, local.read_value_1()),
         );
         builder
-            .when(is_jalv + (AB::Expr::from(AB::F::ONE) - is_imm_op) * (is_beq + is_bne + is_bus_op))
+            .when(
+                is_jalv + (AB::Expr::from(AB::F::ONE) - is_imm_op) * (is_beq + is_bne + is_bus_op),
+            )
             .assert_eq(local.read_addr_2(), addr_c);
         builder
             .when(
@@ -251,7 +253,10 @@ impl CpuStark {
     }
 }
 
-fn reduce<F: PrimeField, AB: AirBuilder<F = F>>(base: &[AB::Expr], input: Word<AB::Var>) -> AB::Expr {
+fn reduce<F: PrimeField, AB: AirBuilder<F = F>>(
+    base: &[AB::Expr],
+    input: Word<AB::Var>,
+) -> AB::Expr {
     input
         .into_iter()
         .enumerate()

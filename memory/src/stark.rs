@@ -1,20 +1,30 @@
 use crate::columns::MemoryCols;
+use crate::{MachineWithMemBus, MachineWithMemoryChip, MemoryChip};
 use core::borrow::Borrow;
 use p3_air::{Air, AirBuilder, PermutationAirBuilder};
-use p3_field::AbstractField;
+use p3_field::{AbstractField, ExtensionField, PrimeField};
 use p3_matrix::Matrix;
+use valida_machine::{chip, Machine};
 
-#[derive(Default)]
-pub struct MemoryStark {}
-
-impl<AB: PermutationAirBuilder> Air<AB> for MemoryStark {
+impl<F, EF, AB, M> Air<AB> for MemoryChip<M>
+where
+    F: PrimeField,
+    EF: ExtensionField<F> + From<AB::Expr>,
+    AB: PermutationAirBuilder<F = F, EF = EF>,
+    M: MachineWithMemoryChip<F = F, EF = EF> + MachineWithMemBus,
+{
     fn eval(&self, builder: &mut AB) {
         self.eval_main(builder);
+        chip::eval_permutation_constraints::<AB, EF, M, Self>(self, builder);
     }
 }
 
-impl MemoryStark {
-    fn eval_main<AB: PermutationAirBuilder>(&self, builder: &mut AB) {
+impl<F, M> MemoryChip<M>
+where
+    F: PrimeField,
+    M: MachineWithMemoryChip<F = F> + MachineWithMemBus,
+{
+    fn eval_main<AB: PermutationAirBuilder<F = F>>(&self, builder: &mut AB) {
         let main = builder.main();
         let local: &MemoryCols<AB::Var> = main.row(0).borrow();
         let next: &MemoryCols<AB::Var> = main.row(1).borrow();

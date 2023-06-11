@@ -13,8 +13,9 @@ use valida_cpu::{
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
-use valida_machine::{Chip, Instruction, Machine, ProgramROM};
-use valida_memory::{stark::MemoryStark, MachineWithMemoryChip, MemoryChip};
+use valida_machine::{BusArgumentIndex, Chip, Instruction, Machine, ProgramROM, PublicMemory};
+use valida_memory::{MachineWithMemoryChip, MemoryChip};
+use valida_range::{stark::RangeStark, MachineWithRangeChip, RangeCheckerChip};
 
 #[derive(Machine, Default)]
 pub struct BasicMachine {
@@ -40,25 +41,27 @@ pub struct BasicMachine {
     #[instruction(mul_u32)]
     mul32: Mul32Instruction,
 
-    #[chip(CpuStark)]
+    #[chip]
     cpu: CpuChip,
-    #[chip(MemoryStark)]
-    mem: MemoryChip,
-    #[chip(Add32Stark)]
+    #[chip]
+    mem: MemoryChip<Self>,
+    #[chip]
     add_u32: Add32Chip,
-    #[chip(Mul32Stark)]
+    #[chip]
     mul_u32: Mul32Chip,
+    #[chip]
+    range: RangeCheckerChip<Self>,
 }
 
 impl MachineWithGeneralBus for BasicMachine {
-    fn general_bus(&self) -> usize {
-        0
+    fn general_bus(&self) -> BusArgumentIndex {
+        BusArgumentIndex::Global(0)
     }
 }
 
 impl MachineWithMemBus for BasicMachine {
-    fn mem_bus(&self) -> usize {
-        1
+    fn mem_bus(&self) -> BusArgumentIndex {
+        BusArgumentIndex::Global(1)
     }
 }
 
@@ -73,11 +76,11 @@ impl MachineWithCpuChip for BasicMachine {
 }
 
 impl MachineWithMemoryChip for BasicMachine {
-    fn mem(&self) -> &MemoryChip {
+    fn mem(&self) -> &MemoryChip<Self> {
         &self.mem
     }
 
-    fn mem_mut(&mut self) -> &mut MemoryChip {
+    fn mem_mut(&mut self) -> &mut MemoryChip<Self> {
         &mut self.mem
     }
 }
@@ -99,6 +102,16 @@ impl MachineWithMul32Chip for BasicMachine {
 
     fn mul_u32_mut(&mut self) -> &mut Mul32Chip {
         &mut self.mul_u32
+    }
+}
+
+impl MachineWithRangeChip for BasicMachine {
+    fn range(&self) -> &RangeCheckerChip<Self> {
+        &self.range
+    }
+
+    fn range_mut(&mut self) -> &mut RangeCheckerChip<Self> {
+        &mut self.range
     }
 }
 
@@ -264,8 +277,9 @@ mod tests {
 
         let mut machine = BasicMachine::default();
         let rom = ProgramROM::new(program);
+        let public_mem = PublicMemory::default();
         machine.cpu_mut().fp = 0x1000;
-        machine.run(rom);
+        machine.run(rom, public_mem);
         machine.prove();
 
         assert_eq!(machine.cpu().clock, 191);
@@ -298,8 +312,9 @@ mod tests {
 
         let mut machine = BasicMachine::default();
         let rom = ProgramROM::new(program);
+        let public_mem = PublicMemory::default();
         machine.cpu_mut().fp = 0x1000;
-        machine.run(rom);
+        machine.run(rom, public_mem);
 
         assert_eq!(machine.cpu().pc, 2);
         assert_eq!(machine.cpu().fp, 0x1000);

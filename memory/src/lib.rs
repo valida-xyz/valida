@@ -8,8 +8,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::mem::transmute;
 use valida_bus::MachineWithMemBus;
-use valida_machine::chip::Interaction;
-use valida_machine::{Chip, Machine, Word};
+use valida_machine::{BusArgumentIndex, Chip, Interaction, LookupData, Machine, Word};
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
@@ -44,21 +43,26 @@ impl Operation {
 }
 
 #[derive(Default)]
-pub struct MemoryChip {
+pub struct MemoryChip<M: Machine + ?Sized> {
     pub cells: BTreeMap<u32, Word<u8>>,
     pub operations: BTreeMap<u32, Vec<Operation>>,
+    lookup_data: Option<LookupData<M>>,
 }
 
 pub trait MachineWithMemoryChip: Machine {
-    fn mem(&self) -> &MemoryChip;
-    fn mem_mut(&mut self) -> &mut MemoryChip;
+    fn mem(&self) -> &MemoryChip<Self>;
+    fn mem_mut(&mut self) -> &mut MemoryChip<Self>;
 }
 
-impl MemoryChip {
+impl<M> MemoryChip<M>
+where
+    M: Machine,
+{
     pub fn new() -> Self {
         Self {
             cells: BTreeMap::new(),
             operations: BTreeMap::new(),
+            lookup_data: None,
         }
     }
 
@@ -84,7 +88,7 @@ impl MemoryChip {
     }
 }
 
-impl<M> Chip<M> for MemoryChip
+impl<M> Chip<M> for MemoryChip<M>
 where
     M: MachineWithMemoryChip + MachineWithMemBus,
 {
@@ -102,20 +106,40 @@ where
         // Sort first by addr, then by clk
         ops.sort_by_key(|(clk, op)| (op.get_address(), *clk));
 
-        // Ensure consecutive sorted clock cycles for an address differ no more than
-        // the length of the table (which is capped at 2^29)
+        // Consecutive sorted clock cycles for an address should differ no more
+        // than the length of the table (capped at 2^29)
         Self::insert_dummy_reads(&mut ops);
 
         let mut rows = ops
             .into_par_iter()
             .enumerate()
-            .map(|(n, (clk, op))| self.op_to_row::<M::F, M>(n, clk as usize, op))
+            .map(|(n, (clk, op))| self.op_to_row(n, clk as usize, op))
             .collect::<Vec<_>>();
 
         // Compute address difference values
         Self::compute_address_diffs(&mut rows);
 
+        // TODO: Set `counter_mult` values
+
         RowMajorMatrix::new(rows.concat(), NUM_MEM_COLS)
+    }
+
+    fn local_sends(&self) -> Vec<Interaction<M::F>> {
+        let sends = Interaction {
+            fields: vec![VirtualPairCol::single_main(MEM_COL_MAP.diff)],
+            count: VirtualPairCol::one(),
+            argument_index: BusArgumentIndex::Local(0),
+        };
+        vec![sends]
+    }
+
+    fn local_receives(&self) -> Vec<Interaction<M::F>> {
+        let sends = Interaction {
+            fields: vec![VirtualPairCol::single_main(MEM_COL_MAP.counter)],
+            count: VirtualPairCol::single_main(MEM_COL_MAP.counter_mult),
+            argument_index: BusArgumentIndex::Local(0),
+        };
+        vec![sends]
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
@@ -135,13 +159,12 @@ where
     }
 }
 
-impl MemoryChip {
-    fn op_to_row<F: PrimeField, M: MachineWithMemoryChip<F = F>>(
-        &self,
-        n: usize,
-        clk: usize,
-        op: Operation,
-    ) -> [M::F; NUM_MEM_COLS] {
+impl<F, M> MemoryChip<M>
+where
+    F: PrimeField,
+    M: MachineWithMemoryChip<F = F>,
+{
+    fn op_to_row(&self, n: usize, clk: usize, op: Operation) -> [M::F; NUM_MEM_COLS] {
         let mut row = [F::ZERO; NUM_MEM_COLS];
         let mut cols: &mut MemoryCols<F> = unsafe { transmute(&mut row) };
 
@@ -206,7 +229,7 @@ impl MemoryChip {
         }
     }
 
-    fn compute_address_diffs<F: PrimeField>(rows: &mut Vec<[F; NUM_MEM_COLS]>) {
+    fn compute_address_diffs(rows: &mut Vec<[F; NUM_MEM_COLS]>) {
         // TODO: Use batch inversion
         for n in 0..(rows.len() - 1) {
             let addr = rows[n][MEM_COL_MAP.addr];
