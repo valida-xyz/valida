@@ -13,7 +13,7 @@ use valida_cpu::{
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
-use valida_machine::{BusArgumentIndex, Chip, Instruction, Machine, ProgramROM, PublicMemory};
+use valida_machine::{BusArgument, Chip, Instruction, Machine, ProgramROM, PublicMemory};
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_range::{stark::RangeStark, MachineWithRangeChip, RangeCheckerChip};
 
@@ -44,24 +44,24 @@ pub struct BasicMachine {
     #[chip]
     cpu: CpuChip,
     #[chip]
-    mem: MemoryChip<Self>,
+    mem: MemoryChip,
     #[chip]
     add_u32: Add32Chip,
     #[chip]
     mul_u32: Mul32Chip,
     #[chip]
-    range: RangeCheckerChip<Self>,
+    range: RangeCheckerChip,
 }
 
 impl MachineWithGeneralBus for BasicMachine {
-    fn general_bus(&self) -> BusArgumentIndex {
-        BusArgumentIndex::Global(0)
+    fn general_bus(&self) -> BusArgument {
+        BusArgument::Global(0)
     }
 }
 
 impl MachineWithMemBus for BasicMachine {
-    fn mem_bus(&self) -> BusArgumentIndex {
-        BusArgumentIndex::Global(1)
+    fn mem_bus(&self) -> BusArgument {
+        BusArgument::Global(1)
     }
 }
 
@@ -76,11 +76,11 @@ impl MachineWithCpuChip for BasicMachine {
 }
 
 impl MachineWithMemoryChip for BasicMachine {
-    fn mem(&self) -> &MemoryChip<Self> {
+    fn mem(&self) -> &MemoryChip {
         &self.mem
     }
 
-    fn mem_mut(&mut self) -> &mut MemoryChip<Self> {
+    fn mem_mut(&mut self) -> &mut MemoryChip {
         &mut self.mem
     }
 }
@@ -106,11 +106,11 @@ impl MachineWithMul32Chip for BasicMachine {
 }
 
 impl MachineWithRangeChip for BasicMachine {
-    fn range(&self) -> &RangeCheckerChip<Self> {
+    fn range(&self) -> &RangeCheckerChip {
         &self.range
     }
 
-    fn range_mut(&mut self) -> &mut RangeCheckerChip<Self> {
+    fn range_mut(&mut self) -> &mut RangeCheckerChip {
         &mut self.range
     }
 }

@@ -1,30 +1,26 @@
 use crate::columns::MemoryCols;
-use crate::{MachineWithMemBus, MachineWithMemoryChip, MemoryChip};
+use crate::{MachineWithMemBus, MachineWithMemoryChip, MemoryChip, MemoryPublicInput};
 use core::borrow::Borrow;
-use p3_air::{Air, AirBuilder, PermutationAirBuilder};
-use p3_field::{AbstractExtensionField, AbstractField, PrimeField};
+use valida_machine::{chip, ValidaAir, ValidaAirBuilder};
+
+use p3_air::{AirBuilder, PermutationAirBuilder};
+use p3_field::PrimeField;
 use p3_matrix::Matrix;
-use valida_machine::{chip, Machine};
 
-impl<F, EF, AB, M> Air<AB> for MemoryChip<M>
-where
-    F: PrimeField,
-    EF: AbstractExtensionField<AB::Expr> + From<AB::Expr> + Sync,
-    AB: PermutationAirBuilder<F = F, EF = EF>,
-    M: MachineWithMemoryChip<F = F, EF = EF> + MachineWithMemBus,
-{
-    fn eval(&self, builder: &mut AB) {
-        self.eval_main(builder);
-        chip::eval_permutation_constraints::<F, AB, EF, M, Self>(self, builder);
-    }
-}
-
-impl<F, M> MemoryChip<M>
+impl<F, M, AB> ValidaAir<AB, M> for MemoryChip
 where
     F: PrimeField,
     M: MachineWithMemoryChip<F = F> + MachineWithMemBus,
+    AB: ValidaAirBuilder<F = F, PublicInput = MemoryPublicInput<F>>,
 {
-    fn eval_main<AB: PermutationAirBuilder<F = F>>(&self, builder: &mut AB) {
+    fn eval(&self, builder: &mut AB, machine: &M) {
+        self.eval_main(builder);
+        chip::eval_permutation_constraints(self, builder, machine);
+    }
+}
+
+impl MemoryChip {
+    fn eval_main<F: PrimeField, AB: PermutationAirBuilder<F = F>>(&self, builder: &mut AB) {
         let main = builder.main();
         let local: &MemoryCols<AB::Var> = main.row(0).borrow();
         let next: &MemoryCols<AB::Var> = main.row(1).borrow();

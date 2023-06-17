@@ -7,6 +7,12 @@ extern crate self as valida_machine;
 
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
+
+pub use crate::core::Word;
+pub use chip::{
+    BusArgument, Chip, Interaction, InteractionType, PublicInput, ValidaAir, ValidaAirBuilder,
+};
+
 pub use p3_field::{AbstractField, ExtensionField, Field, PrimeField, PrimeField32, PrimeField64};
 
 pub mod __internal;
@@ -14,9 +20,6 @@ pub mod chip;
 pub mod config;
 pub mod core;
 pub mod proof;
-
-pub use crate::core::Word;
-pub use chip::{BusArgumentIndex, Chip, Interaction, InteractionType, LookupData};
 
 pub const OPERAND_ELEMENTS: usize = 5;
 pub const INSTRUCTION_ELEMENTS: usize = OPERAND_ELEMENTS + 1;

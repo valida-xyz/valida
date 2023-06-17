@@ -2,11 +2,9 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
 use alloc::vec;
-use alloc::vec::Vec;
-use valida_machine::{Chip, Interaction, LookupData, Machine, PrimeField};
+use valida_machine::{Chip, Machine, PrimeField};
 
 use p3_matrix::dense::RowMajorMatrix;
 
@@ -14,13 +12,12 @@ pub mod columns;
 pub mod stark;
 
 #[derive(Default)]
-pub struct RangeCheckerChip<M: Machine + ?Sized> {
+pub struct RangeCheckerChip {
     pub count: BTreeMap<u32, u32>,
     pub range_max: u32,
-    lookup_data: Option<LookupData<M::F, M::EF>>,
 }
 
-impl<F, M> Chip<M> for RangeCheckerChip<M>
+impl<F, M> Chip<M> for RangeCheckerChip
 where
     F: PrimeField,
     M: Machine<F = F>,
@@ -37,6 +34,6 @@ where
 }
 
 pub trait MachineWithRangeChip: Machine {
-    fn range(&self) -> &RangeCheckerChip<Self>;
-    fn range_mut(&mut self) -> &mut RangeCheckerChip<Self>;
+    fn range(&self) -> &RangeCheckerChip;
+    fn range_mut(&mut self) -> &mut RangeCheckerChip;
 }

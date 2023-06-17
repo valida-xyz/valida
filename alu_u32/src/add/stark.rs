@@ -1,16 +1,17 @@
 use super::columns::Add32Cols;
 use super::Add32Opcode;
 use core::borrow::Borrow;
+use valida_machine::{Machine, ValidaAir};
 
-use p3_air::{Air, PermutationAirBuilder};
+use p3_air::PermutationAirBuilder;
 use p3_field::PrimeField;
 use p3_matrix::Matrix;
 
 #[derive(Default)]
 pub struct Add32Stark {}
 
-impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for Add32Stark {
-    fn eval(&self, builder: &mut AB) {
+impl<M: Machine, AB: PermutationAirBuilder<F = B>, B: PrimeField> ValidaAir<AB, M> for Add32Stark {
+    fn eval(&self, builder: &mut AB, machine: &M) {
         let main = builder.main();
         let local: &Add32Cols<AB::Var> = main.row(0).borrow();
 

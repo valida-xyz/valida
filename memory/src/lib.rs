@@ -8,7 +8,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::mem::transmute;
 use valida_bus::MachineWithMemBus;
-use valida_machine::{BusArgumentIndex, Chip, Interaction, LookupData, Machine, Word};
+use valida_machine::{BusArgument, Chip, Interaction, Machine, PublicInput, Word};
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
@@ -43,26 +43,31 @@ impl Operation {
 }
 
 #[derive(Default)]
-pub struct MemoryChip<M: Machine + ?Sized> {
+pub struct MemoryChip {
     pub cells: BTreeMap<u32, Word<u8>>,
     pub operations: BTreeMap<u32, Vec<Operation>>,
-    lookup_data: Option<LookupData<M::F, M::EF>>,
+}
+
+pub struct MemoryPublicInput<F: PrimeField> {
+    cumulative_sum: F,
+}
+
+impl<F: PrimeField> PublicInput<F> for MemoryPublicInput<F> {
+    fn cumulative_sum(&self) -> F {
+        self.cumulative_sum
+    }
 }
 
 pub trait MachineWithMemoryChip: Machine {
-    fn mem(&self) -> &MemoryChip<Self>;
-    fn mem_mut(&mut self) -> &mut MemoryChip<Self>;
+    fn mem(&self) -> &MemoryChip;
+    fn mem_mut(&mut self) -> &mut MemoryChip;
 }
 
-impl<M> MemoryChip<M>
-where
-    M: Machine,
-{
+impl MemoryChip {
     pub fn new() -> Self {
         Self {
             cells: BTreeMap::new(),
             operations: BTreeMap::new(),
-            lookup_data: None,
         }
     }
 
@@ -88,7 +93,7 @@ where
     }
 }
 
-impl<M> Chip<M> for MemoryChip<M>
+impl<M> Chip<M> for MemoryChip
 where
     M: MachineWithMemoryChip + MachineWithMemBus,
 {
@@ -113,7 +118,7 @@ where
         let mut rows = ops
             .into_par_iter()
             .enumerate()
-            .map(|(n, (clk, op))| self.op_to_row(n, clk as usize, op))
+            .map(|(n, (clk, op))| self.op_to_row::<M::F, M>(n, clk as usize, op))
             .collect::<Vec<_>>();
 
         // Compute address difference values
@@ -128,7 +133,7 @@ where
         let sends = Interaction {
             fields: vec![VirtualPairCol::single_main(MEM_COL_MAP.diff)],
             count: VirtualPairCol::one(),
-            argument_index: BusArgumentIndex::Local(0),
+            argument_index: BusArgument::Local(0),
         };
         vec![sends]
     }
@@ -137,7 +142,7 @@ where
         let sends = Interaction {
             fields: vec![VirtualPairCol::single_main(MEM_COL_MAP.counter)],
             count: VirtualPairCol::single_main(MEM_COL_MAP.counter_mult),
-            argument_index: BusArgumentIndex::Local(0),
+            argument_index: BusArgument::Local(0),
         };
         vec![sends]
     }
@@ -159,12 +164,13 @@ where
     }
 }
 
-impl<F, M> MemoryChip<M>
-where
-    F: PrimeField,
-    M: MachineWithMemoryChip<F = F>,
-{
-    fn op_to_row(&self, n: usize, clk: usize, op: Operation) -> [M::F; NUM_MEM_COLS] {
+impl MemoryChip {
+    fn op_to_row<F: PrimeField, M: MachineWithMemoryChip<F = F>>(
+        &self,
+        n: usize,
+        clk: usize,
+        op: Operation,
+    ) -> [M::F; NUM_MEM_COLS] {
         let mut row = [F::ZERO; NUM_MEM_COLS];
         let mut cols: &mut MemoryCols<F> = unsafe { transmute(&mut row) };
 
@@ -229,7 +235,7 @@ where
         }
     }
 
-    fn compute_address_diffs(rows: &mut Vec<[F; NUM_MEM_COLS]>) {
+    fn compute_address_diffs<F: PrimeField>(rows: &mut Vec<[F; NUM_MEM_COLS]>) {
         // TODO: Use batch inversion
         for n in 0..(rows.len() - 1) {
             let addr = rows[n][MEM_COL_MAP.addr];

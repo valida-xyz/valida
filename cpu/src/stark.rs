@@ -1,21 +1,32 @@
 use crate::columns::CpuCols;
 use core::borrow::Borrow;
 use core::mem::MaybeUninit;
-use valida_machine::Word;
+use valida_machine::{Machine, PublicInput, ValidaAir, ValidaAirBuilder, Word};
 
-use p3_air::{Air, AirBuilder};
+use p3_air::AirBuilder;
 use p3_field::PrimeField;
 use p3_matrix::Matrix;
 
 #[derive(Default)]
 pub struct CpuStark;
 
-impl<F, AB> Air<AB> for CpuStark
+pub struct CpuPublicInput<F: PrimeField> {
+    cumulative_sum: F,
+}
+
+impl<F: PrimeField> PublicInput<F> for CpuPublicInput<F> {
+    fn cumulative_sum(&self) -> F {
+        self.cumulative_sum
+    }
+}
+
+impl<F, M, AB> ValidaAir<AB, M> for CpuStark
 where
     F: PrimeField,
-    AB: AirBuilder<F = F>,
+    M: Machine,
+    AB: ValidaAirBuilder<F = F, PublicInput = CpuPublicInput<F>>,
 {
-    fn eval(&self, builder: &mut AB) {
+    fn eval(&self, builder: &mut AB, _machine: &M) {
         let main = builder.main();
         let local: &CpuCols<AB::Var> = main.row(0).borrow();
         let next: &CpuCols<AB::Var> = main.row(1).borrow();

@@ -3,7 +3,7 @@ use crate::Mul32Opcode;
 use core::borrow::Borrow;
 use core::mem::MaybeUninit;
 use itertools::iproduct;
-use valida_machine::Word;
+use valida_machine::{Machine, ValidaAir, Word};
 
 use p3_air::{Air, AirBuilder, PermutationAirBuilder};
 use p3_field::PrimeField;
@@ -12,8 +12,8 @@ use p3_matrix::Matrix;
 #[derive(Default)]
 pub struct Mul32Stark {}
 
-impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for Mul32Stark {
-    fn eval(&self, builder: &mut AB) {
+impl<M: Machine, AB: PermutationAirBuilder<F = B>, B: PrimeField> ValidaAir<AB, M> for Mul32Stark {
+    fn eval(&self, builder: &mut AB, machine: &M) {
         let main = builder.main();
         let local: &Mul32Cols<AB::Var> = main.row(0).borrow();
         let next: &Mul32Cols<AB::Var> = main.row(1).borrow();
