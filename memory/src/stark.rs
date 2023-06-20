@@ -5,7 +5,7 @@ use valida_machine::{chip, ValidaAirBuilder};
 
 use p3_air::{Air, AirBuilder, PermutationAirBuilder};
 use p3_field::PrimeField;
-use p3_matrix::Matrix;
+use p3_matrix::MatrixRows;
 
 impl<F, M, AB> Air<AB> for MemoryChip
 where

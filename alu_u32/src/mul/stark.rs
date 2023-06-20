@@ -8,7 +8,7 @@ use valida_machine::{chip, ValidaAirBuilder, Word};
 
 use p3_air::{Air, AirBuilder, PermutationAirBuilder};
 use p3_field::PrimeField;
-use p3_matrix::Matrix;
+use p3_matrix::MatrixRows;
 
 impl<F, M, AB> Air<AB> for Mul32Chip
 where

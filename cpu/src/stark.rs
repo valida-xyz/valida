@@ -8,7 +8,7 @@ use valida_memory::MachineWithMemoryChip;
 
 use p3_air::{Air, AirBuilder};
 use p3_field::PrimeField;
-use p3_matrix::Matrix;
+use p3_matrix::MatrixRows;
 
 impl<F, M, AB> Air<AB> for CpuChip
 where

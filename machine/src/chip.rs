@@ -6,7 +6,7 @@ use valida_util::batch_invert;
 
 use p3_air::{PermutationAirBuilder, VirtualPairCol};
 use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Powers, PrimeField};
-use p3_matrix::{dense::RowMajorMatrix, Matrix};
+use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRows};
 
 pub trait Chip<M: Machine> {
     /// Generate the main trace for the chip given the provided machine.
