@@ -1,21 +1,21 @@
 use crate::columns::MemoryCols;
-use crate::{MachineWithMemBus, MachineWithMemoryChip, MemoryChip, MemoryPublicInput};
+use crate::{MachineWithMemBus, MemoryChip, MemoryPublicInput};
 use core::borrow::Borrow;
-use valida_machine::{chip, ValidaAir, ValidaAirBuilder};
+use valida_machine::{chip, ValidaAirBuilder};
 
-use p3_air::{AirBuilder, PermutationAirBuilder};
+use p3_air::{Air, AirBuilder, PermutationAirBuilder};
 use p3_field::PrimeField;
 use p3_matrix::Matrix;
 
-impl<F, M, AB> ValidaAir<AB, M> for MemoryChip
+impl<F, M, AB> Air<AB> for MemoryChip
 where
     F: PrimeField,
-    M: MachineWithMemoryChip<F = F> + MachineWithMemBus,
-    AB: ValidaAirBuilder<F = F, PublicInput = MemoryPublicInput<F>>,
+    M: MachineWithMemBus<F = F>,
+    AB: ValidaAirBuilder<F = F, Machine = M, PublicInput = MemoryPublicInput<F>>,
 {
-    fn eval(&self, builder: &mut AB, machine: &M) {
+    fn eval(&self, builder: &mut AB) {
         self.eval_main(builder);
-        chip::eval_permutation_constraints(self, builder, machine);
+        chip::eval_permutation_constraints(self, builder);
     }
 }
 

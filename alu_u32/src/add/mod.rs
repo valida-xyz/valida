@@ -5,10 +5,11 @@ use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Add32Cols, ADD_COL_MAP, NUM_ADD_COLS};
 use core::mem::transmute;
-use valida_bus::MachineWithGeneralBus;
+use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus};
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{
-    instructions, Chip, Instruction, Interaction, Operands, Word, MEMORY_CELL_BYTES,
+    instructions, Chip, Instruction, Interaction, Operands, PermutationPublicInput, Word,
+    MEMORY_CELL_BYTES,
 };
 use valida_range::MachineWithRangeChip;
 
@@ -31,19 +32,45 @@ pub struct Add32Chip {
     pub operations: Vec<Operation>,
 }
 
+pub struct Add32PublicInput<F: PrimeField> {
+    cumulative_sum: F,
+}
+
+impl<F: PrimeField> PermutationPublicInput<F> for Add32PublicInput<F> {
+    fn cumulative_sum(&self) -> F {
+        self.cumulative_sum
+    }
+}
+
 impl<M> Chip<M> for Add32Chip
 where
-    M: MachineWithAdd32Chip + MachineWithGeneralBus,
+    M: MachineWithGeneralBus + MachineWithRangeBus,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
             .operations
             .par_iter()
-            .map(|op| self.op_to_row::<M::F, M>(op))
+            .map(|op| self.op_to_row(op))
             .flatten()
             .collect::<Vec<_>>();
 
         RowMajorMatrix::new(rows, NUM_ADD_COLS)
+    }
+
+    fn global_sends(&self, machine: &M) -> Vec<Interaction<M::F>> {
+        let output = ADD_COL_MAP
+            .output
+            .0
+            .map(VirtualPairCol::single_main)
+            .into_iter()
+            .collect::<Vec<_>>();
+
+        let send = Interaction {
+            fields: output,
+            count: VirtualPairCol::one(),
+            argument_index: machine.range_bus(),
+        };
+        vec![send]
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
@@ -67,7 +94,7 @@ where
 }
 
 impl Add32Chip {
-    fn op_to_row<F, M>(&self, op: &Operation) -> [F; NUM_ADD_COLS]
+    fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_ADD_COLS]
     where
         F: PrimeField,
     {
@@ -116,20 +143,12 @@ where
         let a = b + c;
         state.mem_mut().write(clk, write_addr, a, true);
 
-        // Record the output of the operation (a) in the range check chip
-        for i in 0..MEMORY_CELL_BYTES {
-            state
-                .range_mut()
-                .count
-                .entry(a[i].into())
-                .and_modify(|c| *c += 1)
-                .or_insert(1);
-        }
-
         state
             .add_u32_mut()
             .operations
             .push(Operation::Add32(a, b, c));
         state.cpu_mut().push_bus_op(imm);
+
+        state.range_record(a);
     }
 }

@@ -1,17 +1,20 @@
 use super::columns::Add32Cols;
-use super::Add32Opcode;
+use super::{Add32Chip, Add32Opcode, Add32PublicInput};
 use core::borrow::Borrow;
-use valida_machine::{Machine, ValidaAir};
+use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus};
+use valida_machine::{chip, ValidaAirBuilder};
 
-use p3_air::PermutationAirBuilder;
+use p3_air::Air;
 use p3_field::PrimeField;
 use p3_matrix::Matrix;
 
-#[derive(Default)]
-pub struct Add32Stark {}
-
-impl<M: Machine, AB: PermutationAirBuilder<F = B>, B: PrimeField> ValidaAir<AB, M> for Add32Stark {
-    fn eval(&self, builder: &mut AB, machine: &M) {
+impl<F, M, AB> Air<AB> for Add32Chip
+where
+    F: PrimeField,
+    M: MachineWithGeneralBus<F = F> + MachineWithRangeBus,
+    AB: ValidaAirBuilder<F = F, Machine = M, PublicInput = Add32PublicInput<F>>,
+{
+    fn eval(&self, builder: &mut AB) {
         let main = builder.main();
         let local: &Add32Cols<AB::Var> = main.row(0).borrow();
 
@@ -34,5 +37,7 @@ impl<M: Machine, AB: PermutationAirBuilder<F = B>, B: PrimeField> ValidaAir<AB, 
         );
 
         // TODO: Range check output ([0,256]) using preprocessed lookup table
+
+        chip::eval_permutation_constraints(self, builder);
     }
 }

@@ -13,3 +13,7 @@ pub trait MachineWithGeneralBus: Machine {
 pub trait MachineWithMemBus: Machine {
     fn mem_bus(&self) -> BusArgument;
 }
+
+pub trait MachineWithRangeBus: Machine {
+    fn range_bus(&self) -> BusArgument;
+}

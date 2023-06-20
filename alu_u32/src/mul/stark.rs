@@ -1,19 +1,22 @@
 use super::columns::Mul32Cols;
-use crate::Mul32Opcode;
+use super::{Mul32Chip, Mul32Opcode, Mul32PublicInput};
 use core::borrow::Borrow;
 use core::mem::MaybeUninit;
 use itertools::iproduct;
-use valida_machine::{Machine, ValidaAir, Word};
+use valida_bus::MachineWithGeneralBus;
+use valida_machine::{chip, ValidaAirBuilder, Word};
 
 use p3_air::{Air, AirBuilder, PermutationAirBuilder};
 use p3_field::PrimeField;
 use p3_matrix::Matrix;
 
-#[derive(Default)]
-pub struct Mul32Stark {}
-
-impl<M: Machine, AB: PermutationAirBuilder<F = B>, B: PrimeField> ValidaAir<AB, M> for Mul32Stark {
-    fn eval(&self, builder: &mut AB, machine: &M) {
+impl<F, M, AB> Air<AB> for Mul32Chip
+where
+    F: PrimeField,
+    M: MachineWithGeneralBus<F = F>,
+    AB: ValidaAirBuilder<F = F, Machine = M, PublicInput = Mul32PublicInput<F>>,
+{
+    fn eval(&self, builder: &mut AB) {
         let main = builder.main();
         let local: &Mul32Cols<AB::Var> = main.row(0).borrow();
         let next: &Mul32Cols<AB::Var> = main.row(1).borrow();
@@ -58,6 +61,8 @@ impl<M: Machine, AB: PermutationAirBuilder<F = B>, B: PrimeField> ValidaAir<AB, 
             local.opcode,
             AB::Expr::from(AB::F::from_canonical_u32(Mul32Opcode)),
         );
+
+        chip::eval_permutation_constraints(self, builder);
     }
 }
 

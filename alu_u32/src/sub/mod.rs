@@ -7,7 +7,10 @@ use columns::{Sub32Cols, NUM_SUB_COLS, SUB_COL_MAP};
 use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
+use valida_machine::{
+    instructions, Chip, Instruction, Interaction, Operands, PermutationPublicInput, Word,
+};
+use valida_range::MachineWithRangeChip;
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
@@ -28,15 +31,25 @@ pub struct Sub32Chip {
     pub operations: Vec<Operation>,
 }
 
+pub struct Sub32PublicInput<F: PrimeField> {
+    cumulative_sum: F,
+}
+
+impl<F: PrimeField> PermutationPublicInput<F> for Sub32PublicInput<F> {
+    fn cumulative_sum(&self) -> F {
+        self.cumulative_sum
+    }
+}
+
 impl<M> Chip<M> for Sub32Chip
 where
-    M: MachineWithSub32Chip + MachineWithGeneralBus,
+    M: MachineWithGeneralBus,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
             .operations
             .par_iter()
-            .map(|op| self.op_to_row::<M::F, M>(op))
+            .map(|op| self.op_to_row(op))
             .collect::<Vec<_>>();
         RowMajorMatrix::new(rows.concat(), NUM_SUB_COLS)
     }
@@ -62,10 +75,9 @@ where
 }
 
 impl Sub32Chip {
-    fn op_to_row<F, M>(&self, op: &Operation) -> [F; NUM_SUB_COLS]
+    fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_SUB_COLS]
     where
         F: PrimeField,
-        M: MachineWithSub32Chip<F = F>,
     {
         let mut row = [F::ZERO; NUM_SUB_COLS];
         let mut cols: &mut Sub32Cols<F> = unsafe { transmute(&mut row) };
@@ -90,7 +102,7 @@ instructions!(Sub32Instruction);
 
 impl<M> Instruction<M> for Sub32Instruction
 where
-    M: MachineWithSub32Chip,
+    M: MachineWithSub32Chip + MachineWithRangeChip,
 {
     const OPCODE: u32 = Sub32Opcode;
 
@@ -117,5 +129,7 @@ where
             .operations
             .push(Operation::Sub32(a, b, c));
         state.cpu_mut().push_bus_op(imm);
+
+        state.range_record(a);
     }
 }

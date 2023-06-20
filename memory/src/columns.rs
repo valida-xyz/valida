@@ -5,7 +5,6 @@ use valida_machine::Word;
 use valida_util::indices_arr;
 
 #[derive(AlignedBorrow, Default)]
-#[repr(C)]
 pub struct MemoryCols<T> {
     /// Memory address
     pub addr: T,

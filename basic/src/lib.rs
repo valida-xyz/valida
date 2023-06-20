@@ -3,19 +3,19 @@
 extern crate alloc;
 
 use valida_alu_u32::{
-    add::{stark::Add32Stark, Add32Chip, Add32Instruction, MachineWithAdd32Chip},
-    mul::{stark::Mul32Stark, MachineWithMul32Chip, Mul32Chip, Mul32Instruction},
+    add::{Add32Chip, Add32Instruction, MachineWithAdd32Chip},
+    mul::{MachineWithMul32Chip, Mul32Chip, Mul32Instruction},
 };
-use valida_bus::{MachineWithGeneralBus, MachineWithMemBus};
+use valida_bus::{MachineWithGeneralBus, MachineWithMemBus, MachineWithRangeBus};
 use valida_cpu::{
-    stark::CpuStark, BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction,
-    JalvInstruction, Load32Instruction, Store32Instruction,
+    BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
+    Load32Instruction, Store32Instruction,
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
 use valida_machine::{BusArgument, Chip, Instruction, Machine, ProgramROM, PublicMemory};
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
-use valida_range::{stark::RangeStark, MachineWithRangeChip, RangeCheckerChip};
+use valida_range::{MachineWithRangeChip, RangeCheckerChip};
 
 #[derive(Machine, Default)]
 pub struct BasicMachine {
@@ -62,6 +62,12 @@ impl MachineWithGeneralBus for BasicMachine {
 impl MachineWithMemBus for BasicMachine {
     fn mem_bus(&self) -> BusArgument {
         BusArgument::Global(1)
+    }
+}
+
+impl MachineWithRangeBus for BasicMachine {
+    fn range_bus(&self) -> BusArgument {
+        BusArgument::Global(2)
     }
 }
 

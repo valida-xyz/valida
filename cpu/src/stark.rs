@@ -1,32 +1,22 @@
 use crate::columns::CpuCols;
+use crate::{CpuChip, CpuPublicInput};
 use core::borrow::Borrow;
 use core::mem::MaybeUninit;
-use valida_machine::{Machine, PublicInput, ValidaAir, ValidaAirBuilder, Word};
+use valida_bus::{MachineWithGeneralBus, MachineWithMemBus};
+use valida_machine::{chip, ValidaAirBuilder, Word};
+use valida_memory::MachineWithMemoryChip;
 
-use p3_air::AirBuilder;
+use p3_air::{Air, AirBuilder};
 use p3_field::PrimeField;
 use p3_matrix::Matrix;
 
-#[derive(Default)]
-pub struct CpuStark;
-
-pub struct CpuPublicInput<F: PrimeField> {
-    cumulative_sum: F,
-}
-
-impl<F: PrimeField> PublicInput<F> for CpuPublicInput<F> {
-    fn cumulative_sum(&self) -> F {
-        self.cumulative_sum
-    }
-}
-
-impl<F, M, AB> ValidaAir<AB, M> for CpuStark
+impl<F, M, AB> Air<AB> for CpuChip
 where
     F: PrimeField,
-    M: Machine,
-    AB: ValidaAirBuilder<F = F, PublicInput = CpuPublicInput<F>>,
+    M: MachineWithMemoryChip<F = F> + MachineWithGeneralBus + MachineWithMemBus + Sync,
+    AB: ValidaAirBuilder<F = F, Machine = M, PublicInput = CpuPublicInput<F>>,
 {
-    fn eval(&self, builder: &mut AB, _machine: &M) {
+    fn eval(&self, builder: &mut AB) {
         let main = builder.main();
         let local: &CpuCols<AB::Var> = main.row(0).borrow();
         let next: &CpuCols<AB::Var> = main.row(1).borrow();
@@ -59,10 +49,12 @@ where
             local.instruction.operands.c(),
             reduce::<F, AB>(&base, local.read_value_2()),
         );
+
+        chip::eval_permutation_constraints(self, builder);
     }
 }
 
-impl CpuStark {
+impl CpuChip {
     fn eval_memory_channels<F, AB>(
         &self,
         builder: &mut AB,

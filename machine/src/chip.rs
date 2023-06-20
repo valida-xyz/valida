@@ -2,8 +2,9 @@ use crate::Machine;
 use alloc::collections::BTreeMap;
 use alloc::vec;
 use alloc::vec::Vec;
+use valida_util::batch_invert;
 
-use p3_air::{Air, AirBuilder, PermutationAirBuilder, VirtualPairCol};
+use p3_air::{PermutationAirBuilder, VirtualPairCol};
 use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Powers, PrimeField};
 use p3_matrix::{dense::RowMajorMatrix, Matrix};
 
@@ -63,19 +64,19 @@ pub trait Chip<M: Machine> {
     }
 }
 
-pub trait ValidaAir<AB: PermutationAirBuilder, M: Machine> {
-    fn eval(&self, builder: &mut AB, machine: &M);
-}
-
 pub trait ValidaAirBuilder: PermutationAirBuilder {
+    type Machine;
+
     type PublicInput;
+
+    fn machine(&self) -> &Self::Machine;
 
     fn public_input(&self) -> Option<Self::PublicInput> {
         None
     }
 }
 
-pub trait PublicInput<F> {
+pub trait PermutationPublicInput<F> {
     fn cumulative_sum(&self) -> F;
 }
 
@@ -134,7 +135,7 @@ pub fn generate_permutation_trace<F: Field, M: Machine<F = F>, C: Chip<M>>(
     let (alphas_local, alphas_global) = generate_rlc_elements(chip, &random_elements);
     let betas = random_elements[2].powers();
 
-    // Compute the reciprocal columns and build a map from bus to reciprocal column index
+    // Compute the reciprocal columns
     //
     // Row: | q_1 | q_2 | q_3 | ... | q_n | \phi |
     // * q_i = \frac{1}{\alpha^i + \sum_j \beta^j * f_{i,j}}
@@ -190,12 +191,11 @@ pub fn eval_permutation_constraints<
     F: PrimeField,
     M: Machine<F = F>,
     C: Chip<M>,
-    AB: ValidaAirBuilder<F = F, PublicInput = PI>,
-    PI: PublicInput<F>,
+    AB: ValidaAirBuilder<Machine = M, F = F, PublicInput = PI>,
+    PI: PermutationPublicInput<F>,
 >(
     chip: &C,
     builder: &mut AB,
-    machine: &M,
 ) {
     let rand_elems = builder.permutation_randomness().to_vec();
 
@@ -212,8 +212,8 @@ pub fn eval_permutation_constraints<
 
     let cumulative_sum = builder.public_input().unwrap().cumulative_sum();
 
-    let all_interactions = chip.all_interactions(machine);
-    let map = chip.interaction_map(machine);
+    let all_interactions = chip.all_interactions(builder.machine());
+    let map = chip.interaction_map(builder.machine());
 
     let (alphas_local, alphas_global) = generate_rlc_elements(chip, &rand_elems);
     let betas = rand_elems[2].powers();
@@ -234,7 +234,7 @@ pub fn eval_permutation_constraints<
         } else {
             rlc = rlc + alphas_global[interaction.argument_index()];
         }
-        builder.assert_eq_ext(rlc, perm_local[col_idx].clone().into());
+        builder.assert_one_ext(rlc * perm_local[col_idx]);
 
         // Build the RHS of the permutation constraint
         let mult = interaction
@@ -308,21 +308,6 @@ fn reduce_row<F: Field, EF: ExtensionField<F>>(
     }
     rlc += alpha;
     rlc
-}
-
-pub fn batch_invert<F: Field>(values: Vec<F>) -> Vec<F> {
-    let mut res = vec![F::ZERO; values.len()];
-    let mut prod = F::ONE;
-    for (n, value) in values.iter().cloned().enumerate() {
-        res[n] = prod;
-        prod *= value;
-    }
-    let mut inv = prod.inverse();
-    for (n, value) in values.iter().cloned().rev().enumerate().rev() {
-        res[n] *= inv;
-        inv *= value;
-    }
-    res
 }
 
 #[macro_export]

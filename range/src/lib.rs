@@ -4,7 +4,7 @@ extern crate alloc;
 
 use alloc::collections::BTreeMap;
 use alloc::vec;
-use valida_machine::{Chip, Machine, PrimeField};
+use valida_machine::{Chip, Machine, PrimeField, Word};
 
 use p3_matrix::dense::RowMajorMatrix;
 
@@ -36,4 +36,15 @@ where
 pub trait MachineWithRangeChip: Machine {
     fn range(&self) -> &RangeCheckerChip;
     fn range_mut(&mut self) -> &mut RangeCheckerChip;
+
+    /// Record the components of the word in the range check counter
+    fn range_record<I: Into<u32>>(&mut self, value: Word<I>) {
+        for v in value {
+            self.range_mut()
+                .count
+                .entry(v.into())
+                .and_modify(|c| *c += 1)
+                .or_insert(1);
+        }
+    }
 }

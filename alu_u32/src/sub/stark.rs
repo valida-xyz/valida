@@ -1,16 +1,20 @@
 use super::columns::Sub32Cols;
-use crate::Sub32Opcode;
+use super::{Sub32Chip, Sub32Opcode, Sub32PublicInput};
 use core::borrow::Borrow;
-use valida_machine::{Machine, ValidaAir};
+use valida_bus::MachineWithGeneralBus;
+use valida_machine::{chip, ValidaAirBuilder};
 
-use p3_air::{Air, PermutationAirBuilder};
+use p3_air::Air;
 use p3_field::PrimeField;
 use p3_matrix::Matrix;
 
-pub struct Sub32Stark {}
-
-impl<M: Machine, AB: PermutationAirBuilder<F = B>, B: PrimeField> ValidaAir<AB, M> for Sub32Stark {
-    fn eval(&self, builder: &mut AB, machine: &M) {
+impl<F, M, AB> Air<AB> for Sub32Chip
+where
+    F: PrimeField,
+    M: MachineWithGeneralBus<F = F>,
+    AB: ValidaAirBuilder<F = F, Machine = M, PublicInput = Sub32PublicInput<F>>,
+{
+    fn eval(&self, builder: &mut AB) {
         let main = builder.main();
         let local: &Sub32Cols<AB::Var> = main.row(0).borrow();
 
@@ -45,6 +49,8 @@ impl<M: Machine, AB: PermutationAirBuilder<F = B>, B: PrimeField> ValidaAir<AB, 
             local.opcode,
             AB::Expr::from(AB::F::from_canonical_u32(Sub32Opcode)),
         );
+
+        chip::eval_permutation_constraints(self, builder);
 
         todo!()
     }

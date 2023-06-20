@@ -4,11 +4,13 @@ use crate::Mul32Opcode;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Mul32Cols, MUL_COL_MAP, NUM_MUL_COLS};
-use core::marker::Sync;
 use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
+use valida_machine::{
+    instructions, Chip, Instruction, Interaction, Operands, PermutationPublicInput, Word,
+};
+use valida_range::MachineWithRangeChip;
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
@@ -29,15 +31,25 @@ pub struct Mul32Chip {
     pub operations: Vec<Operation>,
 }
 
+pub struct Mul32PublicInput<F: PrimeField> {
+    cumulative_sum: F,
+}
+
+impl<F: PrimeField> PermutationPublicInput<F> for Mul32PublicInput<F> {
+    fn cumulative_sum(&self) -> F {
+        self.cumulative_sum
+    }
+}
+
 impl<M> Chip<M> for Mul32Chip
 where
-    M: MachineWithMul32Chip + MachineWithGeneralBus + Sync,
+    M: MachineWithGeneralBus,
 {
-    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F> {
+    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
             .operations
             .par_iter()
-            .map(|op| self.op_to_row(op, machine))
+            .map(|op| self.op_to_row(op))
             .collect::<Vec<_>>();
         RowMajorMatrix::new(rows.concat(), NUM_MUL_COLS)
     }
@@ -67,10 +79,9 @@ where
 }
 
 impl Mul32Chip {
-    fn op_to_row<F, M>(&self, op: &Operation, _machine: &M) -> [F; NUM_MUL_COLS]
+    fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_MUL_COLS]
     where
         F: PrimeField,
-        M: MachineWithMul32Chip<F = F>,
     {
         let mut row = [F::ZERO; NUM_MUL_COLS];
         let mut cols: &mut Mul32Cols<F> = unsafe { transmute(&mut row) };
@@ -95,7 +106,7 @@ instructions!(Mul32Instruction);
 
 impl<M> Instruction<M> for Mul32Instruction
 where
-    M: MachineWithMul32Chip,
+    M: MachineWithMul32Chip + MachineWithRangeChip,
 {
     const OPCODE: u32 = Mul32Opcode;
 
@@ -122,5 +133,7 @@ where
             .operations
             .push(Operation::Mul32(a, b, c));
         state.cpu_mut().push_bus_op(imm);
+
+        state.range_record(a);
     }
 }
