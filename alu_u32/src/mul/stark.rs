@@ -4,17 +4,16 @@ use core::borrow::Borrow;
 use core::mem::MaybeUninit;
 use itertools::iproduct;
 use valida_bus::MachineWithGeneralBus;
-use valida_machine::{ValidaAirBuilder, Word};
+use valida_machine::Word;
 
-use p3_air::{Air, AirBuilder, PermutationAirBuilder};
+use p3_air::{Air, AirBuilder};
 use p3_field::PrimeField;
 use p3_matrix::MatrixRows;
 
-impl<F, M, AB> Air<AB> for Mul32Chip
+impl<F, AB> Air<AB> for Mul32Chip
 where
     F: PrimeField,
-    M: MachineWithGeneralBus<F = F>,
-    AB: ValidaAirBuilder<F = F, Machine = M>,
+    AB: AirBuilder<F = F>,
 {
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
@@ -65,7 +64,7 @@ where
     }
 }
 
-fn pi_m<const N: usize, AB: PermutationAirBuilder>(
+fn pi_m<const N: usize, AB: AirBuilder>(
     base: &[AB::Expr],
     input_1: Word<AB::Var>,
     input_2: Word<AB::Var>,
@@ -76,10 +75,7 @@ fn pi_m<const N: usize, AB: PermutationAirBuilder>(
         .sum()
 }
 
-fn sigma_m<const N: usize, AB: PermutationAirBuilder>(
-    base: &[AB::Expr],
-    input: Word<AB::Var>,
-) -> AB::Expr {
+fn sigma_m<const N: usize, AB: AirBuilder>(base: &[AB::Expr], input: Word<AB::Var>) -> AB::Expr {
     input
         .into_iter()
         .enumerate()

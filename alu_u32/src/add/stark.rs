@@ -1,18 +1,15 @@
 use super::columns::Add32Cols;
 use super::{Add32Chip, ADD32_OPCODE};
 use core::borrow::Borrow;
-use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
-use valida_machine::ValidaAirBuilder;
 
-use p3_air::Air;
+use p3_air::{Air, AirBuilder};
 use p3_field::PrimeField;
 use p3_matrix::MatrixRows;
 
-impl<F, M, AB> Air<AB> for Add32Chip
+impl<F, AB> Air<AB> for Add32Chip
 where
     F: PrimeField,
-    M: MachineWithGeneralBus<F = F> + MachineWithRangeBus8,
-    AB: ValidaAirBuilder<F = F, Machine = M>,
+    AB: AirBuilder<F = F>,
 {
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();

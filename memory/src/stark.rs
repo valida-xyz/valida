@@ -1,17 +1,14 @@
 use crate::columns::MemoryCols;
-use crate::{MachineWithMemBus, MemoryChip};
+use crate::MemoryChip;
 use core::borrow::Borrow;
-use valida_machine::ValidaAirBuilder;
 
-use p3_air::{Air, AirBuilder, PermutationAirBuilder};
-use p3_field::PrimeField;
+use p3_air::{Air, AirBuilder};
+use p3_field::AbstractField;
 use p3_matrix::MatrixRows;
 
-impl<F, M, AB> Air<AB> for MemoryChip
+impl<AB> Air<AB> for MemoryChip
 where
-    F: PrimeField,
-    M: MachineWithMemBus<F = F>,
-    AB: ValidaAirBuilder<F = F, Machine = M>,
+    AB: AirBuilder,
 {
     fn eval(&self, builder: &mut AB) {
         self.eval_main(builder);
@@ -19,7 +16,7 @@ where
 }
 
 impl MemoryChip {
-    fn eval_main<F: PrimeField, AB: PermutationAirBuilder<F = F>>(&self, builder: &mut AB) {
+    fn eval_main<AB: AirBuilder>(&self, builder: &mut AB) {
         let main = builder.main();
         let local: &MemoryCols<AB::Var> = main.row(0).borrow();
         let next: &MemoryCols<AB::Var> = main.row(1).borrow();

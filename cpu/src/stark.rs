@@ -2,20 +2,17 @@ use crate::columns::CpuCols;
 use crate::CpuChip;
 use core::borrow::Borrow;
 use core::mem::MaybeUninit;
-use valida_bus::{MachineWithGeneralBus, MachineWithMemBus};
-use valida_machine::{ValidaAirBuilder, Word};
-use valida_memory::MachineWithMemoryChip;
+use valida_machine::Word;
 
 use p3_air::{Air, AirBuilder};
-use p3_field::PrimeField;
+use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRows;
 
 #[allow(clippy::uninit_assumed_init)]
-impl<F, M, AB> Air<AB> for CpuChip
+impl<F, AB> Air<AB> for CpuChip
 where
     F: PrimeField,
-    M: MachineWithMemoryChip<F = F> + MachineWithGeneralBus + MachineWithMemBus + Sync,
-    AB: ValidaAirBuilder<F = F, Machine = M>,
+    AB: AirBuilder<F = F>,
 {
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
@@ -48,21 +45,20 @@ where
         // this case)
         builder.when(local.opcode_flags.is_imm_op).assert_eq(
             local.instruction.operands.c(),
-            reduce::<F, AB>(&base, local.read_value_2()),
+            reduce::<AB>(&base, local.read_value_2()),
         );
     }
 }
 
 impl CpuChip {
-    fn eval_memory_channels<F, AB>(
+    fn eval_memory_channels<AB>(
         &self,
         builder: &mut AB,
         local: &CpuCols<AB::Var>,
         next: &CpuCols<AB::Var>,
         base: &[AB::Expr; 4],
     ) where
-        F: PrimeField,
-        AB: AirBuilder<F = F>,
+        AB: AirBuilder,
     {
         let is_load = local.opcode_flags.is_load;
         let is_store = local.opcode_flags.is_store;
@@ -96,7 +92,7 @@ impl CpuChip {
         // Read (2)
         builder.when(is_load).assert_eq(
             local.read_addr_2(),
-            reduce::<F, AB>(base, local.read_value_1()),
+            reduce::<AB>(base, local.read_value_1()),
         );
         builder
             .when(
@@ -130,7 +126,7 @@ impl CpuChip {
         builder
             .when_transition()
             .when(is_jal + is_jalv)
-            .assert_eq(next.pc, reduce::<F, AB>(base, local.write_value()));
+            .assert_eq(next.pc, reduce::<AB>(base, local.write_value()));
         builder.when(is_imm32).assert_zero(
             local
                 .write_value()
@@ -144,15 +140,14 @@ impl CpuChip {
             .assert_one(local.write_used());
     }
 
-    fn eval_pc<F, AB>(
+    fn eval_pc<AB>(
         &self,
         builder: &mut AB,
         local: &CpuCols<AB::Var>,
         next: &CpuCols<AB::Var>,
         base: &[AB::Expr; 4],
     ) where
-        F: PrimeField,
-        AB: AirBuilder<F = F>,
+        AB: AirBuilder,
     {
         let should_increment_pc = local.opcode_flags.is_imm32 + local.opcode_flags.is_bus_op;
         let incremented_pc = local.pc + AB::F::ONE;
@@ -184,18 +179,17 @@ impl CpuChip {
         builder
             .when_transition()
             .when(local.opcode_flags.is_jalv)
-            .assert_eq(next.pc, reduce::<F, AB>(base, local.read_value_1()));
+            .assert_eq(next.pc, reduce::<AB>(base, local.read_value_1()));
     }
 
-    fn eval_fp<F, AB>(
+    fn eval_fp<AB>(
         &self,
         builder: &mut AB,
         local: &CpuCols<AB::Var>,
         next: &CpuCols<AB::Var>,
         base: &[AB::Expr; 4],
     ) where
-        F: PrimeField,
-        AB: AirBuilder<F = F>,
+        AB: AirBuilder,
     {
         builder
             .when_transition()
@@ -205,7 +199,7 @@ impl CpuChip {
         builder
             .when_transition()
             .when(local.opcode_flags.is_jalv)
-            .assert_eq(next.fp, reduce::<F, AB>(base, local.read_value_2()));
+            .assert_eq(next.fp, reduce::<AB>(base, local.read_value_2()));
     }
 
     fn eval_equality<AB: AirBuilder>(
@@ -231,10 +225,7 @@ impl CpuChip {
     }
 }
 
-fn reduce<F: PrimeField, AB: AirBuilder<F = F>>(
-    base: &[AB::Expr],
-    input: Word<AB::Var>,
-) -> AB::Expr {
+fn reduce<AB: AirBuilder>(base: &[AB::Expr], input: Word<AB::Var>) -> AB::Expr {
     input
         .into_iter()
         .enumerate()
