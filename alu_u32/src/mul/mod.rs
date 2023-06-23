@@ -1,14 +1,14 @@
 extern crate alloc;
 
-use crate::Mul32Opcode;
+use crate::MUL32_OPCODE;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Mul32Cols, MUL_COL_MAP, NUM_MUL_COLS};
-use core::marker::Sync;
 use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
+use valida_range::MachineWithRangeChip;
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
@@ -31,13 +31,13 @@ pub struct Mul32Chip {
 
 impl<M> Chip<M> for Mul32Chip
 where
-    M: MachineWithMul32Chip + MachineWithGeneralBus + Sync,
+    M: MachineWithGeneralBus,
 {
-    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F> {
+    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
             .operations
             .par_iter()
-            .map(|op| self.op_to_row(op, machine))
+            .map(|op| self.op_to_row(op))
             .collect::<Vec<_>>();
         RowMajorMatrix::new(rows.concat(), NUM_MUL_COLS)
     }
@@ -67,10 +67,9 @@ where
 }
 
 impl Mul32Chip {
-    fn op_to_row<F, M>(&self, op: &Operation, _machine: &M) -> [F; NUM_MUL_COLS]
+    fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_MUL_COLS]
     where
         F: PrimeField,
-        M: MachineWithMul32Chip<F = F>,
     {
         let mut row = [F::ZERO; NUM_MUL_COLS];
         let mut cols: &mut Mul32Cols<F> = unsafe { transmute(&mut row) };
@@ -95,9 +94,9 @@ instructions!(Mul32Instruction);
 
 impl<M> Instruction<M> for Mul32Instruction
 where
-    M: MachineWithMul32Chip,
+    M: MachineWithMul32Chip + MachineWithRangeChip,
 {
-    const OPCODE: u32 = Mul32Opcode;
+    const OPCODE: u32 = MUL32_OPCODE;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
@@ -115,12 +114,14 @@ where
         };
 
         let a = b * c;
-        state.mem_mut().write(clk, write_addr, a.into(), true);
+        state.mem_mut().write(clk, write_addr, a, true);
 
         state
             .mul_u32_mut()
             .operations
             .push(Operation::Mul32(a, b, c));
         state.cpu_mut().push_bus_op(imm);
+
+        state.range_record(a);
     }
 }

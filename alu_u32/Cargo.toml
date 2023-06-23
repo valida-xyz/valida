@@ -18,4 +18,5 @@ valida-derive = { path = "../derive" }
 valida-machine = { path = "../machine" }
 valida-memory = { path = "../memory" }
 valida-cpu = { path = "../cpu" }
+valida-range = { path = "../range" }
 valida-util = { path = "../util" }

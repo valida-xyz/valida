@@ -5,7 +5,6 @@ use valida_machine::Word;
 use valida_util::indices_arr;
 
 #[derive(AlignedBorrow, Default)]
-#[repr(C)]
 pub struct MemoryCols<T> {
     /// Memory address
     pub addr: T,
@@ -30,7 +29,10 @@ pub struct MemoryCols<T> {
     /// A boolean flag indicating whether addr' - addr == 0
     pub addr_not_equal: T,
 
+    /// Increment-by-one counter for local range check
     pub counter: T,
+    /// Multiplicities for local range check
+    pub counter_mult: T,
 }
 
 pub const NUM_MEM_COLS: usize = size_of::<MemoryCols<u8>>();

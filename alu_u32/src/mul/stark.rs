@@ -1,24 +1,27 @@
 use super::columns::Mul32Cols;
-use crate::Mul32Opcode;
+use super::{Mul32Chip, MUL32_OPCODE};
 use core::borrow::Borrow;
 use core::mem::MaybeUninit;
 use itertools::iproduct;
+use valida_bus::MachineWithGeneralBus;
 use valida_machine::Word;
 
-use p3_air::{Air, AirBuilder, PermutationAirBuilder};
+use p3_air::{Air, AirBuilder};
 use p3_field::PrimeField;
-use p3_matrix::Matrix;
+use p3_matrix::MatrixRows;
 
-#[derive(Default)]
-pub struct Mul32Stark {}
-
-impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for Mul32Stark {
+impl<F, AB> Air<AB> for Mul32Chip
+where
+    F: PrimeField,
+    AB: AirBuilder<F = F>,
+{
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
         let local: &Mul32Cols<AB::Var> = main.row(0).borrow();
         let next: &Mul32Cols<AB::Var> = main.row(1).borrow();
 
         // Limb weights modulo 2^32
+        #[allow(clippy::uninit_assumed_init)]
         let mut base_m: [AB::Expr; 4] = unsafe { MaybeUninit::uninit().assume_init() };
         for (i, b) in [1 << 24, 1 << 16, 1 << 8, 1].into_iter().enumerate() {
             base_m[i] = AB::Expr::from(AB::F::from_canonical_u32(b));
@@ -56,12 +59,12 @@ impl<AB: PermutationAirBuilder<F = B>, B: PrimeField> Air<AB> for Mul32Stark {
         // Bus opcode constraint
         builder.assert_eq(
             local.opcode,
-            AB::Expr::from(AB::F::from_canonical_u32(Mul32Opcode)),
+            AB::Expr::from(AB::F::from_canonical_u32(MUL32_OPCODE)),
         );
     }
 }
 
-fn pi_m<const N: usize, AB: PermutationAirBuilder>(
+fn pi_m<const N: usize, AB: AirBuilder>(
     base: &[AB::Expr],
     input_1: Word<AB::Var>,
     input_2: Word<AB::Var>,
@@ -72,10 +75,7 @@ fn pi_m<const N: usize, AB: PermutationAirBuilder>(
         .sum()
 }
 
-fn sigma_m<const N: usize, AB: PermutationAirBuilder>(
-    base: &[AB::Expr],
-    input: Word<AB::Var>,
-) -> AB::Expr {
+fn sigma_m<const N: usize, AB: AirBuilder>(base: &[AB::Expr], input: Word<AB::Var>) -> AB::Expr {
     input
         .into_iter()
         .enumerate()

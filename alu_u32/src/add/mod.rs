@@ -1,13 +1,14 @@
 extern crate alloc;
 
-use super::Add32Opcode;
+use super::ADD32_OPCODE;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Add32Cols, ADD_COL_MAP, NUM_ADD_COLS};
 use core::mem::transmute;
-use valida_bus::MachineWithGeneralBus;
+use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
+use valida_range::MachineWithRangeChip;
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
@@ -30,16 +31,33 @@ pub struct Add32Chip {
 
 impl<M> Chip<M> for Add32Chip
 where
-    M: MachineWithAdd32Chip + MachineWithGeneralBus,
+    M: MachineWithGeneralBus + MachineWithRangeBus8,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
             .operations
             .par_iter()
-            .map(|op| self.op_to_row::<M::F, M>(op))
+            .map(|op| self.op_to_row(op))
             .flatten()
             .collect::<Vec<_>>();
+
         RowMajorMatrix::new(rows, NUM_ADD_COLS)
+    }
+
+    fn global_sends(&self, machine: &M) -> Vec<Interaction<M::F>> {
+        let output = ADD_COL_MAP
+            .output
+            .0
+            .map(VirtualPairCol::single_main)
+            .into_iter()
+            .collect::<Vec<_>>();
+
+        let send = Interaction {
+            fields: output,
+            count: VirtualPairCol::one(),
+            argument_index: machine.range_bus(),
+        };
+        vec![send]
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
@@ -63,10 +81,9 @@ where
 }
 
 impl Add32Chip {
-    fn op_to_row<F, M>(&self, op: &Operation) -> [F; NUM_ADD_COLS]
+    fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_ADD_COLS]
     where
         F: PrimeField,
-        M: MachineWithAdd32Chip<F = F>,
     {
         let mut row = [F::ZERO; NUM_ADD_COLS];
         let mut cols: &mut Add32Cols<F> = unsafe { transmute(&mut row) };
@@ -91,9 +108,9 @@ instructions!(Add32Instruction);
 
 impl<M> Instruction<M> for Add32Instruction
 where
-    M: MachineWithAdd32Chip,
+    M: MachineWithAdd32Chip + MachineWithRangeChip,
 {
-    const OPCODE: u32 = Add32Opcode;
+    const OPCODE: u32 = ADD32_OPCODE;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
@@ -118,5 +135,7 @@ where
             .operations
             .push(Operation::Add32(a, b, c));
         state.cpu_mut().push_bus_op(imm);
+
+        state.range_record(a);
     }
 }
