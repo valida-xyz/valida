@@ -1,15 +1,13 @@
 extern crate alloc;
 
-use super::Add32Opcode;
+use super::ADD32_OPCODE;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Add32Cols, ADD_COL_MAP, NUM_ADD_COLS};
 use core::mem::transmute;
-use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus};
+use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{
-    instructions, Chip, Instruction, Interaction, Operands, Word, MEMORY_CELL_BYTES,
-};
+use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 use valida_range::MachineWithRangeChip;
 
 use p3_air::VirtualPairCol;
@@ -33,7 +31,7 @@ pub struct Add32Chip {
 
 impl<M> Chip<M> for Add32Chip
 where
-    M: MachineWithGeneralBus + MachineWithRangeBus,
+    M: MachineWithGeneralBus + MachineWithRangeBus8,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
@@ -112,7 +110,7 @@ impl<M> Instruction<M> for Add32Instruction
 where
     M: MachineWithAdd32Chip + MachineWithRangeChip,
 {
-    const OPCODE: u32 = Add32Opcode;
+    const OPCODE: u32 = ADD32_OPCODE;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;

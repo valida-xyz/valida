@@ -1,8 +1,8 @@
 use super::columns::Sub32Cols;
-use super::{Sub32Chip, Sub32Opcode};
+use super::{Sub32Chip, SUB32_OPCODE};
 use core::borrow::Borrow;
 use valida_bus::MachineWithGeneralBus;
-use valida_machine::{chip, ValidaAirBuilder};
+use valida_machine::ValidaAirBuilder;
 
 use p3_air::Air;
 use p3_field::PrimeField;
@@ -28,7 +28,7 @@ where
         let borrow_0 = sub_0.clone() - local.output[3];
         let borrow_1 = sub_1.clone() - local.output[2];
         let borrow_2 = sub_2.clone() - local.output[1];
-        let borrow_3 = sub_3.clone() - local.output[0];
+        let _borrow_3 = sub_3.clone() - local.output[0];
 
         // First byte
         builder.assert_zero(borrow_0.clone() * (base.clone() - sub_0 - local.output[3]));
@@ -47,7 +47,7 @@ where
         // Bus opcode constraint
         builder.assert_eq(
             local.opcode,
-            AB::Expr::from(AB::F::from_canonical_u32(Sub32Opcode)),
+            AB::Expr::from(AB::F::from_canonical_u32(SUB32_OPCODE)),
         );
 
         todo!()

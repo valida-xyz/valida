@@ -1,6 +1,6 @@
 extern crate alloc;
 
-use crate::Mul32Opcode;
+use crate::MUL32_OPCODE;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Mul32Cols, MUL_COL_MAP, NUM_MUL_COLS};
@@ -96,7 +96,7 @@ impl<M> Instruction<M> for Mul32Instruction
 where
     M: MachineWithMul32Chip + MachineWithRangeChip,
 {
-    const OPCODE: u32 = Mul32Opcode;
+    const OPCODE: u32 = MUL32_OPCODE;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;

@@ -1,6 +1,6 @@
 extern crate alloc;
 
-use crate::Sub32Opcode;
+use crate::SUB32_OPCODE;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Sub32Cols, NUM_SUB_COLS, SUB_COL_MAP};
@@ -92,7 +92,7 @@ impl<M> Instruction<M> for Sub32Instruction
 where
     M: MachineWithSub32Chip + MachineWithRangeChip,
 {
-    const OPCODE: u32 = Sub32Opcode;
+    const OPCODE: u32 = SUB32_OPCODE;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;

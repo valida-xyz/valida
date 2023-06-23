@@ -6,7 +6,7 @@ use valida_alu_u32::{
     add::{Add32Chip, Add32Instruction, MachineWithAdd32Chip},
     mul::{MachineWithMul32Chip, Mul32Chip, Mul32Instruction},
 };
-use valida_bus::{MachineWithGeneralBus, MachineWithMemBus, MachineWithRangeBus};
+use valida_bus::{MachineWithGeneralBus, MachineWithMemBus, MachineWithRangeBus8};
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
     Load32Instruction, Store32Instruction,
@@ -65,7 +65,7 @@ impl MachineWithMemBus for BasicMachine {
     }
 }
 
-impl MachineWithRangeBus for BasicMachine {
+impl MachineWithRangeBus8 for BasicMachine {
     fn range_bus(&self) -> BusArgument {
         BusArgument::Global(2)
     }

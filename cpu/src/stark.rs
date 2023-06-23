@@ -3,13 +3,14 @@ use crate::CpuChip;
 use core::borrow::Borrow;
 use core::mem::MaybeUninit;
 use valida_bus::{MachineWithGeneralBus, MachineWithMemBus};
-use valida_machine::{chip, ValidaAirBuilder, Word};
+use valida_machine::{ValidaAirBuilder, Word};
 use valida_memory::MachineWithMemoryChip;
 
 use p3_air::{Air, AirBuilder};
 use p3_field::PrimeField;
 use p3_matrix::MatrixRows;
 
+#[allow(clippy::uninit_assumed_init)]
 impl<F, M, AB> Air<AB> for CpuChip
 where
     F: PrimeField,

@@ -128,12 +128,12 @@ where
     }
 
     fn local_receives(&self) -> Vec<Interaction<M::F>> {
-        let sends = Interaction {
+        let receives = Interaction {
             fields: vec![VirtualPairCol::single_main(MEM_COL_MAP.counter)],
             count: VirtualPairCol::single_main(MEM_COL_MAP.counter_mult),
             argument_index: BusArgument::Local(0),
         };
-        vec![sends]
+        vec![receives]
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {

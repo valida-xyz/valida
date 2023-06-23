@@ -1,8 +1,8 @@
 use super::columns::Add32Cols;
-use super::{Add32Chip, Add32Opcode};
+use super::{Add32Chip, ADD32_OPCODE};
 use core::borrow::Borrow;
-use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus};
-use valida_machine::{chip, ValidaAirBuilder};
+use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
+use valida_machine::ValidaAirBuilder;
 
 use p3_air::Air;
 use p3_field::PrimeField;
@@ -11,7 +11,7 @@ use p3_matrix::MatrixRows;
 impl<F, M, AB> Air<AB> for Add32Chip
 where
     F: PrimeField,
-    M: MachineWithGeneralBus<F = F> + MachineWithRangeBus,
+    M: MachineWithGeneralBus<F = F> + MachineWithRangeBus8,
     AB: ValidaAirBuilder<F = F, Machine = M>,
 {
     fn eval(&self, builder: &mut AB) {
@@ -33,7 +33,7 @@ where
         // Bus opcode constraint
         builder.assert_eq(
             local.opcode,
-            AB::Expr::from(AB::F::from_canonical_u32(Add32Opcode)),
+            AB::Expr::from(AB::F::from_canonical_u32(ADD32_OPCODE)),
         );
 
         // TODO: Range check output ([0,256]) using preprocessed lookup table

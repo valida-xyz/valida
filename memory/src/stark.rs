@@ -1,7 +1,7 @@
 use crate::columns::MemoryCols;
 use crate::{MachineWithMemBus, MemoryChip};
 use core::borrow::Borrow;
-use valida_machine::{chip, ValidaAirBuilder};
+use valida_machine::ValidaAirBuilder;
 
 use p3_air::{Air, AirBuilder, PermutationAirBuilder};
 use p3_field::PrimeField;

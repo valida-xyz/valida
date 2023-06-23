@@ -82,7 +82,7 @@ fn impl_machine_given_instructions_and_chips(
     }
 }
 
-fn chip_methods(machine: &Ident, chip: &Field) -> TokenStream2 {
+fn chip_methods(_machine: &Ident, chip: &Field) -> TokenStream2 {
     let mut methods = vec![];
     let chip_name = chip.ident.as_ref().unwrap();
     let chip_name_mut = Ident::new(&format!("{}_mut", chip_name), chip_name.span());
@@ -177,7 +177,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
     }
 }
 
-fn verify_method(chips: &[&Field]) -> TokenStream2 {
+fn verify_method(_chips: &[&Field]) -> TokenStream2 {
     quote! {
         fn verify() {}
     }

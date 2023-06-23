@@ -1,10 +1,10 @@
 use super::columns::Mul32Cols;
-use super::{Mul32Chip, Mul32Opcode};
+use super::{Mul32Chip, MUL32_OPCODE};
 use core::borrow::Borrow;
 use core::mem::MaybeUninit;
 use itertools::iproduct;
 use valida_bus::MachineWithGeneralBus;
-use valida_machine::{chip, ValidaAirBuilder, Word};
+use valida_machine::{ValidaAirBuilder, Word};
 
 use p3_air::{Air, AirBuilder, PermutationAirBuilder};
 use p3_field::PrimeField;
@@ -22,6 +22,7 @@ where
         let next: &Mul32Cols<AB::Var> = main.row(1).borrow();
 
         // Limb weights modulo 2^32
+        #[allow(clippy::uninit_assumed_init)]
         let mut base_m: [AB::Expr; 4] = unsafe { MaybeUninit::uninit().assume_init() };
         for (i, b) in [1 << 24, 1 << 16, 1 << 8, 1].into_iter().enumerate() {
             base_m[i] = AB::Expr::from(AB::F::from_canonical_u32(b));
@@ -59,7 +60,7 @@ where
         // Bus opcode constraint
         builder.assert_eq(
             local.opcode,
-            AB::Expr::from(AB::F::from_canonical_u32(Mul32Opcode)),
+            AB::Expr::from(AB::F::from_canonical_u32(MUL32_OPCODE)),
         );
     }
 }

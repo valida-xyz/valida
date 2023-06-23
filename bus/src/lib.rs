@@ -14,6 +14,6 @@ pub trait MachineWithMemBus: Machine {
     fn mem_bus(&self) -> BusArgument;
 }
 
-pub trait MachineWithRangeBus: Machine {
+pub trait MachineWithRangeBus8: Machine {
     fn range_bus(&self) -> BusArgument;
 }

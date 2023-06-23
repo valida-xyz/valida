@@ -68,8 +68,6 @@ pub trait ValidaAirBuilder: PermutationAirBuilder {
     type Machine;
 
     fn machine(&self) -> &Self::Machine;
-
-    fn cumulative_sums(&self) -> &[Self::EF];
 }
 
 pub struct Interaction<F: Field> {
