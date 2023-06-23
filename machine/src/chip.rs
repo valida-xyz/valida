@@ -209,12 +209,12 @@ pub fn eval_permutation_constraints<
     let betas = rand_elems[2].powers();
 
     let lhs = phi_next - phi_local.clone();
-    let mut rhs = AB::ExprEF::from_base(AB::F::ZERO);
+    let mut rhs = AB::ExprEF::from_base(AB::Expr::ZERO);
     for (m, (interaction, interaction_type)) in all_interactions.iter().enumerate() {
         let col_idx = map[&interaction.argument_index][m];
 
         // Reciprocal constraints
-        let mut rlc = AB::ExprEF::from_base(AB::F::ZERO);
+        let mut rlc = AB::ExprEF::from_base(AB::Expr::ZERO);
         for (field, beta) in interaction.fields.iter().zip(betas.clone()) {
             let elem = field.apply::<AB::Expr, AB::Var>(&[], main_local);
             rlc += AB::ExprEF::from(beta) * elem;
@@ -224,7 +224,7 @@ pub fn eval_permutation_constraints<
         } else {
             rlc = rlc + alphas_global[interaction.argument_index()];
         }
-        builder.assert_one_ext(rlc * perm_local[col_idx]);
+        builder.assert_one_ext::<AB::ExprEF, AB::ExprEF>(rlc * perm_local[col_idx]);
 
         // Build the RHS of the permutation constraint
         let mult = interaction
@@ -241,7 +241,9 @@ pub fn eval_permutation_constraints<
     }
 
     // Running sum constraints
-    builder.when_transition().assert_eq_ext(lhs, rhs);
+    builder
+        .when_transition()
+        .assert_eq_ext::<AB::ExprEF, _, _>(lhs, rhs);
     builder.when_first_row().assert_zero_ext(phi_local);
     builder
         .when_last_row()
