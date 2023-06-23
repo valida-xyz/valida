@@ -1,5 +1,5 @@
 use super::columns::Add32Cols;
-use super::{Add32Chip, Add32Opcode, Add32PublicInput};
+use super::{Add32Chip, Add32Opcode};
 use core::borrow::Borrow;
 use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus};
 use valida_machine::{chip, ValidaAirBuilder};
@@ -12,7 +12,7 @@ impl<F, M, AB> Air<AB> for Add32Chip
 where
     F: PrimeField,
     M: MachineWithGeneralBus<F = F> + MachineWithRangeBus,
-    AB: ValidaAirBuilder<F = F, Machine = M, PublicInput = Add32PublicInput<F>>,
+    AB: ValidaAirBuilder<F = F, Machine = M>,
 {
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
@@ -37,7 +37,5 @@ where
         );
 
         // TODO: Range check output ([0,256]) using preprocessed lookup table
-
-        chip::eval_permutation_constraints(self, builder);
     }
 }

@@ -1,5 +1,5 @@
 use super::columns::Sub32Cols;
-use super::{Sub32Chip, Sub32Opcode, Sub32PublicInput};
+use super::{Sub32Chip, Sub32Opcode};
 use core::borrow::Borrow;
 use valida_bus::MachineWithGeneralBus;
 use valida_machine::{chip, ValidaAirBuilder};
@@ -12,7 +12,7 @@ impl<F, M, AB> Air<AB> for Sub32Chip
 where
     F: PrimeField,
     M: MachineWithGeneralBus<F = F>,
-    AB: ValidaAirBuilder<F = F, Machine = M, PublicInput = Sub32PublicInput<F>>,
+    AB: ValidaAirBuilder<F = F, Machine = M>,
 {
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
@@ -49,8 +49,6 @@ where
             local.opcode,
             AB::Expr::from(AB::F::from_canonical_u32(Sub32Opcode)),
         );
-
-        chip::eval_permutation_constraints(self, builder);
 
         todo!()
     }

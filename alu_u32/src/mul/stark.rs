@@ -1,5 +1,5 @@
 use super::columns::Mul32Cols;
-use super::{Mul32Chip, Mul32Opcode, Mul32PublicInput};
+use super::{Mul32Chip, Mul32Opcode};
 use core::borrow::Borrow;
 use core::mem::MaybeUninit;
 use itertools::iproduct;
@@ -14,7 +14,7 @@ impl<F, M, AB> Air<AB> for Mul32Chip
 where
     F: PrimeField,
     M: MachineWithGeneralBus<F = F>,
-    AB: ValidaAirBuilder<F = F, Machine = M, PublicInput = Mul32PublicInput<F>>,
+    AB: ValidaAirBuilder<F = F, Machine = M>,
 {
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
@@ -61,8 +61,6 @@ where
             local.opcode,
             AB::Expr::from(AB::F::from_canonical_u32(Mul32Opcode)),
         );
-
-        chip::eval_permutation_constraints(self, builder);
     }
 }
 

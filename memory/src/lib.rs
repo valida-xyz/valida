@@ -8,8 +8,8 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::mem::transmute;
 use valida_bus::MachineWithMemBus;
-use valida_machine::{BusArgument, Chip, Interaction, Machine, PermutationPublicInput, Word};
-use valida_util::batch_invert;
+use valida_machine::{BusArgument, Chip, Interaction, Machine, Word};
+use valida_util::batch_multiplicative_inverse;
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
@@ -47,16 +47,6 @@ impl Operation {
 pub struct MemoryChip {
     pub cells: BTreeMap<u32, Word<u8>>,
     pub operations: BTreeMap<u32, Vec<Operation>>,
-}
-
-pub struct MemoryPublicInput<F: PrimeField> {
-    cumulative_sum: F,
-}
-
-impl<F: PrimeField> PermutationPublicInput<F> for MemoryPublicInput<F> {
-    fn cumulative_sum(&self) -> F {
-        self.cumulative_sum
-    }
 }
 
 pub trait MachineWithMemoryChip: Machine {
@@ -254,8 +244,7 @@ impl MemoryChip {
 
         // Compute `diff_inv`
         // TODO: Implement inversion for Mersenne31 and uncomment line below
-        //let diff_inv = batch_invert(diff.clone());
-        let diff_inv = vec![F::ZERO; rows.len()];
+        let diff_inv = batch_multiplicative_inverse(diff.clone());
 
         // Set trace values
         for n in 0..(rows.len() - 1) {

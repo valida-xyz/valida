@@ -2,9 +2,9 @@ use crate::Machine;
 use alloc::collections::BTreeMap;
 use alloc::vec;
 use alloc::vec::Vec;
-use valida_util::batch_invert;
+use valida_util::batch_multiplicative_inverse;
 
-use p3_air::{PermutationAirBuilder, VirtualPairCol};
+use p3_air::{AirBuilder, PermutationAirBuilder, VirtualPairCol};
 use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Powers, PrimeField};
 use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRows};
 
@@ -67,17 +67,9 @@ pub trait Chip<M: Machine> {
 pub trait ValidaAirBuilder: PermutationAirBuilder {
     type Machine;
 
-    type PublicInput;
-
     fn machine(&self) -> &Self::Machine;
 
-    fn public_input(&self) -> Option<Self::PublicInput> {
-        None
-    }
-}
-
-pub trait PermutationPublicInput<F> {
-    fn cumulative_sum(&self) -> F;
+    fn cumulative_sums(&self) -> &[Self::EF];
 }
 
 pub struct Interaction<F: Field> {
@@ -158,7 +150,7 @@ pub fn generate_permutation_trace<F: Field, M: Machine<F = F>, C: Chip<M>>(
         }
         perm_values.extend(row);
     }
-    let perm_values = batch_invert(perm_values);
+    let perm_values = batch_multiplicative_inverse(perm_values);
     let mut perm = RowMajorMatrix::new(perm_values, perm_width);
 
     // Compute the running sum column
@@ -191,11 +183,11 @@ pub fn eval_permutation_constraints<
     F: PrimeField,
     M: Machine<F = F>,
     C: Chip<M>,
-    AB: ValidaAirBuilder<Machine = M, F = F, PublicInput = PI>,
-    PI: PermutationPublicInput<F>,
+    AB: ValidaAirBuilder<Machine = M, F = F>,
 >(
     chip: &C,
     builder: &mut AB,
+    cumulative_sum: AB::EF,
 ) {
     let rand_elems = builder.permutation_randomness().to_vec();
 
@@ -209,8 +201,6 @@ pub fn eval_permutation_constraints<
 
     let phi_local = perm_local[perm_width - 1].clone();
     let phi_next = perm_next[perm_width - 1].clone();
-
-    let cumulative_sum = builder.public_input().unwrap().cumulative_sum();
 
     let all_interactions = chip.all_interactions(builder.machine());
     let map = chip.interaction_map(builder.machine());
@@ -255,7 +245,7 @@ pub fn eval_permutation_constraints<
     builder.when_first_row().assert_zero_ext(phi_local);
     builder
         .when_last_row()
-        .assert_eq_ext(perm_local[0].clone(), AB::ExprEF::from_base(cumulative_sum));
+        .assert_eq_ext(perm_local[0].clone(), AB::ExprEF::from(cumulative_sum));
 }
 
 fn generate_rlc_elements<

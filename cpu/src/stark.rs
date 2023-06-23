@@ -1,5 +1,5 @@
 use crate::columns::CpuCols;
-use crate::{CpuChip, CpuPublicInput};
+use crate::CpuChip;
 use core::borrow::Borrow;
 use core::mem::MaybeUninit;
 use valida_bus::{MachineWithGeneralBus, MachineWithMemBus};
@@ -14,7 +14,7 @@ impl<F, M, AB> Air<AB> for CpuChip
 where
     F: PrimeField,
     M: MachineWithMemoryChip<F = F> + MachineWithGeneralBus + MachineWithMemBus + Sync,
-    AB: ValidaAirBuilder<F = F, Machine = M, PublicInput = CpuPublicInput<F>>,
+    AB: ValidaAirBuilder<F = F, Machine = M>,
 {
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
@@ -49,8 +49,6 @@ where
             local.instruction.operands.c(),
             reduce::<F, AB>(&base, local.read_value_2()),
         );
-
-        chip::eval_permutation_constraints(self, builder);
     }
 }
 

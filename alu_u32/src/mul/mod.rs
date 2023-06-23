@@ -7,9 +7,7 @@ use columns::{Mul32Cols, MUL_COL_MAP, NUM_MUL_COLS};
 use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{
-    instructions, Chip, Instruction, Interaction, Operands, PermutationPublicInput, Word,
-};
+use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 use valida_range::MachineWithRangeChip;
 
 use p3_air::VirtualPairCol;
@@ -29,16 +27,6 @@ pub enum Operation {
 pub struct Mul32Chip {
     pub clock: u32,
     pub operations: Vec<Operation>,
-}
-
-pub struct Mul32PublicInput<F: PrimeField> {
-    cumulative_sum: F,
-}
-
-impl<F: PrimeField> PermutationPublicInput<F> for Mul32PublicInput<F> {
-    fn cumulative_sum(&self) -> F {
-        self.cumulative_sum
-    }
 }
 
 impl<M> Chip<M> for Mul32Chip

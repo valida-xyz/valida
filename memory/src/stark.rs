@@ -1,5 +1,5 @@
 use crate::columns::MemoryCols;
-use crate::{MachineWithMemBus, MemoryChip, MemoryPublicInput};
+use crate::{MachineWithMemBus, MemoryChip};
 use core::borrow::Borrow;
 use valida_machine::{chip, ValidaAirBuilder};
 
@@ -11,11 +11,10 @@ impl<F, M, AB> Air<AB> for MemoryChip
 where
     F: PrimeField,
     M: MachineWithMemBus<F = F>,
-    AB: ValidaAirBuilder<F = F, Machine = M, PublicInput = MemoryPublicInput<F>>,
+    AB: ValidaAirBuilder<F = F, Machine = M>,
 {
     fn eval(&self, builder: &mut AB) {
         self.eval_main(builder);
-        chip::eval_permutation_constraints(self, builder);
     }
 }
 

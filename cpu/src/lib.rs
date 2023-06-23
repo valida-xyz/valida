@@ -9,9 +9,7 @@ use core::iter;
 use core::marker::Sync;
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithMemBus};
-use valida_machine::{
-    instructions, Chip, Instruction, Interaction, Operands, PermutationPublicInput, Word,
-};
+use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 
 use p3_air::VirtualPairCol;
@@ -48,16 +46,6 @@ pub struct CpuChip {
 pub struct Registers {
     pc: u32,
     fp: u32,
-}
-
-pub struct CpuPublicInput<F: PrimeField> {
-    cumulative_sum: F,
-}
-
-impl<F: PrimeField> PermutationPublicInput<F> for CpuPublicInput<F> {
-    fn cumulative_sum(&self) -> F {
-        self.cumulative_sum
-    }
 }
 
 impl<M> Chip<M> for CpuChip
