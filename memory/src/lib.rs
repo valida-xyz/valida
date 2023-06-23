@@ -192,7 +192,7 @@ impl MemoryChip {
                 // the number of operations
                 continue;
             }
-            let clk_diff = (op2.0 - op1.0) as u32;
+            let clk_diff = op2.0 - op1.0;
             if clk_diff > table_len {
                 let num_dummy_ops = clk_diff / table_len;
                 for j in 0..num_dummy_ops {
@@ -236,7 +236,7 @@ impl MemoryChip {
             } else {
                 let clk = ops[n].0;
                 let clk_next = ops[n + 1].0;
-                (clk_next - clk) as u32
+                clk_next - clk
             };
             diff[n] = F::from_canonical_u32(value);
             mult[value as usize] += F::ONE;

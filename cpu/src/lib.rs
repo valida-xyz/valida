@@ -57,7 +57,7 @@ where
             .operations
             .par_iter()
             .enumerate()
-            .map(|(n, op)| self.op_to_row(n, &op, machine))
+            .map(|(n, op)| self.op_to_row(n, op, machine))
             .collect::<Vec<_>>();
 
         // Set diff, diff_inv, and not_equal

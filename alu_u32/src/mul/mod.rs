@@ -114,7 +114,7 @@ where
         };
 
         let a = b * c;
-        state.mem_mut().write(clk, write_addr, a.into(), true);
+        state.mem_mut().write(clk, write_addr, a, true);
 
         state
             .mul_u32_mut()
