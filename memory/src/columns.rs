@@ -29,8 +29,9 @@ pub struct MemoryCols<T> {
     /// A boolean flag indicating whether addr' - addr == 0
     pub addr_not_equal: T,
 
-    /// Counter and lookup multiplicities for local range check
+    /// Increment-by-one counter for local range check
     pub counter: T,
+    /// Multiplicities for local range check
     pub counter_mult: T,
 }
 
