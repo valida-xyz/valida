@@ -1,20 +1,22 @@
 #![no_std]
+#![allow(unused)]
 
 extern crate alloc;
 
 use valida_alu_u32::{
-    add::{stark::Add32Stark, Add32Chip, Add32Instruction, MachineWithAdd32Chip},
-    mul::{stark::Mul32Stark, MachineWithMul32Chip, Mul32Chip, Mul32Instruction},
+    add::{Add32Chip, Add32Instruction, MachineWithAdd32Chip},
+    mul::{MachineWithMul32Chip, Mul32Chip, Mul32Instruction},
 };
-use valida_bus::{MachineWithGeneralBus, MachineWithMemBus};
+use valida_bus::{MachineWithGeneralBus, MachineWithMemBus, MachineWithRangeBus8};
 use valida_cpu::{
-    stark::CpuStark, BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction,
-    JalvInstruction, Load32Instruction, Store32Instruction,
+    BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
+    Load32Instruction, Store32Instruction,
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
-use valida_machine::{Chip, Instruction, Machine, ProgramROM};
-use valida_memory::{stark::MemoryStark, MachineWithMemoryChip, MemoryChip};
+use valida_machine::{BusArgument, Chip, Instruction, Machine, ProgramROM, PublicMemory};
+use valida_memory::{MachineWithMemoryChip, MemoryChip};
+use valida_range::{MachineWithRangeChip, RangeCheckerChip};
 
 #[derive(Machine, Default)]
 pub struct BasicMachine {
@@ -40,25 +42,33 @@ pub struct BasicMachine {
     #[instruction(mul_u32)]
     mul32: Mul32Instruction,
 
-    #[chip(CpuStark)]
+    #[chip]
     cpu: CpuChip,
-    #[chip(MemoryStark)]
+    #[chip]
     mem: MemoryChip,
-    #[chip(Add32Stark)]
+    #[chip]
     add_u32: Add32Chip,
-    #[chip(Mul32Stark)]
+    #[chip]
     mul_u32: Mul32Chip,
+    #[chip]
+    range: RangeCheckerChip,
 }
 
 impl MachineWithGeneralBus for BasicMachine {
-    fn general_bus(&self) -> usize {
-        0
+    fn general_bus(&self) -> BusArgument {
+        BusArgument::Global(0)
     }
 }
 
 impl MachineWithMemBus for BasicMachine {
-    fn mem_bus(&self) -> usize {
-        1
+    fn mem_bus(&self) -> BusArgument {
+        BusArgument::Global(1)
+    }
+}
+
+impl MachineWithRangeBus8 for BasicMachine {
+    fn range_bus(&self) -> BusArgument {
+        BusArgument::Global(2)
     }
 }
 
@@ -99,6 +109,16 @@ impl MachineWithMul32Chip for BasicMachine {
 
     fn mul_u32_mut(&mut self) -> &mut Mul32Chip {
         &mut self.mul_u32
+    }
+}
+
+impl MachineWithRangeChip for BasicMachine {
+    fn range(&self) -> &RangeCheckerChip {
+        &self.range
+    }
+
+    fn range_mut(&mut self) -> &mut RangeCheckerChip {
+        &mut self.range
     }
 }
 
@@ -264,8 +284,9 @@ mod tests {
 
         let mut machine = BasicMachine::default();
         let rom = ProgramROM::new(program);
+        let public_mem = PublicMemory::default();
         machine.cpu_mut().fp = 0x1000;
-        machine.run(rom);
+        machine.run(rom, public_mem);
         machine.prove();
 
         assert_eq!(machine.cpu().clock, 191);
@@ -298,8 +319,9 @@ mod tests {
 
         let mut machine = BasicMachine::default();
         let rom = ProgramROM::new(program);
+        let public_mem = PublicMemory::default();
         machine.cpu_mut().fp = 0x1000;
-        machine.run(rom);
+        machine.run(rom, public_mem);
 
         assert_eq!(machine.cpu().pc, 2);
         assert_eq!(machine.cpu().fp, 0x1000);

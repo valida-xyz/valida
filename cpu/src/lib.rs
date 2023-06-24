@@ -2,7 +2,7 @@
 
 extern crate alloc;
 
-use crate::columns::{CpuCols, CPU_COL_INDICES, NUM_CPU_COLS};
+use crate::columns::{CpuCols, CPU_COL_MAP, NUM_CPU_COLS};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::iter;
@@ -53,18 +53,22 @@ where
     M: MachineWithMemoryChip + MachineWithGeneralBus + MachineWithMemBus + Sync,
 {
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F> {
-        let rows = self
+        let mut rows = self
             .operations
             .par_iter()
             .enumerate()
-            .map(|(n, op)| self.op_to_row(n, &op, machine))
+            .map(|(n, op)| self.op_to_row(n, op, machine))
             .collect::<Vec<_>>();
+
+        // Set diff, diff_inv, and not_equal
+        Self::compute_word_diffs(&mut rows);
+
         RowMajorMatrix::new(rows.concat(), NUM_CPU_COLS)
     }
 
     fn global_sends(&self, machine: &M) -> Vec<Interaction<M::F>> {
         let mem_sends = (0..3).map(|i| {
-            let channel = &CPU_COL_INDICES.mem_channels[i];
+            let channel = &CPU_COL_MAP.mem_channels[i];
             let is_read = VirtualPairCol::single_main(channel.is_read);
             let addr = VirtualPairCol::single_main(channel.addr);
             let value = channel.value.0.map(VirtualPairCol::single_main);
@@ -79,11 +83,9 @@ where
             }
         });
 
-        let mut fields = vec![VirtualPairCol::single_main(
-            CPU_COL_INDICES.instruction.opcode,
-        )];
+        let mut fields = vec![VirtualPairCol::single_main(CPU_COL_MAP.instruction.opcode)];
         fields.extend(
-            CPU_COL_INDICES
+            CPU_COL_MAP
                 .mem_channels
                 .iter()
                 .map(|c| c.value.into_iter().map(VirtualPairCol::single_main))
@@ -91,11 +93,11 @@ where
                 .collect::<Vec<_>>(),
         );
         fields.push(VirtualPairCol::single_main(
-            CPU_COL_INDICES.chip_channel.clk_or_zero,
+            CPU_COL_MAP.chip_channel.clk_or_zero,
         ));
         let send_general = Interaction {
             fields,
-            count: VirtualPairCol::single_main(CPU_COL_INDICES.opcode_flags.is_bus_op),
+            count: VirtualPairCol::single_main(CPU_COL_MAP.opcode_flags.is_bus_op),
             argument_index: machine.general_bus(),
         };
 
@@ -157,8 +159,6 @@ impl CpuChip {
             }
         }
 
-        // TODO: Set diff, diff_inv, and not_equal
-
         row
     }
 
@@ -192,6 +192,40 @@ impl CpuChip {
                     }
                     _ => {}
                 }
+            }
+        }
+    }
+
+    fn compute_word_diffs<F: PrimeField>(rows: &mut Vec<[F; NUM_CPU_COLS]>) {
+        // Compute `diff`
+        let mut diff = vec![F::ZERO; rows.len()];
+        for n in 0..(rows.len() - 1) {
+            let word_1 = CPU_COL_MAP.mem_channels[0]
+                .value
+                .into_iter()
+                .map(|i| rows[n][i])
+                .collect::<Vec<_>>();
+            let word_2 = CPU_COL_MAP.mem_channels[1]
+                .value
+                .into_iter()
+                .map(|i| rows[n][i])
+                .collect::<Vec<_>>();
+            for (a, b) in word_1.into_iter().zip(word_2) {
+                diff[n] = (a - b) * (a - b);
+            }
+        }
+
+        // Compute `diff_inv`
+        // TODO: Implement inversion for Mersenne31 and uncomment line below
+        //let diff_inv = batch_invert(diff.clone());
+        let diff_inv = vec![F::ZERO; rows.len()];
+
+        // Set trace values
+        for n in 0..(rows.len() - 1) {
+            rows[n][CPU_COL_MAP.diff] = diff[n];
+            rows[n][CPU_COL_MAP.diff_inv] = diff_inv[n];
+            if diff[n] != F::ZERO {
+                rows[n][CPU_COL_MAP.not_equal] = F::ONE;
             }
         }
     }

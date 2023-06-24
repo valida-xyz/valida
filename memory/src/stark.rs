@@ -1,20 +1,22 @@
 use crate::columns::MemoryCols;
+use crate::MemoryChip;
 use core::borrow::Borrow;
-use p3_air::{Air, AirBuilder, PermutationAirBuilder};
+
+use p3_air::{Air, AirBuilder};
 use p3_field::AbstractField;
-use p3_matrix::Matrix;
+use p3_matrix::MatrixRows;
 
-#[derive(Default)]
-pub struct MemoryStark {}
-
-impl<AB: PermutationAirBuilder> Air<AB> for MemoryStark {
+impl<AB> Air<AB> for MemoryChip
+where
+    AB: AirBuilder,
+{
     fn eval(&self, builder: &mut AB) {
         self.eval_main(builder);
     }
 }
 
-impl MemoryStark {
-    fn eval_main<AB: PermutationAirBuilder>(&self, builder: &mut AB) {
+impl MemoryChip {
+    fn eval_main<AB: AirBuilder>(&self, builder: &mut AB) {
         let main = builder.main();
         let local: &MemoryCols<AB::Var> = main.row(0).borrow();
         let next: &MemoryCols<AB::Var> = main.row(1).borrow();

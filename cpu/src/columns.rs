@@ -1,11 +1,9 @@
 use core::borrow::{Borrow, BorrowMut};
-use core::iter;
 use core::mem::{size_of, transmute};
 use valida_derive::AlignedBorrow;
 use valida_machine::{Operands, Word, CPU_MEMORY_CHANNELS};
 use valida_util::indices_arr;
 
-#[repr(C)]
 #[derive(AlignedBorrow, Default)]
 pub struct CpuCols<T> {
     /// Clock cycle
@@ -105,9 +103,7 @@ impl<T: Copy> CpuCols<T> {
 
 // `u8` is guaranteed to have a `size_of` of 1.
 pub const NUM_CPU_COLS: usize = size_of::<CpuCols<u8>>();
-pub const NUM_CPU_PERM_COLS: usize = 0; // todo!();
-
-pub const CPU_COL_INDICES: CpuCols<usize> = make_col_map();
+pub const CPU_COL_MAP: CpuCols<usize> = make_col_map();
 
 const fn make_col_map() -> CpuCols<usize> {
     let indices_arr = indices_arr::<NUM_CPU_COLS>();

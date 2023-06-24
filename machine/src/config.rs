@@ -1,6 +1,6 @@
 use p3_commit::UnivariatePCS;
 use p3_field::ExtensionField;
-use p3_field::{Field, PrimeField};
+use p3_field::PrimeField;
 
 pub trait StarkConfig {
     /// The field over which trace data is encoded.

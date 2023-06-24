@@ -1,4 +1,4 @@
-use super::{Field, PrimeField, PrimeField64, MEMORY_CELL_BYTES};
+use super::{Field, PrimeField, MEMORY_CELL_BYTES};
 use core::ops::{Add, Index, IndexMut, Mul, Sub};
 
 #[derive(Copy, Clone, Debug, Default)]

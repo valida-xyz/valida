@@ -22,7 +22,7 @@ pub struct BasicSymVar {
     pub column: usize,
 }
 
-pub fn prove<SC, A>(air: &A, trace: RowMajorMatrix<SC::F>)
+pub fn prove<SC, A>(_air: &A, _trace: RowMajorMatrix<SC::F>)
 where
     SC: StarkConfig,
     A: for<'a> Air<
