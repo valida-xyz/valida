@@ -17,6 +17,7 @@ where
 
         let base = AB::Expr::from(AB::F::from_canonical_u32(1 << 8));
 
+        // FIXME: Carry values should be bit flags, not bytes. This is wrong.
         let carry_0 = local.input_1[3] + local.input_2[3] - local.output[3];
         let carry_1 = local.input_1[2] + local.input_2[2] + carry_0.clone() - local.output[2];
         let carry_2 = local.input_1[1] + local.input_2[1] + carry_1.clone() - local.output[1];

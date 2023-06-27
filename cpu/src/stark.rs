@@ -69,6 +69,7 @@ impl CpuChip {
         let is_imm32 = local.opcode_flags.is_imm32;
         let is_imm_op = local.opcode_flags.is_imm_op;
         let is_bus_op = local.opcode_flags.is_bus_op;
+        let is_bus_op_with_mem = local.opcode_flags.is_bus_op_with_mem;
 
         let addr_a = local.fp + local.instruction.operands.a();
         let addr_b = local.fp + local.instruction.operands.b();
@@ -88,6 +89,7 @@ impl CpuChip {
         builder
             .when(is_load + is_store + is_jalv + is_beq + is_bne + is_bus_op)
             .assert_one(local.read_1_used());
+        builder.when(is_jal).assert_zero(local.read_1_used());
 
         // Read (2)
         builder.when(is_load).assert_eq(
@@ -101,21 +103,29 @@ impl CpuChip {
             .assert_eq(local.read_addr_2(), addr_c);
         builder
             .when(
-                is_store
-                    + is_load
+                is_load
                     + is_jalv
-                    + is_beq
-                    + is_bne
-                    + (AB::Expr::from(AB::F::ONE) - is_imm_op) * is_bus_op,
+                    + (AB::Expr::from(AB::F::ONE) - is_imm_op) * (is_beq + is_bne + is_bus_op),
             )
             .assert_one(local.read_2_used());
+        builder
+            .when(is_store + is_jal + is_imm_op * (is_beq + is_bne + is_bus_op))
+            .assert_zero(local.read_2_used());
 
         // Write
         builder
             .when(is_load + is_jal + is_jalv + is_imm32 + is_bus_op)
             .assert_eq(local.write_addr(), addr_a);
         builder.when(is_store).assert_eq(local.write_addr(), addr_b);
-        builder.when(is_load + is_store).assert_zero(
+        builder.when(is_store).assert_zero(
+            local
+                .read_value_1()
+                .into_iter()
+                .zip(local.write_value())
+                .map(|(a, b)| (a - b) * (a - b))
+                .sum::<AB::Expr>(),
+        );
+        builder.when(is_load).assert_zero(
             local
                 .read_value_2()
                 .into_iter()

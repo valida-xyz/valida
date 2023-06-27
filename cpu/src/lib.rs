@@ -9,8 +9,11 @@ use core::iter;
 use core::marker::Sync;
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithMemBus};
-use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
+use valida_machine::{
+    instructions, Chip, Instruction, InstructionWord, Interaction, Operands, Word,
+};
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
+use valida_util::batch_multiplicative_inverse;
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
@@ -40,6 +43,7 @@ pub struct CpuChip {
     pub fp: u32,
     pub registers: Vec<Registers>,
     pub operations: Vec<Operation>,
+    pub instructions: Vec<InstructionWord<i32>>,
 }
 
 #[derive(Default)]
@@ -122,6 +126,7 @@ impl CpuChip {
         cols.fp = F::from_canonical_u32(self.registers[clk].fp);
         cols.clk = F::from_canonical_usize(clk);
 
+        self.set_instruction_values(clk, cols);
         self.set_memory_channel_values(clk, cols, machine);
 
         match op {
@@ -162,12 +167,22 @@ impl CpuChip {
         row
     }
 
+    fn set_instruction_values<F: PrimeField>(&self, clk: usize, cols: &mut CpuCols<F>) {
+        cols.instruction.opcode = F::from_canonical_u32(self.instructions[clk].opcode);
+        cols.instruction.operands =
+            Operands::<F>::from_i32_slice(&self.instructions[clk].operands.0);
+    }
+
     fn set_memory_channel_values<F: PrimeField, M: MachineWithMemoryChip<F = F>>(
         &self,
         clk: usize,
         cols: &mut CpuCols<F>,
         machine: &M,
     ) {
+        cols.mem_channels[0].is_read = F::ONE;
+        cols.mem_channels[1].is_read = F::ONE;
+        cols.mem_channels[2].is_read = F::ZERO;
+
         let memory = machine.mem();
         for ops in memory.operations.get(&(clk as u32)).iter() {
             let mut is_first_read = true;
@@ -211,14 +226,13 @@ impl CpuChip {
                 .map(|i| rows[n][i])
                 .collect::<Vec<_>>();
             for (a, b) in word_1.into_iter().zip(word_2) {
-                diff[n] = (a - b) * (a - b);
+                diff[n] += (a - b) * (a - b);
             }
         }
 
         // Compute `diff_inv`
         // TODO: Implement inversion for Mersenne31 and uncomment line below
-        //let diff_inv = batch_invert(diff.clone());
-        let diff_inv = vec![F::ZERO; rows.len()];
+        let diff_inv = batch_multiplicative_inverse(diff.clone());
 
         // Set trace values
         for n in 0..(rows.len() - 1) {
@@ -267,7 +281,9 @@ where
         let cell = state.mem_mut().read(clk, read_addr_2.into(), true);
         state.mem_mut().write(clk, write_addr, cell, true);
         state.cpu_mut().pc += 1;
-        state.cpu_mut().push_op(Operation::Load32);
+        state
+            .cpu_mut()
+            .push_op(Operation::Load32, <Self as Instruction<M>>::OPCODE, ops);
     }
 }
 
@@ -284,7 +300,9 @@ where
         let cell = state.mem_mut().read(clk, read_addr, true);
         state.mem_mut().write(clk, write_addr, cell, true);
         state.cpu_mut().pc += 1;
-        state.cpu_mut().push_op(Operation::Store32);
+        state
+            .cpu_mut()
+            .push_op(Operation::Store32, <Self as Instruction<M>>::OPCODE, ops);
     }
 }
 
@@ -304,7 +322,9 @@ where
         state.cpu_mut().pc = ops.b() as u32;
         // Set fp to fp + c
         state.cpu_mut().fp = (state.cpu().fp as i32 + ops.c()) as u32;
-        state.cpu_mut().push_op(Operation::Jal);
+        state
+            .cpu_mut()
+            .push_op(Operation::Jal, <Self as Instruction<M>>::OPCODE, ops);
     }
 }
 
@@ -327,7 +347,9 @@ where
         let read_addr = (state.cpu().fp as i32 + ops.c()) as u32;
         let cell: u32 = state.mem_mut().read(clk, read_addr, true).into();
         state.cpu_mut().fp += cell;
-        state.cpu_mut().push_op(Operation::Jalv);
+        state
+            .cpu_mut()
+            .push_op(Operation::Jalv, <Self as Instruction<M>>::OPCODE, ops);
     }
 }
 
@@ -355,7 +377,9 @@ where
         } else {
             state.cpu_mut().pc = state.cpu().pc + 1;
         }
-        state.cpu_mut().push_op(Operation::Beq(imm));
+        state
+            .cpu_mut()
+            .push_op(Operation::Beq(imm), <Self as Instruction<M>>::OPCODE, ops);
     }
 }
 
@@ -383,7 +407,9 @@ where
         } else {
             state.cpu_mut().pc = state.cpu().pc + 1;
         }
-        state.cpu_mut().push_op(Operation::Bne(imm));
+        state
+            .cpu_mut()
+            .push_op(Operation::Bne(imm), <Self as Instruction<M>>::OPCODE, ops);
     }
 }
 
@@ -398,26 +424,34 @@ where
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
         let value = Word([ops.b() as u8, ops.c() as u8, ops.d() as u8, ops.e() as u8]);
         state.mem_mut().write(clk, write_addr, value.into(), true);
+        state
+            .cpu_mut()
+            .push_op(Operation::Imm32, <Self as Instruction<M>>::OPCODE, ops);
         state.cpu_mut().pc += 1;
-        state.cpu_mut().push_op(Operation::Imm32);
     }
 }
 
 impl CpuChip {
-    pub fn push_bus_op_with_memory(&mut self, imm: Option<Word<u8>>) {
+    pub fn push_bus_op_with_memory(
+        &mut self,
+        imm: Option<Word<u8>>,
+        opcode: u32,
+        operands: Operands<i32>,
+    ) {
         self.pc += 1;
-        self.push_op(Operation::BusWithMemory(imm));
+        self.push_op(Operation::BusWithMemory(imm), opcode, operands);
     }
 
-    pub fn push_bus_op(&mut self, imm: Option<Word<u8>>) {
+    pub fn push_bus_op(&mut self, imm: Option<Word<u8>>, opcode: u32, operands: Operands<i32>) {
         self.pc += 1;
-        self.push_op(Operation::Bus(imm));
+        self.push_op(Operation::Bus(imm), opcode, operands);
     }
 
-    pub fn push_op(&mut self, op: Operation) {
+    pub fn push_op(&mut self, op: Operation, opcode: u32, operands: Operands<i32>) {
         self.operations.push(op);
-        self.clock += 1;
+        self.instructions.push(InstructionWord { opcode, operands });
         self.save_register_state();
+        self.clock += 1;
     }
 
     pub fn save_register_state(&mut self) {

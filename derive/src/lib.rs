@@ -151,28 +151,21 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             }
         })
         .collect::<TokenStream2>();
-    //let prove_starks = chips
-    //    .iter()
-    //    .map(|chip| {
-    //        let chip_name = chip.ident.as_ref().unwrap();
-    //        let chip_trace_name = Ident::new(&format!("{}_trace", chip_name), chip_name.span());
-    //        let chip_stark: TokenStream2 =
-    //            remove_outer_parentheses(chip.attrs[0].tokens.clone().into())
-    //                .unwrap()
-    //                .into();
-    //        let chip_stark_name: TokenStream2 =
-    //            camel_to_snake_case(chip_stark.clone().into()).into();
+    let prove_starks = chips
+        .iter()
+        .map(|chip| {
+            let chip_name = chip.ident.as_ref().unwrap();
+            let chip_trace_name = Ident::new(&format!("{}_trace", chip_name), chip_name.span());
 
-    //        quote! {
-    //            let #chip_stark_name = #chip_stark::default();
-    //            //::valida_machine::__internal::prove(&#chip_stark_name, #chip_trace_name);
-    //        }
-    //    })
-    //    .collect::<TokenStream2>();
+            quote! {
+                ::valida_machine::__internal::prove(self.#chip_name(), #chip_trace_name);
+            }
+        })
+        .collect::<TokenStream2>();
     quote! {
         fn prove(&self) {
             #generate_trace
-            //#prove_starks
+            #prove_starks
         }
     }
 }

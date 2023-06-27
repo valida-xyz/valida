@@ -243,7 +243,6 @@ impl MemoryChip {
         }
 
         // Compute `diff_inv`
-        // TODO: Implement inversion for Mersenne31 and uncomment line below
         let diff_inv = batch_multiplicative_inverse(diff.clone());
 
         // Set trace values

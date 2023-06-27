@@ -88,6 +88,8 @@ impl Add32Chip {
         let mut row = [F::ZERO; NUM_ADD_COLS];
         let mut cols: &mut Add32Cols<F> = unsafe { transmute(&mut row) };
 
+        cols.opcode = F::from_canonical_u32(ADD32_OPCODE);
+
         match op {
             Operation::Add32(a, b, c) => {
                 cols.input_1 = b.transform(F::from_canonical_u8);
@@ -134,7 +136,9 @@ where
             .add_u32_mut()
             .operations
             .push(Operation::Add32(a, b, c));
-        state.cpu_mut().push_bus_op(imm);
+        state
+            .cpu_mut()
+            .push_bus_op(imm, <Self as Instruction<M>>::OPCODE, ops);
 
         state.range_record(a);
     }

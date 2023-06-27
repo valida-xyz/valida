@@ -120,7 +120,9 @@ where
             .mul_u32_mut()
             .operations
             .push(Operation::Mul32(a, b, c));
-        state.cpu_mut().push_bus_op(imm);
+        state
+            .cpu_mut()
+            .push_bus_op(imm, <Self as Instruction<M>>::OPCODE, ops);
 
         state.range_record(a);
     }

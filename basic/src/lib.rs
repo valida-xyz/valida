@@ -286,6 +286,8 @@ mod tests {
         let rom = ProgramROM::new(program);
         let public_mem = PublicMemory::default();
         machine.cpu_mut().fp = 0x1000;
+        machine.cpu_mut().save_register_state(); // TODO: Initial register state should be saved
+                                                 // automatically by the machine, not manually here
         machine.run(rom, public_mem);
         machine.prove();
 
@@ -322,6 +324,7 @@ mod tests {
         let public_mem = PublicMemory::default();
         machine.cpu_mut().fp = 0x1000;
         machine.run(rom, public_mem);
+        //machine.prove();
 
         assert_eq!(machine.cpu().pc, 2);
         assert_eq!(machine.cpu().fp, 0x1000);
