@@ -120,6 +120,6 @@ where
             .cpu_mut()
             .push_bus_op(imm, <Self as Instruction<M>>::OPCODE, ops);
 
-        state.range_record(a);
+        state.range_check(a);
     }
 }

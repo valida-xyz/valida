@@ -1,4 +1,4 @@
-#![no_std]
+//#![no_std]
 
 const ADD32_OPCODE: u32 = 8;
 const SUB32_OPCODE: u32 = 9;

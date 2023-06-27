@@ -51,7 +51,7 @@ pub struct BasicMachine {
     #[chip]
     mul_u32: Mul32Chip,
     #[chip]
-    range: RangeCheckerChip,
+    range: RangeCheckerChip, // TODO: Specify 8-bit RC chip
 }
 
 impl MachineWithGeneralBus for BasicMachine {
