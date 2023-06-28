@@ -76,7 +76,7 @@ pub struct Interaction<F: Field> {
     pub argument_index: BusArgument,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum InteractionType {
     LocalSend,
     LocalReceive,
@@ -117,12 +117,12 @@ impl<F: Field> Interaction<F> {
 /// This is called only after `generate_trace` has been called on all chips.
 pub fn generate_permutation_trace<F: Field, M: Machine<F = F>, C: Chip<M>>(
     machine: &M,
-    chip: &mut C,
+    chip: &C,
     main: &RowMajorMatrix<M::F>,
     random_elements: Vec<M::EF>,
 ) -> RowMajorMatrix<M::EF> {
     let all_interactions = chip.all_interactions(machine);
-    let (alphas_local, alphas_global) = generate_rlc_elements(chip, &random_elements);
+    let (alphas_local, alphas_global) = generate_rlc_elements(machine, chip, &random_elements);
     let betas = random_elements[2].powers();
 
     // Compute the reciprocal columns
@@ -136,6 +136,7 @@ pub fn generate_permutation_trace<F: Field, M: Machine<F = F>, C: Chip<M>>(
     // number is subject to a target constraint degree).
     let perm_width = all_interactions.len() + 1;
     let mut perm_values = Vec::with_capacity(main.height() * perm_width);
+
     for main_row in main.rows() {
         let mut row = vec![M::EF::ZERO; perm_width];
         for (n, (interaction, _)) in all_interactions.iter().enumerate() {
@@ -153,18 +154,16 @@ pub fn generate_permutation_trace<F: Field, M: Machine<F = F>, C: Chip<M>>(
 
     // Compute the running sum column
     let mut phi = vec![M::EF::ZERO; perm.height() + 1];
-    let map = chip.interaction_map(machine);
     for (n, (main_row, perm_row)) in main.rows().zip(perm.rows()).enumerate() {
         phi[n + 1] = phi[n];
         for (m, (interaction, interaction_type)) in all_interactions.iter().enumerate() {
             let mult = interaction.count.apply::<M::F, M::F>(&[], main_row);
-            let col_idx = map[&interaction.argument_index][m];
             match interaction_type {
                 InteractionType::LocalSend | InteractionType::GlobalSend => {
-                    phi[n + 1] += M::EF::from_base(mult) * perm_row[col_idx];
+                    phi[n + 1] += M::EF::from_base(mult) * perm_row[m];
                 }
                 InteractionType::LocalReceive | InteractionType::GlobalReceive => {
-                    phi[n + 1] -= M::EF::from_base(mult) * perm_row[col_idx];
+                    phi[n + 1] -= M::EF::from_base(mult) * perm_row[m];
                 }
             }
         }
@@ -201,16 +200,13 @@ pub fn eval_permutation_constraints<
     let phi_next = perm_next[perm_width - 1].clone();
 
     let all_interactions = chip.all_interactions(builder.machine());
-    let map = chip.interaction_map(builder.machine());
 
-    let (alphas_local, alphas_global) = generate_rlc_elements(chip, &rand_elems);
+    let (alphas_local, alphas_global) = generate_rlc_elements(builder.machine(), chip, &rand_elems);
     let betas = rand_elems[2].powers();
 
     let lhs = phi_next - phi_local.clone();
     let mut rhs = AB::ExprEF::from_base(AB::Expr::ZERO);
     for (m, (interaction, interaction_type)) in all_interactions.iter().enumerate() {
-        let col_idx = map[&interaction.argument_index][m];
-
         // Reciprocal constraints
         let mut rlc = AB::ExprEF::from_base(AB::Expr::ZERO);
         for (field, beta) in interaction.fields.iter().zip(betas.clone()) {
@@ -222,7 +218,7 @@ pub fn eval_permutation_constraints<
         } else {
             rlc = rlc + alphas_global[interaction.argument_index()];
         }
-        builder.assert_one_ext::<AB::ExprEF, AB::ExprEF>(rlc * perm_local[col_idx]);
+        builder.assert_one_ext::<AB::ExprEF, AB::ExprEF>(rlc * perm_local[m]);
 
         // Build the RHS of the permutation constraint
         let mult = interaction
@@ -230,10 +226,10 @@ pub fn eval_permutation_constraints<
             .apply::<AB::Expr, AB::Var>(&[], main_local);
         match interaction_type {
             InteractionType::LocalSend | InteractionType::GlobalSend => {
-                rhs += AB::ExprEF::from(mult) * perm_local[col_idx];
+                rhs += AB::ExprEF::from_base(mult) * perm_local[m];
             }
             InteractionType::LocalReceive | InteractionType::GlobalReceive => {
-                rhs -= AB::ExprEF::from(mult) * perm_local[col_idx];
+                rhs -= AB::ExprEF::from_base(mult) * perm_local[m];
             }
         }
     }
@@ -254,6 +250,7 @@ fn generate_rlc_elements<
     F: AbstractField,
     EF: AbstractExtensionField<F>,
 >(
+    machine: &M,
     chip: &C,
     random_elements: &[EF],
 ) -> (Vec<EF>, Vec<EF>) {
@@ -262,10 +259,13 @@ fn generate_rlc_elements<
         .skip(1)
         .take(
             chip.local_sends()
-                .iter()
+                .into_iter()
+                .chain(chip.local_receives())
+                .into_iter()
                 .map(|interaction| interaction.argument_index())
                 .max()
-                .unwrap(),
+                .unwrap_or(0)
+                + 1,
         )
         .collect::<Vec<_>>();
 
@@ -273,11 +273,14 @@ fn generate_rlc_elements<
         .powers()
         .skip(1)
         .take(
-            chip.local_sends()
-                .iter()
+            chip.global_sends(machine)
+                .into_iter()
+                .chain(chip.global_receives(machine))
+                .into_iter()
                 .map(|interaction| interaction.argument_index())
                 .max()
-                .unwrap(),
+                .unwrap_or(0)
+                + 1,
         )
         .collect::<Vec<_>>();
 

@@ -22,21 +22,21 @@ impl MemoryChip {
         let next: &MemoryCols<AB::Var> = main.row(1).borrow();
 
         // Address equality
-        builder.when_transition().assert_eq(
-            local.addr_not_equal,
-            (next.addr - local.addr) * next.diff_inv,
-        );
+        builder
+            .when_transition()
+            .when(local.addr_not_equal)
+            .assert_one((next.addr - local.addr) * local.diff_inv);
         builder.assert_bool(local.addr_not_equal);
 
         // Non-contiguous
         builder
             .when_transition()
             .when(local.addr_not_equal)
-            .assert_eq(next.diff, next.addr - local.addr);
+            .assert_eq(local.diff, next.addr - local.addr);
         builder
             .when_transition()
             .when_ne(local.addr_not_equal, AB::Expr::from(AB::F::ONE))
-            .assert_eq(next.diff, next.clk - local.clk - AB::Expr::from(AB::F::ONE));
+            .assert_eq(local.diff, next.clk - local.clk);
 
         // Read/write
         // TODO: Record \sum_i (value'_i - value_i)^2 in trace and convert to a single constraint?

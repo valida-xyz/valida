@@ -11,7 +11,10 @@ use alloc::vec::Vec;
 pub use crate::core::Word;
 pub use chip::{BusArgument, Chip, Interaction, InteractionType, ValidaAirBuilder};
 
-pub use p3_field::{AbstractField, ExtensionField, Field, PrimeField, PrimeField32, PrimeField64};
+pub use p3_field::{
+    AbstractExtensionField, AbstractField, ExtensionField, Field, PrimeField, PrimeField32,
+    PrimeField64,
+};
 
 pub mod __internal;
 pub mod chip;

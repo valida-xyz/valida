@@ -62,7 +62,8 @@ where
     }
 
     fn local_sends(&self) -> Vec<Interaction<M::F>> {
-        todo!()
+        // TODO
+        vec![]
     }
 }
 

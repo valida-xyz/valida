@@ -133,10 +133,10 @@ impl CpuChip {
                 .map(|(a, b)| (a - b) * (a - b))
                 .sum::<AB::Expr>(),
         );
-        builder
-            .when_transition()
-            .when(is_jal + is_jalv)
-            .assert_eq(next.pc, reduce::<AB>(base, local.write_value()));
+        builder.when_transition().when(is_jal + is_jalv).assert_eq(
+            local.pc + AB::F::ONE,
+            reduce::<AB>(base, local.write_value()),
+        );
         builder.when(is_imm32).assert_zero(
             local
                 .write_value()
@@ -168,7 +168,7 @@ impl CpuChip {
 
         // Branch manipulation
         let equal = AB::Expr::from(AB::F::ONE) - local.not_equal;
-        let next_pc_if_branching = local.pc + local.instruction.operands.a();
+        let next_pc_if_branching = local.instruction.operands.a();
         let beq_next_pc =
             equal.clone() * next_pc_if_branching.clone() + local.not_equal * incremented_pc.clone();
         let bne_next_pc = equal * incremented_pc + local.not_equal * next_pc_if_branching;
@@ -205,11 +205,10 @@ impl CpuChip {
             .when_transition()
             .when(local.opcode_flags.is_jal)
             .assert_eq(next.fp, local.fp + local.instruction.operands.c());
-
         builder
             .when_transition()
             .when(local.opcode_flags.is_jalv)
-            .assert_eq(next.fp, reduce::<AB>(base, local.read_value_2()));
+            .assert_eq(next.fp, local.fp + reduce::<AB>(base, local.read_value_2()));
     }
 
     fn eval_equality<AB: AirBuilder>(

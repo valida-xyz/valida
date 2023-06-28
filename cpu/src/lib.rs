@@ -424,10 +424,10 @@ where
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
         let value = Word([ops.b() as u8, ops.c() as u8, ops.d() as u8, ops.e() as u8]);
         state.mem_mut().write(clk, write_addr, value.into(), true);
+        state.cpu_mut().pc += 1;
         state
             .cpu_mut()
             .push_op(Operation::Imm32, <Self as Instruction<M>>::OPCODE, ops);
-        state.cpu_mut().pc += 1;
     }
 }
 

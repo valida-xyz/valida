@@ -14,7 +14,10 @@ use valida_cpu::{
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
-use valida_machine::{BusArgument, Chip, Instruction, Machine, ProgramROM, PublicMemory};
+use valida_machine::{
+    AbstractExtensionField, AbstractField, BusArgument, Chip, Instruction, Machine, ProgramROM,
+    PublicMemory,
+};
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_range::{MachineWithRangeChip, RangeCheckerChip};
 

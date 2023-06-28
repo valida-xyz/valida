@@ -141,7 +141,7 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
 }
 
 fn prove_method(chips: &[&Field]) -> TokenStream2 {
-    let generate_trace = chips
+    let generate_main_trace = chips
         .iter()
         .map(|chip| {
             let chip_name = chip.ident.as_ref().unwrap();
@@ -151,20 +151,44 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             }
         })
         .collect::<TokenStream2>();
+    let generate_perm_trace = chips
+        .iter()
+        .map(|chip| {
+            let chip_name = chip.ident.as_ref().unwrap();
+            let chip_trace_name = Ident::new(&format!("{}_trace", chip_name), chip_name.span());
+            let chip_perm_trace_name =
+                Ident::new(&format!("{}_perm_trace", chip_name), chip_name.span());
+            quote! {
+                // FIXME: Random elements are unique to each chip. Replace these dummy values.
+                let #chip_perm_trace_name = ::valida_machine::chip::generate_permutation_trace(
+                    self, self.#chip_name(), &#chip_trace_name, rand_elems.clone());
+            }
+        })
+        .collect::<TokenStream2>();
     let prove_starks = chips
         .iter()
         .map(|chip| {
             let chip_name = chip.ident.as_ref().unwrap();
             let chip_trace_name = Ident::new(&format!("{}_trace", chip_name), chip_name.span());
+            let chip_perm_trace_name =
+                Ident::new(&format!("{}_perm_trace", chip_name), chip_name.span());
 
             quote! {
-                ::valida_machine::__internal::prove(self.#chip_name(), #chip_trace_name);
+                ::valida_machine::__internal::prove(
+                    self, self.#chip_name(), #chip_trace_name, #chip_perm_trace_name);
             }
         })
         .collect::<TokenStream2>();
     quote! {
         fn prove(&self) {
-            #generate_trace
+            // TODO: Get random elements from verifier
+            let mut rand_elems = alloc::vec::Vec::new();
+            for _ in 0..3 {
+                rand_elems.push(Self::EF::from_base(Self::F::TWO));
+            }
+
+            #generate_main_trace
+            #generate_perm_trace
             #prove_starks
         }
     }

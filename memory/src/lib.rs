@@ -249,10 +249,13 @@ impl MemoryChip {
         for n in 0..(rows.len() - 1) {
             rows[n][MEM_COL_MAP.diff] = diff[n];
             rows[n][MEM_COL_MAP.diff_inv] = diff_inv[n];
-            if diff[n] != F::ZERO {
+            rows[n][MEM_COL_MAP.counter_mult] = mult[n];
+
+            let addr = ops[n].1.get_address();
+            let addr_next = ops[n + 1].1.get_address();
+            if addr_next - addr != 0 {
                 rows[n][MEM_COL_MAP.addr_not_equal] = F::ONE;
             }
-            rows[n][MEM_COL_MAP.counter_mult] = mult[n];
         }
     }
 }
