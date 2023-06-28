@@ -239,9 +239,10 @@ pub fn eval_permutation_constraints<
         .when_transition()
         .assert_eq_ext::<AB::ExprEF, _, _>(lhs, rhs);
     builder.when_first_row().assert_zero_ext(phi_local);
-    builder
-        .when_last_row()
-        .assert_eq_ext(perm_local[0].clone(), AB::ExprEF::from(cumulative_sum));
+    builder.when_last_row().assert_eq_ext(
+        perm_local.last().unwrap().clone(),
+        AB::ExprEF::from(cumulative_sum),
+    );
 }
 
 fn generate_rlc_elements<

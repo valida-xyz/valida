@@ -214,7 +214,7 @@ impl CpuChip {
     fn compute_word_diffs<F: PrimeField>(rows: &mut Vec<[F; NUM_CPU_COLS]>) {
         // Compute `diff`
         let mut diff = vec![F::ZERO; rows.len()];
-        for n in 0..(rows.len() - 1) {
+        for n in 0..rows.len() {
             let word_1 = CPU_COL_MAP.mem_channels[0]
                 .value
                 .into_iter()
@@ -235,7 +235,7 @@ impl CpuChip {
         let diff_inv = batch_multiplicative_inverse(diff.clone());
 
         // Set trace values
-        for n in 0..(rows.len() - 1) {
+        for n in 0..rows.len() {
             rows[n][CPU_COL_MAP.diff] = diff[n];
             rows[n][CPU_COL_MAP.diff_inv] = diff_inv[n];
             if diff[n] != F::ZERO {

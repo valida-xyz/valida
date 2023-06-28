@@ -99,12 +99,12 @@ where
     let cumulative_sum = *perm.row(perm.height() - 1).last().unwrap();
 
     // Check that constraints are satisfied
-    for n in 0..main.height() - 1 {
+    for n in 0..main.height() {
         let main_local = main.row(n);
-        let main_next = main.row(n + 1);
+        let main_next = main.row((n + 1) % main.height());
 
         let perm_local = perm.row(n);
-        let perm_next = perm.row(n + 1);
+        let perm_next = perm.row((n + 1) % main.height());
 
         let mut builder = DebugConstraintBuilder {
             machine,
@@ -127,6 +127,7 @@ where
         }
         if n == main.height() - 1 {
             builder.is_last_row = M::F::ONE;
+            builder.is_transition = M::F::ZERO;
         }
 
         air.eval(&mut builder);
