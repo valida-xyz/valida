@@ -9,6 +9,8 @@ pub struct Add32Cols<T> {
     pub input_1: Word<T>,
     pub input_2: Word<T>,
 
+    pub carry: [T; 3],
+
     /// Witnessed output
     pub output: Word<T>,
 

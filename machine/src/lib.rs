@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 // TODO: Convert memory from big endian to little endian
 
@@ -11,7 +11,10 @@ use alloc::vec::Vec;
 pub use crate::core::Word;
 pub use chip::{BusArgument, Chip, Interaction, InteractionType, ValidaAirBuilder};
 
-pub use p3_field::{AbstractField, ExtensionField, Field, PrimeField, PrimeField32, PrimeField64};
+pub use p3_field::{
+    AbstractExtensionField, AbstractField, ExtensionField, Field, PrimeField, PrimeField32,
+    PrimeField64,
+};
 
 pub mod __internal;
 pub mod chip;
@@ -59,7 +62,7 @@ impl<F: Copy> Operands<F> {
         self.0[4]
     }
     pub fn imm32(&self) -> Word<F> {
-        Word([self.0[0], self.0[1], self.0[2], self.0[3]])
+        Word([self.0[1], self.0[2], self.0[3], self.0[4]])
     }
 }
 

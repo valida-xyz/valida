@@ -74,7 +74,7 @@ fn impl_machine_given_instructions_and_chips(
     quote! {
         impl Machine for #machine {
             type F = ::valida_machine::__internal::DefaultField;
-            type EF = ::valida_machine::__internal::DefaultField; // FIXME
+            type EF = ::valida_machine::__internal::DefaultExtensionField; // FIXME
             #run
             #prove
             #verify
@@ -141,38 +141,46 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
 }
 
 fn prove_method(chips: &[&Field]) -> TokenStream2 {
-    let generate_trace = chips
+    let push_chips = chips
         .iter()
         .map(|chip| {
             let chip_name = chip.ident.as_ref().unwrap();
-            let chip_trace_name = Ident::new(&format!("{}_trace", chip_name), chip_name.span());
             quote! {
-                let #chip_trace_name = self.#chip_name().generate_trace(self);
+                chips.push(alloc::boxed::Box::new(self.#chip_name()));
             }
         })
         .collect::<TokenStream2>();
-    //let prove_starks = chips
-    //    .iter()
-    //    .map(|chip| {
-    //        let chip_name = chip.ident.as_ref().unwrap();
-    //        let chip_trace_name = Ident::new(&format!("{}_trace", chip_name), chip_name.span());
-    //        let chip_stark: TokenStream2 =
-    //            remove_outer_parentheses(chip.attrs[0].tokens.clone().into())
-    //                .unwrap()
-    //                .into();
-    //        let chip_stark_name: TokenStream2 =
-    //            camel_to_snake_case(chip_stark.clone().into()).into();
+    let prove_starks = chips
+        .iter()
+        .enumerate()
+        .map(|(n, chip)| {
+            let chip_name = chip.ident.as_ref().unwrap();
+            quote! {
+                #[cfg(debug_assertions)]
+                ::valida_machine::__internal::evaluate_constraints(
+                    self, self.#chip_name(), &traces[#n].0, &traces[#n].1);
+            }
+        })
+        .collect::<TokenStream2>();
 
-    //        quote! {
-    //            let #chip_stark_name = #chip_stark::default();
-    //            //::valida_machine::__internal::prove(&#chip_stark_name, #chip_trace_name);
-    //        }
-    //    })
-    //    .collect::<TokenStream2>();
     quote! {
         fn prove(&self) {
-            #generate_trace
-            //#prove_starks
+            // TODO: Get random elements from verifier
+            let mut rand_elems = alloc::vec::Vec::new();
+            for _ in 0..3 {
+                rand_elems.push(Self::EF::from_base(Self::F::TWO));
+            }
+
+            let mut chips: alloc::vec::Vec<alloc::boxed::Box<&dyn Chip<Self>>> = alloc::vec::Vec::new();
+            #push_chips
+
+            let traces = chips.into_par_iter().map(|chip| {
+                let main = chip.generate_trace(self);
+                let perm = ::valida_machine::chip::generate_permutation_trace(self, *chip, &main, rand_elems.clone());
+                (main, perm)
+            }).collect::<alloc::vec::Vec<_>>();
+
+            #prove_starks
         }
     }
 }
@@ -211,39 +219,4 @@ pub fn aligned_borrow_derive(input: TokenStream) -> TokenStream {
         }
     };
     methods.into()
-}
-
-fn remove_outer_parentheses(ts: TokenStream) -> Option<TokenStream> {
-    let mut iter = ts.into_iter();
-    if let Some(proc_macro::TokenTree::Group(group)) = iter.next() {
-        if group.delimiter() == proc_macro::Delimiter::Parenthesis {
-            Some(group.stream())
-        } else {
-            None
-        }
-    } else {
-        None
-    }
-}
-
-fn camel_to_snake_case(input: TokenStream) -> TokenStream {
-    let mut output = String::new();
-
-    if let Some(proc_macro::TokenTree::Ident(ident)) = input.into_iter().next() {
-        for (i, c) in ident.to_string().chars().enumerate() {
-            if c.is_uppercase() {
-                if i != 0 {
-                    output.push('_');
-                }
-                for lowercase in c.to_lowercase() {
-                    output.push(lowercase);
-                }
-            } else {
-                output.push(c);
-            }
-        }
-    }
-
-    let output_ident = quote::format_ident!("{}", output);
-    quote::quote! { #output_ident }.into()
 }

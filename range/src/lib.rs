@@ -38,7 +38,7 @@ pub trait MachineWithRangeChip: Machine {
     fn range_mut(&mut self) -> &mut RangeCheckerChip;
 
     /// Record the components of the word in the range check counter
-    fn range_record<I: Into<u32>>(&mut self, value: Word<I>) {
+    fn range_check<I: Into<u32>>(&mut self, value: Word<I>) {
         for v in value {
             self.range_mut()
                 .count
