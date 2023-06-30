@@ -91,7 +91,7 @@ where
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let mut ops = self
             .operations
-            .iter()
+            .par_iter()
             .flat_map(|(clk, ops)| {
                 ops.iter()
                     .map(|op| (*clk, *op))

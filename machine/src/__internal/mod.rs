@@ -7,9 +7,11 @@ use p3_air::TwoRowMatrixView;
 use p3_air::{Air, AirBuilder, PermutationAirBuilder};
 use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, PrimeField};
 use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRows};
+use p3_maybe_rayon::*;
 use p3_mersenne_31::Mersenne31;
 
 pub type DefaultField = Mersenne31;
+pub type DefaultExtensionField = Mersenne31; // FIXME: Replace
 
 pub struct DebugConstraintBuilder<'a, F: Field, EF: ExtensionField<F>, M: Machine> {
     machine: &'a M,
@@ -87,9 +89,13 @@ where
     }
 }
 
-pub fn prove<A, M>(machine: &M, air: &A, main: RowMajorMatrix<M::F>, perm: RowMajorMatrix<M::EF>)
-where
-    M: Machine,
+pub fn evaluate_constraints<A, M>(
+    machine: &M,
+    air: &A,
+    main: &RowMajorMatrix<M::F>,
+    perm: &RowMajorMatrix<M::EF>,
+) where
+    M: Machine + Sync,
     A: for<'a> Air<DebugConstraintBuilder<'a, M::F, M::EF, M>> + Chip<M>,
 {
     if main.height() == 0 {
@@ -99,7 +105,7 @@ where
     let cumulative_sum = *perm.row(perm.height() - 1).last().unwrap();
 
     // Check that constraints are satisfied
-    for n in 0..main.height() {
+    (0..main.height()).into_par_iter().for_each(|n| {
         let main_local = main.row(n);
         let main_next = main.row((n + 1) % main.height());
 
@@ -132,5 +138,5 @@ where
 
         air.eval(&mut builder);
         eval_permutation_constraints(air, &mut builder, cumulative_sum);
-    }
+    });
 }
