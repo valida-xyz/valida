@@ -12,7 +12,9 @@ valida-derive = { path = "../derive" }
 valida-machine = { path = "../machine" }
 valida-memory = { path = "../memory" }
 valida-range = { path = "../range" }
+p3-maybe-rayon = { path = "../../Plonky3/maybe-rayon" }
 
 [dev-dependencies]
 p3-mersenne-31 = { path = "../../Plonky3/mersenne-31" }
-p3-field= { path = "../../Plonky3/field" }
+p3-field = { path = "../../Plonky3/field" }
+

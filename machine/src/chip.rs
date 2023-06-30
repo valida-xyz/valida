@@ -7,8 +7,9 @@ use valida_util::batch_multiplicative_inverse;
 use p3_air::{AirBuilder, PermutationAirBuilder, VirtualPairCol};
 use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Powers, PrimeField};
 use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRows};
+use p3_maybe_rayon::*;
 
-pub trait Chip<M: Machine> {
+pub trait Chip<M: Machine>: Sync {
     /// Generate the main trace for the chip given the provided machine.
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F>;
 
@@ -51,16 +52,6 @@ pub trait Chip<M: Machine> {
                 .map(|i| (i, InteractionType::GlobalReceive)),
         );
         interactions
-    }
-
-    fn interaction_map(&self, machine: &M) -> BTreeMap<BusArgument, Vec<usize>> {
-        let mut map: BTreeMap<BusArgument, Vec<usize>> = BTreeMap::new();
-        for (n, (interaction, _)) in self.all_interactions(machine).iter().enumerate() {
-            map.entry(interaction.argument_index)
-                .or_insert_with(Vec::new)
-                .push(n);
-        }
-        map
     }
 }
 
@@ -115,12 +106,16 @@ impl<F: Field> Interaction<F> {
 
 /// Generate the permutation trace for a chip with the provided machine.
 /// This is called only after `generate_trace` has been called on all chips.
-pub fn generate_permutation_trace<F: Field, M: Machine<F = F>, C: Chip<M>>(
+pub fn generate_permutation_trace<F, M>(
     machine: &M,
-    chip: &C,
+    chip: &dyn Chip<M>,
     main: &RowMajorMatrix<M::F>,
     random_elements: Vec<M::EF>,
-) -> RowMajorMatrix<M::EF> {
+) -> RowMajorMatrix<M::EF>
+where
+    F: Field,
+    M: Machine<F = F>,
+{
     let all_interactions = chip.all_interactions(machine);
     let (alphas_local, alphas_global) = generate_rlc_elements(machine, chip, &random_elements);
     let betas = random_elements[2].powers();
@@ -176,16 +171,13 @@ pub fn generate_permutation_trace<F: Field, M: Machine<F = F>, C: Chip<M>>(
     perm
 }
 
-pub fn eval_permutation_constraints<
+pub fn eval_permutation_constraints<F, M, C, AB>(chip: &C, builder: &mut AB, cumulative_sum: AB::EF)
+where
     F: PrimeField,
     M: Machine<F = F>,
     C: Chip<M>,
     AB: ValidaAirBuilder<Machine = M, F = F>,
->(
-    chip: &C,
-    builder: &mut AB,
-    cumulative_sum: AB::EF,
-) {
+{
     let rand_elems = builder.permutation_randomness().to_vec();
 
     let main = builder.main();
@@ -245,16 +237,16 @@ pub fn eval_permutation_constraints<
     );
 }
 
-fn generate_rlc_elements<
-    C: Chip<M>,
-    M: Machine,
+fn generate_rlc_elements<F, EF, M>(
+    machine: &M,
+    chip: &dyn Chip<M>,
+    random_elements: &[EF],
+) -> (Vec<EF>, Vec<EF>)
+where
     F: AbstractField,
     EF: AbstractExtensionField<F>,
->(
-    machine: &M,
-    chip: &C,
-    random_elements: &[EF],
-) -> (Vec<EF>, Vec<EF>) {
+    M: Machine,
+{
     let alphas_local = random_elements[0]
         .powers()
         .skip(1)
@@ -290,12 +282,11 @@ fn generate_rlc_elements<
 
 // TODO: Use Var and Expr type bounds in place of concrete fields so that
 // this function can be used in `eval_permutation_constraints`.
-fn reduce_row<F: Field, EF: ExtensionField<F>>(
-    row: &[F],
-    fields: &[VirtualPairCol<F>],
-    alpha: EF,
-    betas: Powers<EF>,
-) -> EF {
+fn reduce_row<F, EF>(row: &[F], fields: &[VirtualPairCol<F>], alpha: EF, betas: Powers<EF>) -> EF
+where
+    F: Field,
+    EF: ExtensionField<F>,
+{
     let mut rlc = EF::ZERO;
     for (columns, beta) in fields.iter().zip(betas) {
         rlc += beta * columns.apply::<F, F>(&[], row)

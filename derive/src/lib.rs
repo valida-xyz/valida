@@ -74,7 +74,7 @@ fn impl_machine_given_instructions_and_chips(
     quote! {
         impl Machine for #machine {
             type F = ::valida_machine::__internal::DefaultField;
-            type EF = ::valida_machine::__internal::DefaultField; // FIXME
+            type EF = ::valida_machine::__internal::DefaultExtensionField; // FIXME
             #run
             #prove
             #verify
@@ -141,44 +141,28 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
 }
 
 fn prove_method(chips: &[&Field]) -> TokenStream2 {
-    let generate_main_trace = chips
+    let push_chips = chips
         .iter()
         .map(|chip| {
             let chip_name = chip.ident.as_ref().unwrap();
-            let chip_trace_name = Ident::new(&format!("{}_trace", chip_name), chip_name.span());
             quote! {
-                let #chip_trace_name = self.#chip_name().generate_trace(self);
-            }
-        })
-        .collect::<TokenStream2>();
-    let generate_perm_trace = chips
-        .iter()
-        .map(|chip| {
-            let chip_name = chip.ident.as_ref().unwrap();
-            let chip_trace_name = Ident::new(&format!("{}_trace", chip_name), chip_name.span());
-            let chip_perm_trace_name =
-                Ident::new(&format!("{}_perm_trace", chip_name), chip_name.span());
-            quote! {
-                // FIXME: Random elements are unique to each chip. Replace these dummy values.
-                let #chip_perm_trace_name = ::valida_machine::chip::generate_permutation_trace(
-                    self, self.#chip_name(), &#chip_trace_name, rand_elems.clone());
+                chips.push(alloc::boxed::Box::new(self.#chip_name()));
             }
         })
         .collect::<TokenStream2>();
     let prove_starks = chips
         .iter()
-        .map(|chip| {
+        .enumerate()
+        .map(|(n, chip)| {
             let chip_name = chip.ident.as_ref().unwrap();
-            let chip_trace_name = Ident::new(&format!("{}_trace", chip_name), chip_name.span());
-            let chip_perm_trace_name =
-                Ident::new(&format!("{}_perm_trace", chip_name), chip_name.span());
-
             quote! {
-                ::valida_machine::__internal::prove(
-                    self, self.#chip_name(), #chip_trace_name, #chip_perm_trace_name);
+                #[cfg(debug_assertions)]
+                ::valida_machine::__internal::evaluate_constraints(
+                    self, self.#chip_name(), &traces[#n].0, &traces[#n].1);
             }
         })
         .collect::<TokenStream2>();
+
     quote! {
         fn prove(&self) {
             // TODO: Get random elements from verifier
@@ -187,8 +171,15 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                 rand_elems.push(Self::EF::from_base(Self::F::TWO));
             }
 
-            #generate_main_trace
-            #generate_perm_trace
+            let mut chips: alloc::vec::Vec<alloc::boxed::Box<&dyn Chip<Self>>> = alloc::vec::Vec::new();
+            #push_chips
+
+            let traces = chips.into_par_iter().map(|chip| {
+                let main = chip.generate_trace(self);
+                let perm = ::valida_machine::chip::generate_permutation_trace(self, *chip, &main, rand_elems.clone());
+                (main, perm)
+            }).collect::<alloc::vec::Vec<_>>();
+
             #prove_starks
         }
     }
@@ -228,39 +219,4 @@ pub fn aligned_borrow_derive(input: TokenStream) -> TokenStream {
         }
     };
     methods.into()
-}
-
-fn remove_outer_parentheses(ts: TokenStream) -> Option<TokenStream> {
-    let mut iter = ts.into_iter();
-    if let Some(proc_macro::TokenTree::Group(group)) = iter.next() {
-        if group.delimiter() == proc_macro::Delimiter::Parenthesis {
-            Some(group.stream())
-        } else {
-            None
-        }
-    } else {
-        None
-    }
-}
-
-fn camel_to_snake_case(input: TokenStream) -> TokenStream {
-    let mut output = String::new();
-
-    if let Some(proc_macro::TokenTree::Ident(ident)) = input.into_iter().next() {
-        for (i, c) in ident.to_string().chars().enumerate() {
-            if c.is_uppercase() {
-                if i != 0 {
-                    output.push('_');
-                }
-                for lowercase in c.to_lowercase() {
-                    output.push(lowercase);
-                }
-            } else {
-                output.push(c);
-            }
-        }
-    }
-
-    let output_ident = quote::format_ident!("{}", output);
-    quote::quote! { #output_ident }.into()
 }
