@@ -15,24 +15,37 @@ where
         let main = builder.main();
         let local: &Add32Cols<AB::Var> = main.row(0).borrow();
 
+        let one = AB::F::ONE;
         let base = AB::Expr::from(AB::F::from_canonical_u32(1 << 8));
 
-        let carry_0 = local.input_1[3] + local.input_2[3] - local.output[3];
-        let carry_1 = local.input_1[2] + local.input_2[2] + carry_0.clone() - local.output[2];
-        let carry_2 = local.input_1[1] + local.input_2[1] + carry_1.clone() - local.output[1];
-        let carry_3 = local.input_1[0] + local.input_2[0] + carry_2.clone() - local.output[0];
+        let carry_1 = local.carry[0];
+        let carry_2 = local.carry[1];
+        let carry_3 = local.carry[2];
 
-        builder.assert_zero(carry_0.clone() * (base.clone() + carry_0));
-        builder.assert_zero(carry_1.clone() * (base.clone() + carry_1));
-        builder.assert_zero(carry_2.clone() * (base.clone() + carry_2));
-        builder.assert_zero(carry_3.clone() * (base + carry_3));
+        let overflow_0 = local.input_1[3] + local.input_2[3] - local.output[3];
+        let overflow_1 = local.input_1[2] + local.input_2[2] - local.output[2] + carry_1;
+        let overflow_2 = local.input_1[1] + local.input_2[1] - local.output[1] + carry_2;
+        let overflow_3 = local.input_1[0] + local.input_2[0] - local.output[0] + carry_3;
+
+        // Limb constraints
+        builder.assert_zero(overflow_0.clone() * (overflow_0.clone() - base.clone()));
+        builder.assert_zero(overflow_1.clone() * (overflow_1.clone() - base.clone()));
+        builder.assert_zero(overflow_2.clone() * (overflow_2.clone() - base.clone()));
+        builder.assert_zero(overflow_3.clone() * (overflow_3 - base.clone()));
+
+        // Carry constraints
+        builder.assert_zero(
+            overflow_0.clone() * (carry_1 - one) + (overflow_0 - base.clone()) * carry_1,
+        );
+        builder.assert_zero(
+            overflow_1.clone() * (carry_2 - one) + (overflow_1 - base.clone()) * carry_2,
+        );
+        builder.assert_zero(overflow_2.clone() * (carry_3 - one) + (overflow_2 - base) * carry_3);
 
         // Bus opcode constraint
         builder.assert_eq(
             local.opcode,
             AB::Expr::from(AB::F::from_canonical_u32(ADD32_OPCODE)),
         );
-
-        // TODO: Range check output ([0,256]) using preprocessed lookup table
     }
 }

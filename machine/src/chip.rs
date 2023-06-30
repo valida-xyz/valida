@@ -7,8 +7,9 @@ use valida_util::batch_multiplicative_inverse;
 use p3_air::{AirBuilder, PermutationAirBuilder, VirtualPairCol};
 use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Powers, PrimeField};
 use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRows};
+use p3_maybe_rayon::*;
 
-pub trait Chip<M: Machine> {
+pub trait Chip<M: Machine>: Sync {
     /// Generate the main trace for the chip given the provided machine.
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F>;
 
@@ -52,16 +53,6 @@ pub trait Chip<M: Machine> {
         );
         interactions
     }
-
-    fn interaction_map(&self, machine: &M) -> BTreeMap<BusArgument, Vec<usize>> {
-        let mut map: BTreeMap<BusArgument, Vec<usize>> = BTreeMap::new();
-        for (n, (interaction, _)) in self.all_interactions(machine).iter().enumerate() {
-            map.entry(interaction.argument_index)
-                .or_insert_with(Vec::new)
-                .push(n);
-        }
-        map
-    }
 }
 
 pub trait ValidaAirBuilder: PermutationAirBuilder {
@@ -76,7 +67,7 @@ pub struct Interaction<F: Field> {
     pub argument_index: BusArgument,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum InteractionType {
     LocalSend,
     LocalReceive,
@@ -115,14 +106,18 @@ impl<F: Field> Interaction<F> {
 
 /// Generate the permutation trace for a chip with the provided machine.
 /// This is called only after `generate_trace` has been called on all chips.
-pub fn generate_permutation_trace<F: Field, M: Machine<F = F>, C: Chip<M>>(
+pub fn generate_permutation_trace<F, M>(
     machine: &M,
-    chip: &mut C,
+    chip: &dyn Chip<M>,
     main: &RowMajorMatrix<M::F>,
     random_elements: Vec<M::EF>,
-) -> RowMajorMatrix<M::EF> {
+) -> RowMajorMatrix<M::EF>
+where
+    F: Field,
+    M: Machine<F = F>,
+{
     let all_interactions = chip.all_interactions(machine);
-    let (alphas_local, alphas_global) = generate_rlc_elements(chip, &random_elements);
+    let (alphas_local, alphas_global) = generate_rlc_elements(machine, chip, &random_elements);
     let betas = random_elements[2].powers();
 
     // Compute the reciprocal columns
@@ -136,6 +131,7 @@ pub fn generate_permutation_trace<F: Field, M: Machine<F = F>, C: Chip<M>>(
     // number is subject to a target constraint degree).
     let perm_width = all_interactions.len() + 1;
     let mut perm_values = Vec::with_capacity(main.height() * perm_width);
+
     for main_row in main.rows() {
         let mut row = vec![M::EF::ZERO; perm_width];
         for (n, (interaction, _)) in all_interactions.iter().enumerate() {
@@ -153,18 +149,16 @@ pub fn generate_permutation_trace<F: Field, M: Machine<F = F>, C: Chip<M>>(
 
     // Compute the running sum column
     let mut phi = vec![M::EF::ZERO; perm.height() + 1];
-    let map = chip.interaction_map(machine);
     for (n, (main_row, perm_row)) in main.rows().zip(perm.rows()).enumerate() {
         phi[n + 1] = phi[n];
         for (m, (interaction, interaction_type)) in all_interactions.iter().enumerate() {
             let mult = interaction.count.apply::<M::F, M::F>(&[], main_row);
-            let col_idx = map[&interaction.argument_index][m];
             match interaction_type {
                 InteractionType::LocalSend | InteractionType::GlobalSend => {
-                    phi[n + 1] += M::EF::from_base(mult) * perm_row[col_idx];
+                    phi[n + 1] += M::EF::from_base(mult) * perm_row[m];
                 }
                 InteractionType::LocalReceive | InteractionType::GlobalReceive => {
-                    phi[n + 1] -= M::EF::from_base(mult) * perm_row[col_idx];
+                    phi[n + 1] -= M::EF::from_base(mult) * perm_row[m];
                 }
             }
         }
@@ -177,16 +171,13 @@ pub fn generate_permutation_trace<F: Field, M: Machine<F = F>, C: Chip<M>>(
     perm
 }
 
-pub fn eval_permutation_constraints<
+pub fn eval_permutation_constraints<F, M, C, AB>(chip: &C, builder: &mut AB, cumulative_sum: AB::EF)
+where
     F: PrimeField,
     M: Machine<F = F>,
     C: Chip<M>,
     AB: ValidaAirBuilder<Machine = M, F = F>,
->(
-    chip: &C,
-    builder: &mut AB,
-    cumulative_sum: AB::EF,
-) {
+{
     let rand_elems = builder.permutation_randomness().to_vec();
 
     let main = builder.main();
@@ -201,16 +192,13 @@ pub fn eval_permutation_constraints<
     let phi_next = perm_next[perm_width - 1].clone();
 
     let all_interactions = chip.all_interactions(builder.machine());
-    let map = chip.interaction_map(builder.machine());
 
-    let (alphas_local, alphas_global) = generate_rlc_elements(chip, &rand_elems);
+    let (alphas_local, alphas_global) = generate_rlc_elements(builder.machine(), chip, &rand_elems);
     let betas = rand_elems[2].powers();
 
     let lhs = phi_next - phi_local.clone();
     let mut rhs = AB::ExprEF::from_base(AB::Expr::ZERO);
     for (m, (interaction, interaction_type)) in all_interactions.iter().enumerate() {
-        let col_idx = map[&interaction.argument_index][m];
-
         // Reciprocal constraints
         let mut rlc = AB::ExprEF::from_base(AB::Expr::ZERO);
         for (field, beta) in interaction.fields.iter().zip(betas.clone()) {
@@ -222,7 +210,7 @@ pub fn eval_permutation_constraints<
         } else {
             rlc = rlc + alphas_global[interaction.argument_index()];
         }
-        builder.assert_one_ext::<AB::ExprEF, AB::ExprEF>(rlc * perm_local[col_idx]);
+        builder.assert_one_ext::<AB::ExprEF, AB::ExprEF>(rlc * perm_local[m]);
 
         // Build the RHS of the permutation constraint
         let mult = interaction
@@ -230,10 +218,10 @@ pub fn eval_permutation_constraints<
             .apply::<AB::Expr, AB::Var>(&[], main_local);
         match interaction_type {
             InteractionType::LocalSend | InteractionType::GlobalSend => {
-                rhs += AB::ExprEF::from(mult) * perm_local[col_idx];
+                rhs += AB::ExprEF::from_base(mult) * perm_local[m];
             }
             InteractionType::LocalReceive | InteractionType::GlobalReceive => {
-                rhs -= AB::ExprEF::from(mult) * perm_local[col_idx];
+                rhs -= AB::ExprEF::from_base(mult) * perm_local[m];
             }
         }
     }
@@ -243,29 +231,34 @@ pub fn eval_permutation_constraints<
         .when_transition()
         .assert_eq_ext::<AB::ExprEF, _, _>(lhs, rhs);
     builder.when_first_row().assert_zero_ext(phi_local);
-    builder
-        .when_last_row()
-        .assert_eq_ext(perm_local[0].clone(), AB::ExprEF::from(cumulative_sum));
+    builder.when_last_row().assert_eq_ext(
+        perm_local.last().unwrap().clone(),
+        AB::ExprEF::from(cumulative_sum),
+    );
 }
 
-fn generate_rlc_elements<
-    C: Chip<M>,
-    M: Machine,
+fn generate_rlc_elements<F, EF, M>(
+    machine: &M,
+    chip: &dyn Chip<M>,
+    random_elements: &[EF],
+) -> (Vec<EF>, Vec<EF>)
+where
     F: AbstractField,
     EF: AbstractExtensionField<F>,
->(
-    chip: &C,
-    random_elements: &[EF],
-) -> (Vec<EF>, Vec<EF>) {
+    M: Machine,
+{
     let alphas_local = random_elements[0]
         .powers()
         .skip(1)
         .take(
             chip.local_sends()
-                .iter()
+                .into_iter()
+                .chain(chip.local_receives())
+                .into_iter()
                 .map(|interaction| interaction.argument_index())
                 .max()
-                .unwrap(),
+                .unwrap_or(0)
+                + 1,
         )
         .collect::<Vec<_>>();
 
@@ -273,11 +266,14 @@ fn generate_rlc_elements<
         .powers()
         .skip(1)
         .take(
-            chip.local_sends()
-                .iter()
+            chip.global_sends(machine)
+                .into_iter()
+                .chain(chip.global_receives(machine))
+                .into_iter()
                 .map(|interaction| interaction.argument_index())
                 .max()
-                .unwrap(),
+                .unwrap_or(0)
+                + 1,
         )
         .collect::<Vec<_>>();
 
@@ -286,12 +282,11 @@ fn generate_rlc_elements<
 
 // TODO: Use Var and Expr type bounds in place of concrete fields so that
 // this function can be used in `eval_permutation_constraints`.
-fn reduce_row<F: Field, EF: ExtensionField<F>>(
-    row: &[F],
-    fields: &[VirtualPairCol<F>],
-    alpha: EF,
-    betas: Powers<EF>,
-) -> EF {
+fn reduce_row<F, EF>(row: &[F], fields: &[VirtualPairCol<F>], alpha: EF, betas: Powers<EF>) -> EF
+where
+    F: Field,
+    EF: ExtensionField<F>,
+{
     let mut rlc = EF::ZERO;
     for (columns, beta) in fields.iter().zip(betas) {
         rlc += beta * columns.apply::<F, F>(&[], row)
