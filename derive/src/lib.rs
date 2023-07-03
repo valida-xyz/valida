@@ -157,14 +157,22 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             let chip_name = chip.ident.as_ref().unwrap();
             quote! {
                 #[cfg(debug_assertions)]
-                ::valida_machine::__internal::evaluate_constraints(
+                ::valida_machine::__internal::check_constraints(
                     self, self.#chip_name(), &traces[#n].0, &traces[#n].1);
+
+                // TODO: Can we avoid cloning traces?
+                ::valida_machine::__internal::prove::<Self, _, SC>(
+                    self, config, self.#chip_name(), &mut challenger, traces[#n].0.clone(),
+                    traces[#n].1.clone());
             }
         })
         .collect::<TokenStream2>();
 
     quote! {
-        fn prove(&self) {
+        fn prove<SC>(&self, config: &SC)
+        where
+            SC: ::valida_machine::config::StarkConfig<Val = Self::F, Challenge = Self::EF>,
+        {
             // TODO: Get random elements from verifier
             let mut rand_elems = alloc::vec::Vec::new();
             for _ in 0..3 {
@@ -176,9 +184,12 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
 
             let traces = chips.into_par_iter().map(|chip| {
                 let main = chip.generate_trace(self);
-                let perm = ::valida_machine::chip::generate_permutation_trace(self, *chip, &main, rand_elems.clone());
+                let perm = ::valida_machine::chip::generate_permutation_trace(
+                    self, *chip, &main, rand_elems.clone());
                 (main, perm)
             }).collect::<alloc::vec::Vec<_>>();
+
+            let mut challenger = config.challenger();
 
             #prove_starks
         }

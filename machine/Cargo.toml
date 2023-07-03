@@ -7,6 +7,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 p3-air = { path = "../../Plonky3/air" }
 p3-commit = { path = "../../Plonky3/commit" }
+p3-challenger = { path = "../../Plonky3/challenger" }
 p3-field = { path = "../../Plonky3/field" }
 p3-matrix = { path = "../../Plonky3/matrix" }
 p3-maybe-rayon = { path = "../../Plonky3/maybe-rayon" }

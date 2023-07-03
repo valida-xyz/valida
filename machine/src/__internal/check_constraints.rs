@@ -1,14 +1,14 @@
 use crate::__internal::DebugConstraintBuilder;
 use crate::chip::eval_permutation_constraints;
 use crate::{Chip, Machine};
-use core::marker::PhantomData;
 use p3_air::{Air, TwoRowMatrixView};
 use p3_field::AbstractField;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_matrix::{Matrix, MatrixRows};
 use p3_maybe_rayon::{MaybeIntoParIter, ParallelIterator};
 
-pub fn evaluate_constraints<A, M>(
+/// Check that all constraints vanish on the subgroup.
+pub fn check_constraints<A, M>(
     machine: &M,
     air: &A,
     main: &RowMajorMatrix<M::F>,
@@ -24,12 +24,13 @@ pub fn evaluate_constraints<A, M>(
     let cumulative_sum = *perm.row(perm.height() - 1).last().unwrap();
 
     // Check that constraints are satisfied
-    (0..main.height()).into_par_iter().for_each(|n| {
-        let main_local = main.row(n);
-        let main_next = main.row((n + 1) % main.height());
+    (0..main.height()).into_par_iter().for_each(|i| {
+        let i_next = (i + 1) % main.height();
 
-        let perm_local = perm.row(n);
-        let perm_next = perm.row((n + 1) % main.height());
+        let main_local = main.row(i);
+        let main_next = main.row(i_next);
+        let perm_local = perm.row(i);
+        let perm_next = perm.row(i_next);
 
         let mut builder = DebugConstraintBuilder {
             machine,
@@ -41,16 +42,15 @@ pub fn evaluate_constraints<A, M>(
                 local: &perm_local,
                 next: &perm_next,
             },
-            rand_elems: &[M::EF::TWO; 3], // FIXME: implement
+            perm_challenges: &[M::EF::TWO; 3], // FIXME: implement
             is_first_row: M::F::ZERO,
             is_last_row: M::F::ZERO,
             is_transition: M::F::ONE,
-            _phantom_f: PhantomData,
         };
-        if n == 0 {
+        if i == 0 {
             builder.is_first_row = M::F::ONE;
         }
-        if n == main.height() - 1 {
+        if i == main.height() - 1 {
             builder.is_last_row = M::F::ONE;
             builder.is_transition = M::F::ZERO;
         }

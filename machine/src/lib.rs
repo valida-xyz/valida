@@ -11,6 +11,7 @@ use alloc::vec::Vec;
 pub use crate::core::Word;
 pub use chip::{BusArgument, Chip, Interaction, InteractionType, ValidaAirBuilder};
 
+use crate::config::StarkConfig;
 pub use p3_field::{
     AbstractExtensionField, AbstractField, ExtensionField, Field, PrimeField, PrimeField32,
     PrimeField64,
@@ -98,7 +99,10 @@ pub struct PublicMemory<F> {
 pub trait Machine {
     type F: PrimeField64;
     type EF: ExtensionField<Self::F>;
+
     fn run(&mut self, program: ProgramROM<i32>, public_memory: PublicMemory<u8>);
-    fn prove(&self);
+    fn prove<SC>(&self, config: &SC)
+    where
+        SC: StarkConfig<Val = Self::F, Challenge = Self::EF>;
     fn verify();
 }
