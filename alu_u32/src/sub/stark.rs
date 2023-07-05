@@ -1,7 +1,6 @@
 use super::columns::Sub32Cols;
 use super::{Sub32Chip, SUB32_OPCODE};
 use core::borrow::Borrow;
-use valida_bus::MachineWithGeneralBus;
 
 use p3_air::{Air, AirBuilder};
 use p3_field::PrimeField;

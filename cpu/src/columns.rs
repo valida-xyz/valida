@@ -111,7 +111,6 @@ const fn make_col_map() -> CpuCols<usize> {
 }
 
 mod tests {
-    use p3_field::AbstractField;
     type F = p3_mersenne_31::Mersenne31;
 
     #[test]

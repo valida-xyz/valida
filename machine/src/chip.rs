@@ -1,5 +1,4 @@
 use crate::Machine;
-use alloc::collections::BTreeMap;
 use alloc::vec;
 use alloc::vec::Vec;
 use valida_util::batch_multiplicative_inverse;
@@ -7,7 +6,6 @@ use valida_util::batch_multiplicative_inverse;
 use p3_air::{AirBuilder, PermutationAirBuilder, VirtualPairCol};
 use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Powers, PrimeField};
 use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRows};
-use p3_maybe_rayon::*;
 
 pub trait Chip<M: Machine>: Sync {
     /// Generate the main trace for the chip given the provided machine.
