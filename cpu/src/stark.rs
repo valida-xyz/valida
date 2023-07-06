@@ -67,6 +67,7 @@ impl CpuChip {
         let is_beq = local.opcode_flags.is_beq;
         let is_bne = local.opcode_flags.is_bne;
         let is_imm32 = local.opcode_flags.is_imm32;
+        let is_advice = local.opcode_flags.is_advice;
         let is_imm_op = local.opcode_flags.is_imm_op;
         let is_bus_op = local.opcode_flags.is_bus_op;
         let is_bus_op_with_mem = local.opcode_flags.is_bus_op_with_mem;
@@ -159,7 +160,9 @@ impl CpuChip {
     ) where
         AB: AirBuilder,
     {
-        let should_increment_pc = local.opcode_flags.is_imm32 + local.opcode_flags.is_bus_op;
+        let should_increment_pc = local.opcode_flags.is_imm32
+            + local.opcode_flags.is_bus_op
+            + local.opcode_flags.is_advice;
         let incremented_pc = local.pc + AB::F::ONE;
         builder
             .when_transition()
