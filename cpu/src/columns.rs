@@ -116,6 +116,7 @@ mod tests {
     #[test]
     fn aligned_borrow() {
         use super::*;
+        use p3_field::AbstractField;
 
         let mut row = [F::ZERO; NUM_CPU_COLS];
         let mut cols: &mut CpuCols<F> = unsafe { transmute(&mut row) };

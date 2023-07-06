@@ -138,10 +138,11 @@ where
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
         let is_read: VirtualPairCol<M::F> = VirtualPairCol::single_main(MEM_COL_MAP.is_read);
+        let clk = VirtualPairCol::single_main(MEM_COL_MAP.clk);
         let addr = VirtualPairCol::single_main(MEM_COL_MAP.addr);
         let value = MEM_COL_MAP.value.0.map(VirtualPairCol::single_main);
 
-        let mut fields = vec![is_read, addr];
+        let mut fields = vec![is_read, clk, addr];
         fields.extend(value);
 
         let receive = Interaction {
