@@ -44,7 +44,7 @@ impl MemoryChip {
             builder
                 .when_transition()
                 .when(next.is_read)
-                .when_ne(next.addr, local.addr)
+                .when_ne(local.addr_not_equal, AB::Expr::ONE)
                 .assert_eq(value_next, value);
         }
         builder.when(next.is_read).assert_eq(local.addr, next.addr);
