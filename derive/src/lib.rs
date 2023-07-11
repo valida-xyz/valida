@@ -224,7 +224,14 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
 
 fn verify_method(_chips: &[&Field]) -> TokenStream2 {
     quote! {
-        fn verify() {}
+        fn verify<SC>(
+            proof: &::valida_machine::proof::MachineProof<SC>,
+        ) -> core::result::Result<(), ()>
+        where
+            SC: ::valida_machine::config::StarkConfig<Val = Self::F, Challenge = Self::EF>
+        {
+            Ok(()) // TODO
+        }
     }
 }
 
