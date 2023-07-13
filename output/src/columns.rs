@@ -6,11 +6,22 @@ use valida_util::indices_arr;
 
 #[derive(AlignedBorrow, Default)]
 pub struct OutputCols<T> {
-    /// Memory address
-    pub addr: T,
+    /// CPU clock
+    pub clk: T,
 
-    /// Memory cell
-    pub value: Word<T>,
+    /// Output byte value
+    pub value: T,
+
+    /// Whether output operation is real write, not a dummy
+    pub is_real: T,
+
+    /// clk' - clk
+    pub diff: T,
+
+    /// Increment-by-one counter for local range check
+    pub counter: T,
+    /// Multiplicities for local range check
+    pub counter_mult: T,
 
     pub opcode: T,
 }

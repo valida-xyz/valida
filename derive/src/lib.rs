@@ -114,16 +114,13 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
         .collect::<TokenStream2>();
 
     quote! {
-        fn run(&mut self, program: ProgramROM<i32>, public_memory: PublicMemory<u8>) {
+        fn run(&mut self, program: ProgramROM<i32>) {
             loop {
                 // Fetch
                 let pc = self.cpu().pc;
                 let instruction = program.get_instruction(pc);
                 let opcode = instruction.opcode;
                 let ops = instruction.operands;
-
-                // Extend dynamic memory with public memory
-                self.mem_mut().cells.extend(public_memory.cells.iter());
 
                 // A zero opcode signals the end of the program
                 if opcode == 0 {

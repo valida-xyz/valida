@@ -16,7 +16,6 @@ use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
 use valida_machine::{
     AbstractExtensionField, AbstractField, BusArgument, Chip, Instruction, Machine, ProgramROM,
-    PublicMemory,
 };
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_range::{MachineWithRangeChip, RangeCheckerChip};
@@ -288,11 +287,10 @@ mod tests {
 
         let mut machine = BasicMachine::default();
         let rom = ProgramROM::new(program);
-        let public_mem = PublicMemory::default();
         machine.cpu_mut().fp = 0x1000;
         machine.cpu_mut().save_register_state(); // TODO: Initial register state should be saved
                                                  // automatically by the machine, not manually here
-        machine.run(rom, public_mem);
+        machine.run(rom);
         machine.prove();
 
         assert_eq!(machine.cpu().clock, 191);
@@ -325,9 +323,8 @@ mod tests {
 
         let mut machine = BasicMachine::default();
         let rom = ProgramROM::new(program);
-        let public_mem = PublicMemory::default();
         machine.cpu_mut().fp = 0x1000;
-        machine.run(rom, public_mem);
+        machine.run(rom);
         //machine.prove();
 
         assert_eq!(machine.cpu().pc, 2);

@@ -16,10 +16,13 @@ where
         let local: &OutputCols<AB::Var> = main.row(0).borrow();
         let next: &OutputCols<AB::Var> = main.row(1).borrow();
 
-        // Address should increment by 1
+        // Range check constraints
         builder
             .when_transition()
-            .assert_eq(local.addr + AB::F::ONE, next.addr);
+            .assert_eq(local.diff, next.clk - local.clk);
+        builder
+            .when_transition()
+            .assert_eq(next.counter, local.counter + AB::Expr::from(AB::F::ONE));
 
         // Bus opcode constraint
         builder.assert_eq(

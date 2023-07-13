@@ -5,7 +5,6 @@
 extern crate alloc;
 extern crate self as valida_machine;
 
-use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 
 pub use crate::core::Word;
@@ -90,15 +89,10 @@ impl<F> ProgramROM<F> {
     }
 }
 
-#[derive(Default)]
-pub struct PublicMemory<F> {
-    pub cells: BTreeMap<u32, Word<F>>,
-}
-
 pub trait Machine {
     type F: PrimeField64;
     type EF: ExtensionField<Self::F>;
-    fn run(&mut self, program: ProgramROM<i32>, public_memory: PublicMemory<u8>);
+    fn run(&mut self, program: ProgramROM<i32>);
     fn prove(&self);
     fn verify();
 }
