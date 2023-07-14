@@ -308,7 +308,7 @@ mod tests {
         type Challenge = Val; // TODO
         type PackedChallenge = Challenge; // TODO
 
-        let mds = NaiveMDSMatrix::<Val, 8>::new([[Val::ZERO; 8]; 8]); // TODO: Use a real MDS matrix
+        let mds = NaiveMDSMatrix::<Val, 8>::new([[Val::ONE; 8]; 8]); // TODO: Use a real MDS matrix
         type Perm = Poseidon<Val, NaiveMDSMatrix<Val, 8>, 8, 7>;
         let perm = Perm::new_from_rng(5, 5, mds, &mut thread_rng()); // TODO: Use deterministic RNG
         let h4 = PaddingFreeSponge::<Val, Perm, { 4 + 4 }>::new(perm.clone());

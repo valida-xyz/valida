@@ -150,6 +150,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             }
         })
         .collect::<TokenStream2>();
+
     let prove_starks = chips
         .iter()
         .enumerate()
@@ -157,48 +158,80 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             let chip_name = chip.ident.as_ref().unwrap();
             quote! {
                 #[cfg(debug_assertions)]
-                ::valida_machine::__internal::check_constraints(
-                    self, self.#chip_name(), &traces[#n].0, &traces[#n].1);
+                check_constraints(
+                    self, self.#chip_name(), &main_traces[#n], &perm_traces[#n], &perm_challenges);
 
-                // TODO: Can we avoid cloning traces?
-                ::valida_machine::__internal::prove::<Self, _, SC>(
-                    self, config, self.#chip_name(), &mut challenger, traces[#n].0.clone(),
-                    traces[#n].1.clone());
+                chip_proofs.push(prove(self, config, self.#chip_name(), &mut challenger));
             }
         })
         .collect::<TokenStream2>();
 
     quote! {
-        fn prove<SC>(&self, config: &SC)
+        fn prove<SC>(&self, config: &SC) -> ::valida_machine::proof::MachineProof<SC>
         where
             SC: ::valida_machine::config::StarkConfig<Val = Self::F, Challenge = Self::EF>,
         {
-            // TODO: Get random elements from verifier
-            let mut rand_elems = alloc::vec::Vec::new();
-            for _ in 0..3 {
-                rand_elems.push(Self::EF::from_base(Self::F::TWO));
-            }
+            use ::valida_machine::__internal::*;
+            use ::valida_machine::__internal::p3_challenger::Challenger;
+            use ::valida_machine::__internal::p3_commit::{PCS, MultivariatePCS};
+            use ::valida_machine::__internal::p3_matrix::dense::RowMajorMatrix;
+            use ::valida_machine::chip::generate_permutation_trace;
+            use ::valida_machine::proof::MachineProof;
+            use alloc::vec;
+            use alloc::vec::Vec;
+            use alloc::boxed::Box;
 
-            let mut chips: alloc::vec::Vec<alloc::boxed::Box<&dyn Chip<Self>>> = alloc::vec::Vec::new();
+            let mut chips: Vec<Box<&dyn Chip<Self>>> = Vec::new();
             #push_chips
-
-            let traces = chips.into_par_iter().map(|chip| {
-                let main = chip.generate_trace(self);
-                let perm = ::valida_machine::chip::generate_permutation_trace(
-                    self, *chip, &main, rand_elems.clone());
-                (main, perm)
-            }).collect::<alloc::vec::Vec<_>>();
 
             let mut challenger = config.challenger();
 
+            let main_traces = chips.par_iter().map(|chip| {
+                chip.generate_trace(self)
+            }).collect::<Vec<_>>();
+
+            // TODO: Want to avoid cloning, but this leads to lifetime issues...
+            // let main_trace_views = main_traces.iter().map(|trace| trace.as_view()).collect();
+
+            let (main_commit, main_data) = config.pcs().commit_batches(main_traces.clone());
+            // TODO: Have challenger observe main_commit.
+
+            let mut perm_challenges = Vec::new();
+            for _ in 0..3 {
+                perm_challenges.push(challenger.random_ext_element());
+            }
+
+            let perm_traces = chips.into_par_iter().enumerate().map(|(i, chip)| {
+                generate_permutation_trace(self, *chip, &main_traces[i], perm_challenges.clone())
+            }).collect::<Vec<_>>();
+
+            // TODO: Want to avoid cloning, but this leads to lifetime issues...
+            // let perm_trace_views = perm_traces.iter().map(|trace| trace.as_view()).collect();
+
+            let (perm_commit, perm_data) = config.pcs().commit_batches(perm_traces.clone());
+            // TODO: Have challenger observe perm_commit.
+
+            let opening_points = &[vec![Self::EF::TWO], vec![Self::EF::TWO]]; // TODO
+            let (openings, opening_proof) = config.pcs().open_multi_batches::<Self::EF, SC::Chal>(
+                &[&main_data, &perm_data], opening_points, &mut challenger);
+
+            let mut chip_proofs = vec![];
             #prove_starks
+            MachineProof { opening_proof, chip_proofs }
         }
     }
 }
 
 fn verify_method(_chips: &[&Field]) -> TokenStream2 {
     quote! {
-        fn verify() {}
+        fn verify<SC>(
+            proof: &::valida_machine::proof::MachineProof<SC>,
+        ) -> core::result::Result<(), ()>
+        where
+            SC: ::valida_machine::config::StarkConfig<Val = Self::F, Challenge = Self::EF>
+        {
+            Ok(()) // TODO
+        }
     }
 }
 

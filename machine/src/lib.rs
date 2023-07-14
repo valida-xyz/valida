@@ -12,6 +12,7 @@ pub use crate::core::Word;
 pub use chip::{BusArgument, Chip, Interaction, InteractionType, ValidaAirBuilder};
 
 use crate::config::StarkConfig;
+use crate::proof::MachineProof;
 pub use p3_field::{
     AbstractExtensionField, AbstractField, ExtensionField, Field, PrimeField, PrimeField32,
     PrimeField64,
@@ -101,8 +102,12 @@ pub trait Machine {
     type EF: ExtensionField<Self::F>;
 
     fn run(&mut self, program: ProgramROM<i32>, public_memory: PublicMemory<u8>);
-    fn prove<SC>(&self, config: &SC)
+
+    fn prove<SC>(&self, config: &SC) -> MachineProof<SC>
     where
         SC: StarkConfig<Val = Self::F, Challenge = Self::EF>;
-    fn verify();
+
+    fn verify<SC>(proof: &MachineProof<SC>) -> Result<(), ()>
+    where
+        SC: StarkConfig<Val = Self::F, Challenge = Self::EF>;
 }

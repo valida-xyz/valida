@@ -35,23 +35,24 @@ impl MemoryChip {
             .assert_eq(local.diff, next.addr - local.addr);
         builder
             .when_transition()
-            .when_ne(local.addr_not_equal, AB::Expr::from(AB::F::ONE))
+            .when_ne(local.addr_not_equal, AB::Expr::ONE)
             .assert_eq(local.diff, next.clk - local.clk);
 
         // Read/write
         // TODO: Record \sum_i (value'_i - value_i)^2 in trace and convert to a single constraint?
         for (value_next, value) in next.value.into_iter().zip(local.value.into_iter()) {
-            let is_value_unchanged =
-                (local.addr - next.addr + AB::Expr::from(AB::F::ONE)) * (value_next - value);
             builder
                 .when_transition()
                 .when(next.is_read)
-                .assert_zero(is_value_unchanged);
+                .when_ne(local.addr_not_equal, AB::Expr::ONE)
+                .assert_eq(value_next, value);
         }
+        builder.when(next.is_read).assert_eq(local.addr, next.addr);
 
-        // Counter
+        // Counter increments from zero.
+        builder.when_first_row().assert_zero(local.counter);
         builder
             .when_transition()
-            .assert_eq(next.counter, local.counter + AB::Expr::from(AB::F::ONE));
+            .assert_eq(next.counter, local.counter + AB::Expr::ONE);
     }
 }

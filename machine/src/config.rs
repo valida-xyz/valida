@@ -2,6 +2,7 @@ use core::marker::PhantomData;
 use p3_challenger::Challenger;
 use p3_commit::MultivariatePCS;
 use p3_field::{AbstractExtensionField, ExtensionField, Field, PackedField, PrimeField64};
+use p3_matrix::dense::RowMajorMatrix;
 
 pub trait StarkConfig {
     /// The field over which trace data is encoded.
@@ -13,7 +14,7 @@ pub trait StarkConfig {
         + AbstractExtensionField<<Self::Val as Field>::Packing>;
 
     /// The polynomial commitment scheme used.
-    type PCS: MultivariatePCS<Self::Val>;
+    type PCS: MultivariatePCS<Self::Val, RowMajorMatrix<Self::Val>>;
 
     /// The `Challenger` (Fiat-Shamir) implementation used.
     type Chal: Challenger<Self::Val>;
@@ -53,7 +54,7 @@ where
     Val: PrimeField64,
     Challenge: ExtensionField<Val>,
     PackedChallenge: PackedField<Scalar = Challenge> + AbstractExtensionField<Val::Packing>,
-    PCS: MultivariatePCS<Val>,
+    PCS: MultivariatePCS<Val, RowMajorMatrix<Val>>,
     Chal: Challenger<Val> + Clone,
 {
     type Val = Val;
