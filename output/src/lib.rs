@@ -3,7 +3,10 @@ use core::iter;
 use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, BusArgument, Chip, Instruction, Interaction, Operands, Word};
+use valida_machine::{
+    instructions, BusArgument, Chip, Instruction, Interaction, Operands, Word, CPU_MEMORY_CHANNELS,
+    MEMORY_CELL_BYTES,
+};
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
@@ -26,7 +29,7 @@ where
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let table_len = self.values.len() as u32;
-        let rows = self
+        let mut rows = self
             .values
             .as_slice()
             .par_windows(2)
@@ -58,9 +61,9 @@ where
                     .collect::<Vec<_>>()
                     .windows(2)
                     .enumerate()
-                    .for_each(|(n, window)| {
+                    .for_each(|(n, clks)| {
                         let mut cols: &mut OutputCols<M::F> = unsafe { transmute(&mut rows[n]) };
-                        cols.diff = window[1] - window[0];
+                        cols.diff = clks[1] - clks[0];
                     });
 
                 rows
@@ -68,7 +71,13 @@ where
             .collect::<Vec<_>>()
             .concat();
 
-        // TODO: Add final row
+        // Add final row
+        let mut last_row = [M::F::ZERO; NUM_OUTPUT_COLS];
+        let mut cols: &mut OutputCols<M::F> = unsafe { transmute(&mut last_row) };
+        cols.is_real = M::F::ONE;
+        cols.clk = M::F::from_canonical_u32(self.values.last().unwrap().0);
+        cols.value = M::F::from_canonical_u8(self.values.last().unwrap().1);
+        rows.push(last_row);
 
         RowMajorMatrix::new(rows.concat(), NUM_OUTPUT_COLS)
     }
@@ -94,10 +103,15 @@ where
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
         let opcode = VirtualPairCol::single_main(OUTPUT_COL_MAP.opcode);
         let clk = VirtualPairCol::single_main(OUTPUT_COL_MAP.clk);
-        let value = VirtualPairCol::single_main(OUTPUT_COL_MAP.value);
-        // FIXME: We need to insert dummy "zero" fields here (and in the proper order) so that
-        // the RLC can be computed correctly
-        let fields = vec![opcode, clk, value];
+
+        let mut values = (0..CPU_MEMORY_CHANNELS * MEMORY_CELL_BYTES)
+            .map(|_| VirtualPairCol::constant(M::F::ZERO))
+            .collect::<Vec<_>>();
+        values[MEMORY_CELL_BYTES - 1] = VirtualPairCol::single_main(OUTPUT_COL_MAP.value);
+
+        let mut fields = vec![opcode];
+        fields.extend(values);
+        fields.push(clk);
 
         let receive = Interaction {
             fields,
