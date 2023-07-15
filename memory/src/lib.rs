@@ -92,11 +92,14 @@ where
         let mut ops = self
             .operations
             .par_iter()
-            .flat_map(|(clk, ops)| {
+            .map(|(clk, ops)| {
                 ops.iter()
                     .map(|op| (*clk, *op))
                     .collect::<Vec<(u32, Operation)>>()
             })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .flatten()
             .collect::<Vec<_>>();
 
         // Sort first by addr, then by clk

@@ -38,10 +38,9 @@ where
             .operations
             .par_iter()
             .map(|op| self.op_to_row(op))
-            .flatten()
             .collect::<Vec<_>>();
 
-        RowMajorMatrix::new(rows, NUM_ADD_COLS)
+        RowMajorMatrix::new(rows.concat(), NUM_ADD_COLS)
     }
 
     fn global_sends(&self, machine: &M) -> Vec<Interaction<M::F>> {
