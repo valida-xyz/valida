@@ -72,7 +72,7 @@ where
         self.main
     }
 
-    fn assert_zero<I: Into<Self::Expr>>(&mut self, x: I) {
+    fn assert_zero<I: Into<Self::Expr>>(&mut self, _x: I) {
         // TODO
     }
 }

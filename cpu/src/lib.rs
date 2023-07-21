@@ -121,7 +121,7 @@ impl CpuChip {
         M: MachineWithMemoryChip,
     {
         let mut row = [F::ZERO; NUM_CPU_COLS];
-        let mut cols: &mut CpuCols<F> = unsafe { transmute(&mut row) };
+        let cols: &mut CpuCols<F> = unsafe { transmute(&mut row) };
 
         cols.pc = F::from_canonical_u32(self.registers[clk].pc);
         cols.fp = F::from_canonical_u32(self.registers[clk].fp);

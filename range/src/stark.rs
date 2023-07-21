@@ -6,7 +6,7 @@ impl<AB> Air<AB> for RangeCheckerChip
 where
     AB: AirBuilder,
 {
-    fn eval(&self, builder: &mut AB) {
+    fn eval(&self, _builder: &mut AB) {
         // TODO
     }
 }

@@ -160,7 +160,7 @@ where
 impl MemoryChip {
     fn op_to_row<F: PrimeField>(&self, n: usize, clk: usize, op: Operation) -> [F; NUM_MEM_COLS] {
         let mut row = [F::ZERO; NUM_MEM_COLS];
-        let mut cols: &mut MemoryCols<F> = unsafe { transmute(&mut row) };
+        let cols: &mut MemoryCols<F> = unsafe { transmute(&mut row) };
 
         cols.clk = F::from_canonical_usize(clk);
         cols.counter = F::from_canonical_usize(n);
