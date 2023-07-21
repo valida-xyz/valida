@@ -29,16 +29,19 @@ pub struct Add32Chip {
     pub operations: Vec<Operation>,
 }
 
-impl<M> Chip<M> for Add32Chip
+impl<F, M> Chip<M> for Add32Chip
 where
-    M: MachineWithGeneralBus + MachineWithRangeBus8,
+    F: PrimeField,
+    M: MachineWithGeneralBus<F = F> + MachineWithRangeBus8,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
-        let rows = self
+        let mut rows = self
             .operations
             .par_iter()
             .map(|op| self.op_to_row(op))
             .collect::<Vec<_>>();
+
+        Self::pad_to_power_of_two(&mut rows);
 
         RowMajorMatrix::new(rows.concat(), NUM_ADD_COLS)
     }
@@ -60,7 +63,7 @@ where
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
-        let opcode = VirtualPairCol::single_main(ADD_COL_MAP.opcode);
+        let opcode = VirtualPairCol::constant(M::F::from_canonical_u32(ADD32_OPCODE));
         let input_1 = ADD_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = ADD_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
         let output = ADD_COL_MAP.output.0.map(VirtualPairCol::single_main);
@@ -72,7 +75,7 @@ where
 
         let receive = Interaction {
             fields,
-            count: VirtualPairCol::one(),
+            count: VirtualPairCol::single_main(ADD_COL_MAP.is_real),
             argument_index: machine.general_bus(),
         };
         vec![receive]
@@ -86,8 +89,6 @@ impl Add32Chip {
     {
         let mut row = [F::ZERO; NUM_ADD_COLS];
         let cols: &mut Add32Cols<F> = unsafe { transmute(&mut row) };
-
-        cols.opcode = F::from_canonical_u32(ADD32_OPCODE);
 
         match op {
             Operation::Add32(a, b, c) => {
@@ -111,6 +112,14 @@ impl Add32Chip {
             }
         }
         row
+    }
+
+    fn pad_to_power_of_two<F: PrimeField>(rows: &mut Vec<[F; NUM_ADD_COLS]>) {
+        let len = rows.len();
+        let next_power_of_two = len.next_power_of_two();
+
+        let padded_row = [F::ZERO; NUM_ADD_COLS];
+        rows.resize(next_power_of_two, padded_row);
     }
 }
 

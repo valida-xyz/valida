@@ -47,6 +47,14 @@ where
             local.instruction.operands.c(),
             reduce::<AB>(&base, local.read_value_2()),
         );
+
+        // "Stop" constraints (to check that program execution was not stopped prematurely)
+        builder
+            .when(local.opcode_flags.is_stop)
+            .assert_eq(next.pc, local.pc);
+        builder
+            .when_last_row()
+            .assert_one(local.opcode_flags.is_stop);
     }
 }
 

@@ -55,6 +55,7 @@ pub struct OpcodeFlagCols<T> {
     pub is_jalv: T,
     pub is_imm32: T,
     pub is_advice: T,
+    pub is_stop: T,
 }
 
 #[derive(Default)]

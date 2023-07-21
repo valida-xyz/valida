@@ -118,6 +118,8 @@ where
         // Compute address difference values
         Self::compute_address_diffs(ops, &mut rows);
 
+        Self::pad_to_power_of_two(&mut rows);
+
         RowMajorMatrix::new(rows.concat(), NUM_MEM_COLS)
     }
 
@@ -261,5 +263,18 @@ impl MemoryChip {
                 rows[n][MEM_COL_MAP.addr_not_equal] = F::ONE;
             }
         }
+    }
+
+    fn pad_to_power_of_two<F: PrimeField>(rows: &mut Vec<[F; NUM_MEM_COLS]>) {
+        let len = rows.len();
+        let next_power_of_two = len.next_power_of_two();
+
+        let mut counter = rows.last().unwrap()[MEM_COL_MAP.counter];
+        rows.resize_with(next_power_of_two, || {
+            let mut padded_row = [F::ZERO; NUM_MEM_COLS];
+            padded_row[MEM_COL_MAP.counter] = counter;
+            counter += F::ONE;
+            padded_row
+        });
     }
 }

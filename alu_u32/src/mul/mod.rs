@@ -29,21 +29,25 @@ pub struct Mul32Chip {
     pub operations: Vec<Operation>,
 }
 
-impl<M> Chip<M> for Mul32Chip
+impl<F, M> Chip<M> for Mul32Chip
 where
-    M: MachineWithGeneralBus,
+    F: PrimeField,
+    M: MachineWithGeneralBus<F = F>,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
-        let rows = self
+        let mut rows = self
             .operations
             .par_iter()
             .map(|op| self.op_to_row(op))
             .collect::<Vec<_>>();
+
+        Self::pad_to_power_of_two(&mut rows);
+
         RowMajorMatrix::new(rows.concat(), NUM_MUL_COLS)
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
-        let opcode = VirtualPairCol::single_main(MUL_COL_MAP.opcode);
+        let opcode = VirtualPairCol::constant(M::F::from_canonical_u32(MUL32_OPCODE));
         let input_1 = MUL_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = MUL_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
         let output = MUL_COL_MAP.output.0.map(VirtualPairCol::single_main);
@@ -55,7 +59,7 @@ where
 
         let receive = Interaction {
             fields,
-            count: VirtualPairCol::one(),
+            count: VirtualPairCol::single_main(MUL_COL_MAP.is_real),
             argument_index: machine.general_bus(),
         };
         vec![receive]
@@ -83,6 +87,14 @@ impl Mul32Chip {
             }
         }
         row
+    }
+
+    fn pad_to_power_of_two<F: PrimeField>(rows: &mut Vec<[F; NUM_MUL_COLS]>) {
+        let len = rows.len();
+        let next_power_of_two = len.next_power_of_two();
+
+        let padded_row = [F::ZERO; NUM_MUL_COLS];
+        rows.resize(next_power_of_two, padded_row);
     }
 }
 

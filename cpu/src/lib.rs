@@ -36,6 +36,7 @@ pub enum Operation {
     BusWithMemory(Option<Word<u8>> /*imm*/),
     ReadAdvice,
     WriteAdvice,
+    Stop,
 }
 
 #[derive(Default)]
@@ -100,6 +101,9 @@ where
 
         // Set diff, diff_inv, and not_equal
         Self::compute_word_diffs(&mut rows);
+
+        // Pad to the next power of two
+        Self::pad_to_power_of_two(&mut rows);
 
         RowMajorMatrix::new(rows.concat(), NUM_CPU_COLS)
     }
@@ -200,6 +204,9 @@ impl CpuChip {
             Operation::ReadAdvice | Operation::WriteAdvice => {
                 cols.opcode_flags.is_advice = F::ONE;
             }
+            Operation::Stop => {
+                cols.opcode_flags.is_stop = F::ONE;
+            }
         }
 
         row
@@ -281,6 +288,17 @@ impl CpuChip {
         }
     }
 
+    fn pad_to_power_of_two<F: PrimeField>(rows: &mut Vec<[F; NUM_CPU_COLS]>) {
+        let len = rows.len();
+        let next_power_of_two = len.next_power_of_two();
+        let pc = rows.last().unwrap()[CPU_COL_MAP.pc];
+
+        let mut padded_row = [F::ZERO; NUM_CPU_COLS];
+        padded_row[CPU_COL_MAP.pc] = pc;
+        padded_row[CPU_COL_MAP.opcode_flags.is_stop] = F::ONE;
+        rows.resize(next_power_of_two, padded_row);
+    }
+
     fn set_imm_value<F: PrimeField>(&self, cols: &mut CpuCols<F>, imm: Option<Word<u8>>) {
         if let Some(imm) = imm {
             cols.opcode_flags.is_imm_op = F::ONE;
@@ -303,7 +321,8 @@ instructions!(
     BneInstruction,
     Imm32Instruction,
     ReadAdviceInstruction,
-    WriteAdviceInstruction
+    WriteAdviceInstruction,
+    StopInstruction
 );
 
 /// Non-deterministic instructions
@@ -537,6 +556,20 @@ where
         state
             .cpu_mut()
             .push_op(Operation::Imm32, <Self as Instruction<M>>::OPCODE, ops);
+    }
+}
+
+impl<M> Instruction<M> for StopInstruction
+where
+    M: MachineWithCpuChip,
+{
+    const OPCODE: u32 = 8;
+
+    fn execute(state: &mut M, ops: Operands<i32>) {
+        state.cpu_mut().pc = state.cpu().pc;
+        state
+            .cpu_mut()
+            .push_op(Operation::Stop, <Self as Instruction<M>>::OPCODE, ops);
     }
 }
 
