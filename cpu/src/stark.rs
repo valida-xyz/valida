@@ -1,14 +1,12 @@
 use crate::columns::CpuCols;
 use crate::CpuChip;
 use core::borrow::Borrow;
-use core::mem::MaybeUninit;
 use valida_machine::Word;
 
 use p3_air::{Air, AirBuilder};
 use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRows;
 
-#[allow(clippy::uninit_assumed_init)]
 impl<F, AB> Air<AB> for CpuChip
 where
     F: PrimeField,
@@ -19,10 +17,7 @@ where
         let local: &CpuCols<AB::Var> = main.row(0).borrow();
         let next: &CpuCols<AB::Var> = main.row(1).borrow();
 
-        let mut base: [AB::Expr; 4] = unsafe { MaybeUninit::uninit().assume_init() };
-        for (i, b) in [1 << 24, 1 << 16, 1 << 8, 1].into_iter().enumerate() {
-            base[i] = AB::Expr::from(AB::F::from_canonical_u32(b));
-        }
+        let base = [1 << 24, 1 << 16, 1 << 8, 1].map(AB::Expr::from_canonical_u32);
 
         self.eval_pc(builder, local, next, &base);
         self.eval_fp(builder, local, next, &base);
@@ -33,12 +28,12 @@ where
         builder.when_first_row().assert_zero(local.clk);
         builder
             .when_transition()
-            .assert_eq(local.clk + AB::Expr::from(AB::F::ONE), next.clk);
+            .assert_eq(local.clk + AB::Expr::ONE, next.clk);
         builder
             .when(local.opcode_flags.is_bus_op_with_mem)
             .assert_eq(local.clk, local.chip_channel.clk_or_zero);
         builder
-            .when(AB::Expr::from(AB::F::ONE) - local.opcode_flags.is_bus_op_with_mem)
+            .when(AB::Expr::ONE - local.opcode_flags.is_bus_op_with_mem)
             .assert_zero(local.chip_channel.clk_or_zero);
 
         // Immediate value constraints (TODO: we'd need to range check read_value_2 in
@@ -106,16 +101,10 @@ impl CpuChip {
             reduce::<AB>(base, local.read_value_1()),
         );
         builder
-            .when(
-                is_jalv + (AB::Expr::from(AB::F::ONE) - is_imm_op) * (is_beq + is_bne + is_bus_op),
-            )
+            .when(is_jalv + (AB::Expr::ONE - is_imm_op) * (is_beq + is_bne + is_bus_op))
             .assert_eq(local.read_addr_2(), addr_c);
         builder
-            .when(
-                is_load
-                    + is_jalv
-                    + (AB::Expr::from(AB::F::ONE) - is_imm_op) * (is_beq + is_bne + is_bus_op),
-            )
+            .when(is_load + is_jalv + (AB::Expr::ONE - is_imm_op) * (is_beq + is_bne + is_bus_op))
             .assert_one(local.read_2_used());
         builder
             .when(is_store + is_jal + is_imm_op * (is_beq + is_bne + is_bus_op))
@@ -178,7 +167,7 @@ impl CpuChip {
             .assert_eq(next.pc, incremented_pc.clone());
 
         // Branch manipulation
-        let equal = AB::Expr::from(AB::F::ONE) - local.not_equal;
+        let equal = AB::Expr::ONE - local.not_equal;
         let next_pc_if_branching = local.instruction.operands.a();
         let beq_next_pc =
             equal.clone() * next_pc_if_branching.clone() + local.not_equal * incremented_pc.clone();

@@ -3,7 +3,7 @@ use super::Add32Chip;
 use core::borrow::Borrow;
 
 use p3_air::{Air, AirBuilder};
-use p3_field::PrimeField;
+use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRows;
 
 impl<F, AB> Air<AB> for Add32Chip
@@ -16,7 +16,7 @@ where
         let local: &Add32Cols<AB::Var> = main.row(0).borrow();
 
         let one = AB::F::ONE;
-        let base = AB::Expr::from(AB::F::from_canonical_u32(1 << 8));
+        let base = AB::F::from_canonical_u32(1 << 8);
 
         let carry_1 = local.carry[0];
         let carry_2 = local.carry[1];
