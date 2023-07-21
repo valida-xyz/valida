@@ -55,7 +55,7 @@ impl CpuChip {
         &self,
         builder: &mut AB,
         local: &CpuCols<AB::Var>,
-        next: &CpuCols<AB::Var>,
+        _next: &CpuCols<AB::Var>, // TODO: unused
         base: &[AB::Expr; 4],
     ) where
         AB: AirBuilder,
@@ -70,7 +70,7 @@ impl CpuChip {
         let is_advice = local.opcode_flags.is_advice;
         let is_imm_op = local.opcode_flags.is_imm_op;
         let is_bus_op = local.opcode_flags.is_bus_op;
-        let is_bus_op_with_mem = local.opcode_flags.is_bus_op_with_mem;
+        let _is_bus_op_with_mem = local.opcode_flags.is_bus_op_with_mem; // TODO: unused
 
         let addr_a = local.fp + local.instruction.operands.a();
         let addr_b = local.fp + local.instruction.operands.b();
@@ -218,8 +218,8 @@ impl CpuChip {
         &self,
         builder: &mut AB,
         local: &CpuCols<AB::Var>,
-        _next: &CpuCols<AB::Var>,
-        _base: &[AB::Expr; 4],
+        _next: &CpuCols<AB::Var>, // TODO: unused
+        _base: &[AB::Expr; 4],    // TODO: unused
     ) {
         // Check if the first two operand values are equal, in case we're doing a conditional branch.
         // (when is_imm == 1, the second read value is guaranteed to be an immediate value)

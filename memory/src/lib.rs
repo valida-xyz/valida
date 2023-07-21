@@ -92,11 +92,14 @@ where
         let mut ops = self
             .operations
             .par_iter()
-            .flat_map(|(clk, ops)| {
+            .map(|(clk, ops)| {
                 ops.iter()
                     .map(|op| (*clk, *op))
                     .collect::<Vec<(u32, Operation)>>()
             })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .flatten()
             .collect::<Vec<_>>();
 
         // Sort first by addr, then by clk
@@ -138,10 +141,11 @@ where
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
         let is_read: VirtualPairCol<M::F> = VirtualPairCol::single_main(MEM_COL_MAP.is_read);
+        let clk = VirtualPairCol::single_main(MEM_COL_MAP.clk);
         let addr = VirtualPairCol::single_main(MEM_COL_MAP.addr);
         let value = MEM_COL_MAP.value.0.map(VirtualPairCol::single_main);
 
-        let mut fields = vec![is_read, addr];
+        let mut fields = vec![is_read, clk, addr];
         fields.extend(value);
 
         let receive = Interaction {
@@ -156,7 +160,7 @@ where
 impl MemoryChip {
     fn op_to_row<F: PrimeField>(&self, n: usize, clk: usize, op: Operation) -> [F; NUM_MEM_COLS] {
         let mut row = [F::ZERO; NUM_MEM_COLS];
-        let mut cols: &mut MemoryCols<F> = unsafe { transmute(&mut row) };
+        let cols: &mut MemoryCols<F> = unsafe { transmute(&mut row) };
 
         cols.clk = F::from_canonical_usize(clk);
         cols.counter = F::from_canonical_usize(n);

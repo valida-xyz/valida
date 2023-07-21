@@ -3,7 +3,6 @@ use super::{Mul32Chip, MUL32_OPCODE};
 use core::borrow::Borrow;
 use core::mem::MaybeUninit;
 use itertools::iproduct;
-use valida_bus::MachineWithGeneralBus;
 use valida_machine::Word;
 
 use p3_air::{Air, AirBuilder};

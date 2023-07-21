@@ -38,10 +38,9 @@ where
             .operations
             .par_iter()
             .map(|op| self.op_to_row(op))
-            .flatten()
             .collect::<Vec<_>>();
 
-        RowMajorMatrix::new(rows, NUM_ADD_COLS)
+        RowMajorMatrix::new(rows.concat(), NUM_ADD_COLS)
     }
 
     fn global_sends(&self, machine: &M) -> Vec<Interaction<M::F>> {
@@ -86,7 +85,7 @@ impl Add32Chip {
         F: PrimeField,
     {
         let mut row = [F::ZERO; NUM_ADD_COLS];
-        let mut cols: &mut Add32Cols<F> = unsafe { transmute(&mut row) };
+        let cols: &mut Add32Cols<F> = unsafe { transmute(&mut row) };
 
         cols.opcode = F::from_canonical_u32(ADD32_OPCODE);
 

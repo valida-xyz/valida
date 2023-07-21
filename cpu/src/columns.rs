@@ -111,16 +111,17 @@ const fn make_col_map() -> CpuCols<usize> {
     unsafe { transmute::<[usize; NUM_CPU_COLS], CpuCols<usize>>(indices_arr) }
 }
 
+#[cfg(test)]
 mod tests {
-    use p3_field::AbstractField;
     type F = p3_mersenne_31::Mersenne31;
 
     #[test]
     fn aligned_borrow() {
         use super::*;
+        use p3_field::AbstractField;
 
         let mut row = [F::ZERO; NUM_CPU_COLS];
-        let mut cols: &mut CpuCols<F> = unsafe { transmute(&mut row) };
+        let cols: &mut CpuCols<F> = unsafe { transmute(&mut row) };
 
         cols.mem_channels[0].is_read = F::ONE;
 

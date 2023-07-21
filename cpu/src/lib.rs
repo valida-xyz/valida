@@ -108,10 +108,11 @@ where
         let mem_sends = (0..3).map(|i| {
             let channel = &CPU_COL_MAP.mem_channels[i];
             let is_read = VirtualPairCol::single_main(channel.is_read);
+            let clk = VirtualPairCol::single_main(CPU_COL_MAP.clk);
             let addr = VirtualPairCol::single_main(channel.addr);
             let value = channel.value.0.map(VirtualPairCol::single_main);
 
-            let mut fields = vec![is_read, addr];
+            let mut fields = vec![is_read, clk, addr];
             fields.extend(value);
 
             Interaction {
@@ -154,7 +155,7 @@ impl CpuChip {
         M: MachineWithMemoryChip,
     {
         let mut row = [F::ZERO; NUM_CPU_COLS];
-        let mut cols: &mut CpuCols<F> = unsafe { transmute(&mut row) };
+        let cols: &mut CpuCols<F> = unsafe { transmute(&mut row) };
 
         cols.pc = F::from_canonical_u32(self.registers[clk].pc);
         cols.fp = F::from_canonical_u32(self.registers[clk].fp);

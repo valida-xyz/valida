@@ -129,6 +129,16 @@ impl MachineWithRangeChip for BasicMachine {
 mod tests {
     use super::*;
     use alloc::vec;
+    use p3_challenger::DuplexChallenger;
+    use p3_merkle_tree::MerkleTreeMMCS;
+    use p3_mersenne_31::Mersenne31;
+    use p3_poseidon::Poseidon;
+    use p3_symmetric::compression::TruncatedPermutation;
+    use p3_symmetric::mds::NaiveMDSMatrix;
+    use p3_symmetric::sponge::PaddingFreeSponge;
+    use p3_tensor_pcs::TensorPCS;
+    use rand::thread_rng;
+    use valida_machine::config::StarkConfigImpl;
     use valida_machine::Operands;
     use valida_machine::{InstructionWord, Word};
 
@@ -291,7 +301,22 @@ mod tests {
         machine.cpu_mut().save_register_state(); // TODO: Initial register state should be saved
                                                  // automatically by the machine, not manually here
         machine.run(rom);
-        machine.prove();
+
+        type Val = Mersenne31;
+        type Challenge = Val; // TODO
+        type PackedChallenge = Challenge; // TODO
+
+        let mds = NaiveMDSMatrix::<Val, 8>::new([[Val::ONE; 8]; 8]); // TODO: Use a real MDS matrix
+        type Perm = Poseidon<Val, NaiveMDSMatrix<Val, 8>, 8, 7>;
+        let perm = Perm::new_from_rng(5, 5, mds, &mut thread_rng()); // TODO: Use deterministic RNG
+        let h4 = PaddingFreeSponge::<Val, Perm, { 4 + 4 }>::new(perm.clone());
+        let c = TruncatedPermutation::<Val, Perm, 2, 4, { 2 * 4 }>::new(perm.clone());
+        let mmcs = MerkleTreeMMCS::new(h4, c);
+        let codes = p3_brakedown::fast_registry();
+        let pcs = TensorPCS::new(codes, mmcs);
+        let challenger = DuplexChallenger::new(perm);
+        let config = StarkConfigImpl::<Val, Challenge, PackedChallenge, _, _>::new(pcs, challenger);
+        machine.prove(&config);
 
         assert_eq!(machine.cpu().clock, 191);
         assert_eq!(machine.cpu().operations.len(), 191);

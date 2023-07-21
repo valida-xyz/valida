@@ -10,6 +10,8 @@ use alloc::vec::Vec;
 pub use crate::core::Word;
 pub use chip::{BusArgument, Chip, Interaction, InteractionType, ValidaAirBuilder};
 
+use crate::config::StarkConfig;
+use crate::proof::MachineProof;
 pub use p3_field::{
     AbstractExtensionField, AbstractField, ExtensionField, Field, PrimeField, PrimeField32,
     PrimeField64,
@@ -92,7 +94,14 @@ impl<F> ProgramROM<F> {
 pub trait Machine {
     type F: PrimeField64;
     type EF: ExtensionField<Self::F>;
+
     fn run(&mut self, program: ProgramROM<i32>);
-    fn prove(&self);
-    fn verify();
+
+    fn prove<SC>(&self, config: &SC) -> MachineProof<SC>
+    where
+        SC: StarkConfig<Val = Self::F, Challenge = Self::EF>;
+
+    fn verify<SC>(proof: &MachineProof<SC>) -> Result<(), ()>
+    where
+        SC: StarkConfig<Val = Self::F, Challenge = Self::EF>;
 }

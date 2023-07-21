@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [
     "alu_u32",
     "basic",
@@ -8,7 +9,6 @@ members = [
     "machine",
     "memory",
     "output",
-    "prover",
     "range",
     "util",
     "verifier"
