@@ -102,10 +102,12 @@ where
         // Set diff, diff_inv, and not_equal
         Self::compute_word_diffs(&mut rows);
 
-        // Pad to the next power of two
-        Self::pad_to_power_of_two(&mut rows);
+        let mut trace =
+            RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_CPU_COLS);
 
-        RowMajorMatrix::new(rows.concat(), NUM_CPU_COLS)
+        Self::pad_to_power_of_two(&mut trace.values);
+
+        trace
     }
 
     fn global_sends(&self, machine: &M) -> Vec<Interaction<M::F>> {
@@ -288,15 +290,34 @@ impl CpuChip {
         }
     }
 
-    fn pad_to_power_of_two<F: PrimeField>(rows: &mut Vec<[F; NUM_CPU_COLS]>) {
-        let len = rows.len();
-        let next_power_of_two = len.next_power_of_two();
-        let pc = rows.last().unwrap()[CPU_COL_MAP.pc];
+    fn pad_to_power_of_two<F: PrimeField>(values: &mut Vec<F>) {
+        let len = values.len();
+        let n_real_rows = values.len() / NUM_CPU_COLS;
 
-        let mut padded_row = [F::ZERO; NUM_CPU_COLS];
-        padded_row[CPU_COL_MAP.pc] = pc;
-        padded_row[CPU_COL_MAP.opcode_flags.is_stop] = F::ONE;
-        rows.resize(next_power_of_two, padded_row);
+        let last_row = &values[len - NUM_CPU_COLS..];
+        let pc = last_row[CPU_COL_MAP.pc];
+        let fp = last_row[CPU_COL_MAP.fp];
+        let clk = last_row[CPU_COL_MAP.clk];
+
+        values.resize(n_real_rows.next_power_of_two() * NUM_CPU_COLS, F::ZERO);
+
+        // Interpret values as a slice of arrays of length `NUM_CPU_COLS`
+        let rows = unsafe {
+            core::slice::from_raw_parts_mut(
+                values.as_mut_ptr() as *mut [F; NUM_CPU_COLS],
+                values.len() / NUM_CPU_COLS,
+            )
+        };
+
+        rows[n_real_rows..]
+            .par_iter_mut()
+            .enumerate()
+            .for_each(|(n, padded_row)| {
+                padded_row[CPU_COL_MAP.pc] = pc;
+                padded_row[CPU_COL_MAP.fp] = fp;
+                padded_row[CPU_COL_MAP.clk] = clk + F::from_canonical_u32(n as u32 + 1);
+                padded_row[CPU_COL_MAP.opcode_flags.is_stop] = F::ONE;
+            });
     }
 
     fn set_imm_value<F: PrimeField>(&self, cols: &mut CpuCols<F>, imm: Option<Word<u8>>) {

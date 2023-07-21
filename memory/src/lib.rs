@@ -118,9 +118,12 @@ where
         // Compute address difference values
         Self::compute_address_diffs(ops, &mut rows);
 
-        Self::pad_to_power_of_two(&mut rows);
+        let mut trace =
+            RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_MEM_COLS);
 
-        RowMajorMatrix::new(rows.concat(), NUM_MEM_COLS)
+        Self::pad_to_power_of_two(&mut trace.values);
+
+        trace
     }
 
     fn local_sends(&self) -> Vec<Interaction<M::F>> {
@@ -265,16 +268,28 @@ impl MemoryChip {
         }
     }
 
-    fn pad_to_power_of_two<F: PrimeField>(rows: &mut Vec<[F; NUM_MEM_COLS]>) {
-        let len = rows.len();
-        let next_power_of_two = len.next_power_of_two();
+    fn pad_to_power_of_two<F: PrimeField>(values: &mut Vec<F>) {
+        let len = values.len();
+        let n_real_rows = values.len() / NUM_MEM_COLS;
 
-        let mut counter = rows.last().unwrap()[MEM_COL_MAP.counter];
-        rows.resize_with(next_power_of_two, || {
-            let mut padded_row = [F::ZERO; NUM_MEM_COLS];
-            padded_row[MEM_COL_MAP.counter] = counter;
-            counter += F::ONE;
-            padded_row
-        });
+        let last_row = &values[len - NUM_MEM_COLS..];
+        let counter = last_row[MEM_COL_MAP.counter];
+
+        values.resize(n_real_rows.next_power_of_two() * NUM_MEM_COLS, F::ZERO);
+
+        // Interpret values as a slice of arrays of length `NUM_MEM_COLS`
+        let rows = unsafe {
+            core::slice::from_raw_parts_mut(
+                values.as_mut_ptr() as *mut [F; NUM_MEM_COLS],
+                values.len() / NUM_MEM_COLS,
+            )
+        };
+
+        rows[n_real_rows..]
+            .par_iter_mut()
+            .enumerate()
+            .for_each(|(n, padded_row)| {
+                padded_row[MEM_COL_MAP.counter] = counter + F::from_canonical_u32(n as u32 + 1);
+            });
     }
 }

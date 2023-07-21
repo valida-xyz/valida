@@ -209,6 +209,10 @@ impl CpuChip {
             .when_transition()
             .when(local.opcode_flags.is_jalv)
             .assert_eq(next.fp, local.fp + reduce::<AB>(base, local.read_value_2()));
+        builder
+            .when_transition()
+            .when(AB::Expr::ONE - local.opcode_flags.is_jal - local.opcode_flags.is_jalv)
+            .assert_eq(next.fp, local.fp);
     }
 
     fn eval_equality<AB: AirBuilder>(

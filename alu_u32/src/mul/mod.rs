@@ -1,6 +1,6 @@
 extern crate alloc;
 
-use crate::MUL32_OPCODE;
+use crate::{pad_to_power_of_two, MUL32_OPCODE};
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Mul32Cols, MUL_COL_MAP, NUM_MUL_COLS};
@@ -35,15 +35,18 @@ where
     M: MachineWithGeneralBus<F = F>,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
-        let mut rows = self
+        let rows = self
             .operations
             .par_iter()
             .map(|op| self.op_to_row(op))
             .collect::<Vec<_>>();
 
-        Self::pad_to_power_of_two(&mut rows);
+        let mut trace =
+            RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_MUL_COLS);
 
-        RowMajorMatrix::new(rows.concat(), NUM_MUL_COLS)
+        pad_to_power_of_two::<NUM_MUL_COLS, F>(&mut trace.values);
+
+        trace
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
@@ -87,14 +90,6 @@ impl Mul32Chip {
             }
         }
         row
-    }
-
-    fn pad_to_power_of_two<F: PrimeField>(rows: &mut Vec<[F; NUM_MUL_COLS]>) {
-        let len = rows.len();
-        let next_power_of_two = len.next_power_of_two();
-
-        let padded_row = [F::ZERO; NUM_MUL_COLS];
-        rows.resize(next_power_of_two, padded_row);
     }
 }
 
