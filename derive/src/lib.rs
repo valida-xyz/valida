@@ -46,6 +46,7 @@ fn impl_machine_given_fields(machine: &Ident, fields: &[&Field]) -> TokenStream 
 }
 
 #[deprecated] // Planning manual impls for now.
+#[allow(dead_code)]
 fn impl_machine_chip_impl_given_chips(machine: &Ident, chips: &[&Field]) -> TokenStream2 {
     let chip_impls = chips.iter().map(|chip| {
         let chip_ty = &chip.ty;
@@ -82,6 +83,7 @@ fn impl_machine_given_instructions_and_chips(
     }
 }
 
+#[allow(dead_code)]
 fn chip_methods(_machine: &Ident, chip: &Field) -> TokenStream2 {
     let mut methods = vec![];
     let chip_name = chip.ident.as_ref().unwrap();

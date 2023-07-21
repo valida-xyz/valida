@@ -85,7 +85,7 @@ impl Add32Chip {
         F: PrimeField,
     {
         let mut row = [F::ZERO; NUM_ADD_COLS];
-        let mut cols: &mut Add32Cols<F> = unsafe { transmute(&mut row) };
+        let cols: &mut Add32Cols<F> = unsafe { transmute(&mut row) };
 
         cols.opcode = F::from_canonical_u32(ADD32_OPCODE);
 

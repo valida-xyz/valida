@@ -55,7 +55,7 @@ impl CpuChip {
         &self,
         builder: &mut AB,
         local: &CpuCols<AB::Var>,
-        next: &CpuCols<AB::Var>,
+        _next: &CpuCols<AB::Var>,
         base: &[AB::Expr; 4],
     ) where
         AB: AirBuilder,
@@ -69,7 +69,7 @@ impl CpuChip {
         let is_imm32 = local.opcode_flags.is_imm32;
         let is_imm_op = local.opcode_flags.is_imm_op;
         let is_bus_op = local.opcode_flags.is_bus_op;
-        let is_bus_op_with_mem = local.opcode_flags.is_bus_op_with_mem;
+        let _is_bus_op_with_mem = local.opcode_flags.is_bus_op_with_mem;
 
         let addr_a = local.fp + local.instruction.operands.a();
         let addr_b = local.fp + local.instruction.operands.b();

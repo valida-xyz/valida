@@ -73,7 +73,7 @@ impl Mul32Chip {
         F: PrimeField,
     {
         let mut row = [F::ZERO; NUM_MUL_COLS];
-        let mut cols: &mut Mul32Cols<F> = unsafe { transmute(&mut row) };
+        let cols: &mut Mul32Cols<F> = unsafe { transmute(&mut row) };
 
         match op {
             Operation::Mul32(a, b, c) => {
