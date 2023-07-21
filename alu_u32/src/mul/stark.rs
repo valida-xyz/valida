@@ -1,12 +1,11 @@
 use super::columns::Mul32Cols;
 use super::{Mul32Chip, MUL32_OPCODE};
 use core::borrow::Borrow;
-use core::mem::MaybeUninit;
 use itertools::iproduct;
 use valida_machine::Word;
 
 use p3_air::{Air, AirBuilder};
-use p3_field::PrimeField;
+use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRows;
 
 impl<F, AB> Air<AB> for Mul32Chip
@@ -20,11 +19,7 @@ where
         let next: &Mul32Cols<AB::Var> = main.row(1).borrow();
 
         // Limb weights modulo 2^32
-        #[allow(clippy::uninit_assumed_init)]
-        let mut base_m: [AB::Expr; 4] = unsafe { MaybeUninit::uninit().assume_init() };
-        for (i, b) in [1 << 24, 1 << 16, 1 << 8, 1].into_iter().enumerate() {
-            base_m[i] = AB::Expr::from(AB::F::from_canonical_u32(b));
-        }
+        let base_m = [1 << 24, 1 << 16, 1 << 8, 1].map(AB::Expr::from_canonical_u32);
 
         // Partially reduced summation of input product limbs (mod 2^32)
         let pi = pi_m::<4, AB>(&base_m, local.input_1, local.input_2);
@@ -39,27 +34,22 @@ where
         let sigma_prime = sigma_m::<2, AB>(&base_m[..2], local.output);
 
         // Congruence checks
-        builder.assert_eq(pi - sigma, local.r * AB::Expr::from(AB::F::TWO));
+        builder.assert_eq(pi - sigma, local.r * AB::Expr::TWO);
         builder.assert_eq(pi_prime - sigma_prime, local.s * base_m[1].clone());
 
         // Range check counter
         builder
             .when_first_row()
-            .assert_eq(local.counter, AB::Expr::from(AB::F::ONE));
+            .assert_eq(local.counter, AB::Expr::ONE);
         builder.when_transition().assert_zero(
-            (local.counter - next.counter)
-                * (local.counter + AB::Expr::from(AB::F::ONE) - next.counter),
+            (local.counter - next.counter) * (local.counter + AB::Expr::ONE - next.counter),
         );
-        builder.when_last_row().assert_eq(
-            local.counter,
-            AB::Expr::from(AB::F::from_canonical_u32(1 << 10)),
-        );
+        builder
+            .when_last_row()
+            .assert_eq(local.counter, AB::Expr::from_canonical_u32(1 << 10));
 
         // Bus opcode constraint
-        builder.assert_eq(
-            local.opcode,
-            AB::Expr::from(AB::F::from_canonical_u32(MUL32_OPCODE)),
-        );
+        builder.assert_eq(local.opcode, AB::Expr::from_canonical_u32(MUL32_OPCODE));
     }
 }
 
