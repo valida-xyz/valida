@@ -8,6 +8,7 @@ members = [
     "derive",
     "machine",
     "memory",
+    "output",
     "range",
     "util",
     "verifier"

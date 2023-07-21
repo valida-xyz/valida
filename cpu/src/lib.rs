@@ -34,6 +34,8 @@ pub enum Operation {
     Imm32,
     Bus(Option<Word<u8>> /*imm*/),
     BusWithMemory(Option<Word<u8>> /*imm*/),
+    ReadAdvice,
+    WriteAdvice,
 }
 
 #[derive(Default)]
@@ -44,6 +46,38 @@ pub struct CpuChip {
     pub registers: Vec<Registers>,
     pub operations: Vec<Operation>,
     pub instructions: Vec<InstructionWord<i32>>,
+    pub advice_tape: AdviceTape,
+}
+
+#[derive(Default)]
+pub struct AdviceTape {
+    data: Vec<Word<u8>>,
+}
+
+impl AdviceTape {
+    pub fn new() -> Self {
+        Self { data: vec![] }
+    }
+
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    pub fn push(&mut self, word: Word<u8>) {
+        self.data.push(word);
+    }
+
+    pub fn pop(&mut self) -> Option<Word<u8>> {
+        self.data.pop()
+    }
+
+    pub fn read(&self, addr: u32, len: u32) -> Vec<Word<u8>> {
+        self.data[addr as usize..(addr + len) as usize].to_vec()
+    }
+
+    pub fn write(&mut self, addr: u32, data: &[Word<u8>]) {
+        self.data[addr as usize..(addr + data.len() as u32) as usize].copy_from_slice(data);
+    }
 }
 
 #[derive(Default)]
@@ -163,6 +197,9 @@ impl CpuChip {
                 cols.opcode_flags.is_bus_op_with_mem = F::ONE;
                 self.set_imm_value(cols, *imm);
             }
+            Operation::ReadAdvice | Operation::WriteAdvice => {
+                cols.opcode_flags.is_advice = F::ONE;
+            }
         }
 
         row
@@ -264,8 +301,80 @@ instructions!(
     JalvInstruction,
     BeqInstruction,
     BneInstruction,
-    Imm32Instruction
+    Imm32Instruction,
+    ReadAdviceInstruction,
+    WriteAdviceInstruction
 );
+
+/// Non-deterministic instructions
+
+impl<M> Instruction<M> for ReadAdviceInstruction
+where
+    M: MachineWithCpuChip,
+{
+    const OPCODE: u32 = 100;
+
+    fn execute(state: &mut M, ops: Operands<i32>) {
+        // Advice tape location
+        let addr = ops.a() as u32;
+        let buf_len = ops.b() as u32;
+
+        // Memory location
+        let mem_addr = ops.c() as u32;
+
+        // Read from the advice tape into memory
+        let segment = state.cpu().advice_tape.read(addr, buf_len);
+        for (n, value) in segment.into_iter().enumerate() {
+            state
+                .mem_mut()
+                .cells
+                .insert((mem_addr + n as u32 * 4) as u32, value);
+        }
+
+        state.cpu_mut().pc += 1;
+        state
+            .cpu_mut()
+            .push_op(Operation::ReadAdvice, <Self as Instruction<M>>::OPCODE, ops);
+    }
+}
+
+impl<M> Instruction<M> for WriteAdviceInstruction
+where
+    M: MachineWithCpuChip,
+{
+    const OPCODE: u32 = 101;
+
+    fn execute(state: &mut M, ops: Operands<i32>) {
+        // Advice tape location
+        let addr = ops.a();
+
+        // Memory location
+        let mem_addr = ops.b();
+        let mem_buf_len = ops.c();
+
+        // Write a memory segment to the advice tape
+        let segment = (mem_addr..mem_addr + mem_buf_len)
+            .map(|n| {
+                state
+                    .mem()
+                    .cells
+                    .get(&(n as u32))
+                    .unwrap_or(&Word::default())
+                    .clone()
+            })
+            .collect::<Vec<_>>();
+        state.cpu_mut().advice_tape.write(addr as u32, &segment);
+
+        state.cpu_mut().pc += 1;
+        state.cpu_mut().push_op(
+            Operation::WriteAdvice,
+            <Self as Instruction<M>>::OPCODE,
+            ops,
+        );
+    }
+}
+
+/// Deterministic instructions
 
 impl<M> Instruction<M> for Load32Instruction
 where
