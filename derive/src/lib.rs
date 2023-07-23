@@ -73,7 +73,7 @@ fn impl_machine_given_instructions_and_chips(
     let prove = prove_method(chips);
     let verify = verify_method(chips);
     quote! {
-        impl Machine for #machine {
+        impl Machine<F> for #machine<F> {
             type F = ::valida_machine::__internal::DefaultField;
             type EF = ::valida_machine::__internal::DefaultExtensionField; // FIXME
             #run

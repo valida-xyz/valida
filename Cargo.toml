@@ -9,6 +9,7 @@ members = [
     "machine",
     "memory",
     "output",
+    "program",
     "range",
     "util",
     "verifier"

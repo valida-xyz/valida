@@ -21,6 +21,7 @@ use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_range::{MachineWithRangeChip, RangeCheckerChip};
 
 use p3_maybe_rayon::*;
+use valida_program::ProgramChip;
 
 #[derive(Machine, Default)]
 pub struct BasicMachine {
@@ -45,8 +46,11 @@ pub struct BasicMachine {
     add32: Add32Instruction,
     #[instruction(mul_u32)]
     mul32: Mul32Instruction,
+
     #[chip]
     cpu: CpuChip,
+    #[chip]
+    program: ProgramChip,
     #[chip]
     mem: MemoryChip,
     #[chip]

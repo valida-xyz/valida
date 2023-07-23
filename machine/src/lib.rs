@@ -35,13 +35,23 @@ pub trait Instruction<M: Machine> {
     fn execute(state: &mut M, ops: Operands<i32>);
 }
 
+#[derive(Copy, Clone, Default)]
 pub struct InstructionWord<F> {
     pub opcode: u32,
     pub operands: Operands<F>,
 }
 
+impl<F: Field> InstructionWord<F> {
+    pub fn flatten(&self) -> [F; INSTRUCTION_ELEMENTS] {
+        let mut result = [F::default(); INSTRUCTION_ELEMENTS];
+        result[0] = F::from_canonical_u32(self.opcode);
+        result[1..].copy_from_slice(&self.operands.0);
+        result
+    }
+}
+
 #[derive(Copy, Clone, Default)]
-pub struct Operands<F>(pub [F; 5]);
+pub struct Operands<F>(pub [F; OPERAND_ELEMENTS]);
 
 impl<F: Copy> Operands<F> {
     pub fn a(&self) -> F {
@@ -79,7 +89,7 @@ impl<F: PrimeField> Operands<F> {
 }
 
 #[derive(Default)]
-pub struct ProgramROM<F>(Vec<InstructionWord<F>>);
+pub struct ProgramROM<F>(pub Vec<InstructionWord<F>>);
 
 impl<F> ProgramROM<F> {
     pub fn new(instructions: Vec<InstructionWord<F>>) -> Self {
