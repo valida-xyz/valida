@@ -62,7 +62,7 @@ impl CpuChip {
         let is_beq = local.opcode_flags.is_beq;
         let is_bne = local.opcode_flags.is_bne;
         let is_imm32 = local.opcode_flags.is_imm32;
-        let is_advice = local.opcode_flags.is_advice;
+        let _is_advice = local.opcode_flags.is_advice; // TODO: unused
         let is_imm_op = local.opcode_flags.is_imm_op;
         let is_bus_op = local.opcode_flags.is_bus_op;
         let _is_bus_op_with_mem = local.opcode_flags.is_bus_op_with_mem; // TODO: unused
