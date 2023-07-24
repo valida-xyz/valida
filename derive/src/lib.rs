@@ -9,82 +9,112 @@ use alloc::vec::Vec;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
-use syn::{spanned::Spanned, Data, Field, Fields, Ident};
+use syn::{spanned::Spanned, Data, Field, Fields, Ident, Token};
+use syn::parse::{Parse, ParseStream};
 
-#[proc_macro_derive(Machine, attributes(bus, chip, instruction))]
+struct MachineFields {
+    base_field: Ident,
+    ext_field: Ident,
+}
+
+impl Parse for MachineFields {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let content;
+        syn::parenthesized!(content in input);
+        let base_field = content.parse()?;
+        content.parse::<Token![,]>()?;
+        let ext_field = content.parse()?;
+        Ok(MachineFields { base_field, ext_field })
+    }
+}
+
+#[proc_macro_derive(Machine, attributes(machine_fields, bus, chip, instruction))]
 pub fn machine_derive(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).unwrap();
     impl_machine(&ast)
 }
 
-fn impl_machine(ast: &syn::DeriveInput) -> TokenStream {
-    match &ast.data {
-        Data::Struct(struct_) => {
-            let fields = match &struct_.fields {
-                Fields::Named(named) => named.named.iter().collect(),
-                Fields::Unnamed(unnamed) => unnamed.unnamed.iter().collect(),
-                Fields::Unit => vec![],
-            };
-            impl_machine_given_fields(&ast.ident, &fields)
-        }
-        _ => panic!("Machine derive only supports structs"),
-    }
-}
+fn impl_machine(machine: &syn::DeriveInput) -> TokenStream {
+    if let Data::Struct(struct_) = &machine.data {
+        let fields = match &struct_.fields {
+            Fields::Named(named) => named.named.iter().collect(),
+            Fields::Unnamed(unnamed) => unnamed.unnamed.iter().collect(),
+            Fields::Unit => vec![],
+        };
 
-fn impl_machine_given_fields(machine: &Ident, fields: &[&Field]) -> TokenStream {
-    let instructions = fields
-        .iter()
-        .filter(|f| f.attrs.iter().any(|a| a.path.is_ident("instruction")))
-        .copied()
-        .collect::<Vec<_>>();
-    let chips = fields
-        .iter()
-        .filter(|f| f.attrs.iter().any(|a| a.path.is_ident("chip")))
-        .copied()
-        .collect::<Vec<_>>();
-    impl_machine_given_instructions_and_chips(machine, &instructions, &chips).into()
+        let instructions = fields
+            .iter()
+            .filter(|f| f.attrs.iter().any(|a| a.path.is_ident("instruction")))
+            .copied()
+            .collect::<Vec<_>>();
+        let chips = fields
+            .iter()
+            .filter(|f| f.attrs.iter().any(|a| a.path.is_ident("chip")))
+            .copied()
+            .collect::<Vec<_>>();
+
+        let name = &machine.ident;
+        let run = run_method(machine, &instructions);
+        let prove = prove_method(&chips);
+        let verify = verify_method(&chips);
+
+        let (impl_generics, ty_generics, where_clause) = machine.generics.split_for_impl();
+
+        let machine_fields = machine
+            .attrs
+            .iter()
+            .filter(|a| a.path.segments.len() == 1 && a.path.segments[0].ident == "machine_fields")
+            .next()
+            .expect("machine_fields attribute required to derive Machine");
+        let machine_fields: MachineFields = syn::parse2(machine_fields.tokens.clone())
+            .expect(
+            "Invalid machine_fields attribute, expected #[machine_fields(<BaseField>, <ExtField>)]",
+        );
+        let base_field = &machine_fields.base_field;
+        let ext_field = &machine_fields.ext_field;
+
+        let stream = quote! {
+            impl #impl_generics Machine for #name #ty_generics #where_clause {
+                type F = #base_field;
+                type EF = #ext_field;
+                #run
+                #prove
+                #verify
+            }
+        };
+
+        stream.into()
+    } else {
+        panic!("Machine derive only supports structs");
+    }
 }
 
 #[deprecated] // Planning manual impls for now.
 #[allow(dead_code)]
-fn impl_machine_chip_impl_given_chips(machine: &Ident, chips: &[&Field]) -> TokenStream2 {
+fn impl_machine_chip_impl_given_chips(machine: &syn::DeriveInput, chips: &[&Field]) -> TokenStream2 {
     let chip_impls = chips.iter().map(|chip| {
         let chip_ty = &chip.ty;
         let tokens = quote!(#chip_ty);
         let chip_impl_name = Ident::new(&format!("MachineWith{}", tokens.to_string()), chip.span());
-        let chip_methods = chip_methods(machine, chip);
+        let chip_methods = chip_methods(chip);
+
+        let name = &machine.ident;
+        let (impl_generics, ty_generics, where_clause) = machine.generics.split_for_impl();
+
         quote! {
-            impl #chip_impl_name for #machine {
+            impl #impl_generics #chip_impl_name for #name #ty_generics #where_clause {
                 #chip_methods
             }
         }
     });
+
     quote! {
         #(#chip_impls)*
     }
 }
 
-fn impl_machine_given_instructions_and_chips(
-    machine: &Ident,
-    instructions: &[&Field],
-    chips: &[&Field],
-) -> TokenStream2 {
-    let run = run_method(machine, instructions);
-    let prove = prove_method(chips);
-    let verify = verify_method(chips);
-    quote! {
-        impl Machine<F> for #machine<F> {
-            type F = ::valida_machine::__internal::DefaultField;
-            type EF = ::valida_machine::__internal::DefaultExtensionField; // FIXME
-            #run
-            #prove
-            #verify
-        }
-    }
-}
-
 #[allow(dead_code)]
-fn chip_methods(_machine: &Ident, chip: &Field) -> TokenStream2 {
+fn chip_methods(chip: &Field) -> TokenStream2 {
     let mut methods = vec![];
     let chip_name = chip.ident.as_ref().unwrap();
     let chip_name_mut = Ident::new(&format!("{}_mut", chip_name), chip_name.span());
@@ -102,13 +132,16 @@ fn chip_methods(_machine: &Ident, chip: &Field) -> TokenStream2 {
     }
 }
 
-fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
+fn run_method(machine: &syn::DeriveInput, instructions: &[&Field]) -> TokenStream2 {
+    let name = &machine.ident;
+    let (impl_generics, ty_generics, where_clause) = machine.generics.split_for_impl();
+
     let opcode_arms = instructions
         .iter()
         .map(|inst| {
             let ty = &inst.ty;
             quote! {
-                <#ty as Instruction<#machine>>::OPCODE => {
+                <#ty as Instruction<#name #ty_generics>>::OPCODE => {
                     #ty::execute(self, ops);
                 }
             }

@@ -3,6 +3,8 @@
 
 extern crate alloc;
 
+use core::marker::PhantomData;
+use p3_field::{ExtensionField, PrimeField64};
 use valida_alu_u32::{
     add::{Add32Chip, Add32Instruction, MachineWithAdd32Chip},
     mul::{MachineWithMul32Chip, Mul32Chip, Mul32Instruction},
@@ -18,13 +20,15 @@ use valida_machine::{
     AbstractExtensionField, AbstractField, BusArgument, Chip, Instruction, Machine, ProgramROM,
 };
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
+use valida_program::MachineWithProgramChip;
 use valida_range::{MachineWithRangeChip, RangeCheckerChip};
 
 use p3_maybe_rayon::*;
 use valida_program::ProgramChip;
 
 #[derive(Machine, Default)]
-pub struct BasicMachine {
+#[machine_fields(F, EF)]
+pub struct BasicMachine<F: PrimeField64, EF: ExtensionField<F>> {
     // Core instructions
     #[instruction]
     load32: Load32Instruction,
@@ -50,7 +54,7 @@ pub struct BasicMachine {
     #[chip]
     cpu: CpuChip,
     #[chip]
-    program: ProgramChip,
+    program: ProgramChip<F>,
     #[chip]
     mem: MemoryChip,
     #[chip]
@@ -59,27 +63,29 @@ pub struct BasicMachine {
     mul_u32: Mul32Chip,
     #[chip]
     range: RangeCheckerChip, // TODO: Specify 8-bit RC chip
+
+    _phantom_ef: PhantomData<EF>,
 }
 
-impl MachineWithGeneralBus for BasicMachine {
+impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithGeneralBus for BasicMachine<F, EF> {
     fn general_bus(&self) -> BusArgument {
         BusArgument::Global(0)
     }
 }
 
-impl MachineWithMemBus for BasicMachine {
+impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithMemBus for BasicMachine<F, EF> {
     fn mem_bus(&self) -> BusArgument {
         BusArgument::Global(1)
     }
 }
 
-impl MachineWithRangeBus8 for BasicMachine {
+impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithRangeBus8 for BasicMachine<F, EF> {
     fn range_bus(&self) -> BusArgument {
         BusArgument::Global(2)
     }
 }
 
-impl MachineWithCpuChip for BasicMachine {
+impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithCpuChip for BasicMachine<F, EF> {
     fn cpu(&self) -> &CpuChip {
         &self.cpu
     }
@@ -89,7 +95,17 @@ impl MachineWithCpuChip for BasicMachine {
     }
 }
 
-impl MachineWithMemoryChip for BasicMachine {
+impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithProgramChip for BasicMachine<F, EF> {
+    fn program(&self) -> &ProgramChip<Self::F> {
+        &self.program
+    }
+
+    fn program_mut(&mut self) -> &mut ProgramChip<Self::F> {
+        &mut self.program
+    }
+}
+
+impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithMemoryChip for BasicMachine<F, EF> {
     fn mem(&self) -> &MemoryChip {
         &self.mem
     }
@@ -99,7 +115,7 @@ impl MachineWithMemoryChip for BasicMachine {
     }
 }
 
-impl MachineWithAdd32Chip for BasicMachine {
+impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithAdd32Chip for BasicMachine<F, EF> {
     fn add_u32(&self) -> &Add32Chip {
         &self.add_u32
     }
@@ -109,7 +125,7 @@ impl MachineWithAdd32Chip for BasicMachine {
     }
 }
 
-impl MachineWithMul32Chip for BasicMachine {
+impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithMul32Chip for BasicMachine<F, EF> {
     fn mul_u32(&self) -> &Mul32Chip {
         &self.mul_u32
     }
@@ -119,7 +135,7 @@ impl MachineWithMul32Chip for BasicMachine {
     }
 }
 
-impl MachineWithRangeChip for BasicMachine {
+impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithRangeChip for BasicMachine<F, EF> {
     fn range(&self) -> &RangeCheckerChip {
         &self.range
     }
@@ -148,6 +164,10 @@ mod tests {
 
     #[test]
     fn fibonacci() {
+        type Val = Mersenne31;
+        type Challenge = Val; // TODO
+        type PackedChallenge = Challenge; // TODO
+
         let mut program = vec![];
 
         // Label locations
@@ -170,31 +190,31 @@ mod tests {
         //...
         program.extend([
             InstructionWord {
-                opcode: <Imm32Instruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <Imm32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([-4, 0, 0, 0, 0]),
             },
             InstructionWord {
-                opcode: <Imm32Instruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <Imm32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([-8, 0, 0, 0, 25]),
             },
             InstructionWord {
-                opcode: <Store32Instruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([0, -16, -8, 0, 0]),
             },
             InstructionWord {
-                opcode: <Imm32Instruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <Imm32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([-20, 0, 0, 0, 28]),
             },
             InstructionWord {
-                opcode: <JalInstruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <JalInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([-28, fib_bb0, -28, 0, 0]),
             },
             InstructionWord {
-                opcode: <Store32Instruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([0, -12, -24, 0, 0]),
             },
             InstructionWord {
-                opcode: <Store32Instruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([0, 4, -12, 0, 0]),
             },
             InstructionWord {
@@ -212,23 +232,23 @@ mod tests {
         //	beq	.LBB0_1, 0(fp), 0(fp)
         program.extend([
             InstructionWord {
-                opcode: <Store32Instruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([0, -4, 12, 0, 0]),
             },
             InstructionWord {
-                opcode: <Imm32Instruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <Imm32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([-8, 0, 0, 0, 0]),
             },
             InstructionWord {
-                opcode: <Imm32Instruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <Imm32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([-12, 0, 0, 0, 1]),
             },
             InstructionWord {
-                opcode: <Imm32Instruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <Imm32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([-16, 0, 0, 0, 0]),
             },
             InstructionWord {
-                opcode: <BeqInstruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <BeqInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([fib_bb0_1, 0, 0, 0, 0]),
             },
         ]);
@@ -238,11 +258,11 @@ mod tests {
         //	beq	.LBB0_4, 0(fp), 0(fp)
         program.extend([
             InstructionWord {
-                opcode: <BneInstruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <BneInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([fib_bb0_2, -16, -4, 0, 0]),
             },
             InstructionWord {
-                opcode: <BeqInstruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <BeqInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([fib_bb0_4, 0, 0, 0, 0]),
             },
         ]);
@@ -254,19 +274,19 @@ mod tests {
         //	beq	.LBB0_3, 0(fp), 0(fp)
         program.extend([
             InstructionWord {
-                opcode: <Add32Instruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <Add32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([-20, -8, -12, 0, 0]),
             },
             InstructionWord {
-                opcode: <Store32Instruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([0, -8, -12, 0, 0]),
             },
             InstructionWord {
-                opcode: <Store32Instruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([0, -12, -20, 0, 0]),
             },
             InstructionWord {
-                opcode: <BeqInstruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <BeqInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([fib_bb0_3, 0, 0, 0, 0]),
             },
         ]);
@@ -276,11 +296,11 @@ mod tests {
         //	beq	.LBB0_1, 0(fp), 0(fp)
         program.extend([
             InstructionWord {
-                opcode: <Add32Instruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <Add32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([-16, -16, 1, 0, 1]),
             },
             InstructionWord {
-                opcode: <BeqInstruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <BeqInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([fib_bb0_1, 0, 0, 0, 0]),
             },
         ]);
@@ -290,11 +310,11 @@ mod tests {
         //	jalv	-4(fp), 0(fp), 8(fp)
         program.extend([
             InstructionWord {
-                opcode: <Store32Instruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([0, 4, -8, 0, 0]),
             },
             InstructionWord {
-                opcode: <JalvInstruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <JalvInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([-4, 0, 8, 0, 0]),
             },
         ]);
@@ -305,10 +325,6 @@ mod tests {
         machine.cpu_mut().save_register_state(); // TODO: Initial register state should be saved
                                                  // automatically by the machine, not manually here
         machine.run(rom);
-
-        type Val = Mersenne31;
-        type Challenge = Val; // TODO
-        type PackedChallenge = Challenge; // TODO
 
         let mds = NaiveMDSMatrix::<Val, 8>::new([[Val::ONE; 8]; 8]); // TODO: Use a real MDS matrix
         type Perm = Poseidon<Val, NaiveMDSMatrix<Val, 8>, 8, 7>;
@@ -335,13 +351,16 @@ mod tests {
 
     #[test]
     fn store32() {
+        type Val = Mersenne31;
+        type Challenge = Val; // TODO
+
         let program = vec![
             InstructionWord {
-                opcode: <Imm32Instruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <Imm32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([-4, 0, 0, 0, 42]),
             },
             InstructionWord {
-                opcode: <Store32Instruction as Instruction<BasicMachine>>::OPCODE,
+                opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
                 operands: Operands([0, -8, -4, 0, 0]),
             },
             InstructionWord {
@@ -350,7 +369,7 @@ mod tests {
             },
         ];
 
-        let mut machine = BasicMachine::default();
+        let mut machine = BasicMachine::<Val, Challenge>::default();
         let rom = ProgramROM::new(program);
         machine.cpu_mut().fp = 0x1000;
         machine.run(rom);
