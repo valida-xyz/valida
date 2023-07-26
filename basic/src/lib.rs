@@ -10,7 +10,7 @@ use valida_alu_u32::{
 use valida_bus::{MachineWithGeneralBus, MachineWithMemBus, MachineWithRangeBus8};
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
-    Load32Instruction, Store32Instruction,
+    Load32Instruction, StopInstruction, Store32Instruction,
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
@@ -45,6 +45,7 @@ pub struct BasicMachine {
     add32: Add32Instruction,
     #[instruction(mul_u32)]
     mul32: Mul32Instruction,
+
     #[chip]
     cpu: CpuChip,
     #[chip]
@@ -194,7 +195,7 @@ mod tests {
                 operands: Operands([0, 4, -12, 0, 0]),
             },
             InstructionWord {
-                opcode: 0,
+                opcode: <StopInstruction as Instruction<BasicMachine>>::OPCODE,
                 operands: Operands::default(),
             },
         ]);
@@ -341,7 +342,7 @@ mod tests {
                 operands: Operands([0, -8, -4, 0, 0]),
             },
             InstructionWord {
-                opcode: 0,
+                opcode: <StopInstruction as Instruction<BasicMachine>>::OPCODE,
                 operands: Operands::default(),
             },
         ];

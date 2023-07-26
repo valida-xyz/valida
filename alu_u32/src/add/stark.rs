@@ -1,5 +1,5 @@
 use super::columns::Add32Cols;
-use super::{Add32Chip, ADD32_OPCODE};
+use super::Add32Chip;
 use core::borrow::Borrow;
 
 use p3_air::{Air, AirBuilder};
@@ -41,8 +41,5 @@ where
             overflow_1.clone() * (carry_2 - one) + (overflow_1 - base.clone()) * carry_2,
         );
         builder.assert_zero(overflow_2.clone() * (carry_3 - one) + (overflow_2 - base) * carry_3);
-
-        // Bus opcode constraint
-        builder.assert_eq(local.opcode, AB::Expr::from_canonical_u32(ADD32_OPCODE));
     }
 }

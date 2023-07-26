@@ -36,6 +36,7 @@ pub enum Operation {
     BusWithMemory(Option<Word<u8>> /*imm*/),
     ReadAdvice,
     WriteAdvice,
+    Stop,
 }
 
 #[derive(Default)]
@@ -101,7 +102,12 @@ where
         // Set diff, diff_inv, and not_equal
         Self::compute_word_diffs(&mut rows);
 
-        RowMajorMatrix::new(rows.concat(), NUM_CPU_COLS)
+        let mut trace =
+            RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_CPU_COLS);
+
+        Self::pad_to_power_of_two(&mut trace.values);
+
+        trace
     }
 
     fn global_sends(&self, machine: &M) -> Vec<Interaction<M::F>> {
@@ -200,6 +206,9 @@ impl CpuChip {
             Operation::ReadAdvice | Operation::WriteAdvice => {
                 cols.opcode_flags.is_advice = F::ONE;
             }
+            Operation::Stop => {
+                cols.opcode_flags.is_stop = F::ONE;
+            }
         }
 
         row
@@ -281,6 +290,36 @@ impl CpuChip {
         }
     }
 
+    fn pad_to_power_of_two<F: PrimeField>(values: &mut Vec<F>) {
+        let len = values.len();
+        let n_real_rows = values.len() / NUM_CPU_COLS;
+
+        let last_row = &values[len - NUM_CPU_COLS..];
+        let pc = last_row[CPU_COL_MAP.pc];
+        let fp = last_row[CPU_COL_MAP.fp];
+        let clk = last_row[CPU_COL_MAP.clk];
+
+        values.resize(n_real_rows.next_power_of_two() * NUM_CPU_COLS, F::ZERO);
+
+        // Interpret values as a slice of arrays of length `NUM_CPU_COLS`
+        let rows = unsafe {
+            core::slice::from_raw_parts_mut(
+                values.as_mut_ptr() as *mut [F; NUM_CPU_COLS],
+                values.len() / NUM_CPU_COLS,
+            )
+        };
+
+        rows[n_real_rows..]
+            .par_iter_mut()
+            .enumerate()
+            .for_each(|(n, padded_row)| {
+                padded_row[CPU_COL_MAP.pc] = pc;
+                padded_row[CPU_COL_MAP.fp] = fp;
+                padded_row[CPU_COL_MAP.clk] = clk + F::from_canonical_u32(n as u32 + 1);
+                padded_row[CPU_COL_MAP.opcode_flags.is_stop] = F::ONE;
+            });
+    }
+
     fn set_imm_value<F: PrimeField>(&self, cols: &mut CpuCols<F>, imm: Option<Word<u8>>) {
         if let Some(imm) = imm {
             cols.opcode_flags.is_imm_op = F::ONE;
@@ -303,7 +342,8 @@ instructions!(
     BneInstruction,
     Imm32Instruction,
     ReadAdviceInstruction,
-    WriteAdviceInstruction
+    WriteAdviceInstruction,
+    StopInstruction
 );
 
 /// Non-deterministic instructions
@@ -537,6 +577,20 @@ where
         state
             .cpu_mut()
             .push_op(Operation::Imm32, <Self as Instruction<M>>::OPCODE, ops);
+    }
+}
+
+impl<M> Instruction<M> for StopInstruction
+where
+    M: MachineWithCpuChip,
+{
+    const OPCODE: u32 = 8;
+
+    fn execute(state: &mut M, ops: Operands<i32>) {
+        state.cpu_mut().pc = state.cpu().pc;
+        state
+            .cpu_mut()
+            .push_op(Operation::Stop, <Self as Instruction<M>>::OPCODE, ops);
     }
 }
 
