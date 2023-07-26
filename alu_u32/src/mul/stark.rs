@@ -1,5 +1,5 @@
 use super::columns::Mul32Cols;
-use super::{Mul32Chip, MUL32_OPCODE};
+use super::Mul32Chip;
 use core::borrow::Borrow;
 use itertools::iproduct;
 use valida_machine::Word;
@@ -47,9 +47,6 @@ where
         builder
             .when_last_row()
             .assert_eq(local.counter, AB::Expr::from_canonical_u32(1 << 10));
-
-        // Bus opcode constraint
-        builder.assert_eq(local.opcode, AB::Expr::from_canonical_u32(MUL32_OPCODE));
     }
 }
 

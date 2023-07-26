@@ -124,8 +124,8 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
                 let opcode = instruction.opcode;
                 let ops = instruction.operands;
 
-                // A zero opcode signals the end of the program
-                if opcode == 0 {
+                // A STOP instruction signals the end of the program
+                if opcode == <StopInstruction as Instruction<Self>>::OPCODE {
                     break;
                 }
 

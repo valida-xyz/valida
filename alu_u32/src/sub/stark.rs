@@ -1,5 +1,5 @@
 use super::columns::Sub32Cols;
-use super::{Sub32Chip, SUB32_OPCODE};
+use super::Sub32Chip;
 use core::borrow::Borrow;
 
 use p3_air::{Air, AirBuilder};
@@ -38,9 +38,6 @@ where
         // Third byte
         builder.assert_zero(borrow_2.clone() * (base.clone() - sub_2 - local.output[1]));
         builder.assert_zero(borrow_2 * (sub_3 - local.output[0] - AB::Expr::ONE));
-
-        // Bus opcode constraint
-        builder.assert_eq(local.opcode, AB::Expr::from_canonical_u32(SUB32_OPCODE));
 
         todo!()
     }

@@ -12,7 +12,7 @@ pub struct Sub32Cols<T> {
     /// Witnessed output
     pub output: Word<T>,
 
-    pub opcode: T,
+    pub is_real: T,
 }
 
 pub const NUM_SUB_COLS: usize = size_of::<Sub32Cols<u8>>();

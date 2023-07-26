@@ -1,6 +1,6 @@
 extern crate alloc;
 
-use crate::SUB32_OPCODE;
+use crate::{pad_to_power_of_two, SUB32_OPCODE};
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Sub32Cols, NUM_SUB_COLS, SUB_COL_MAP};
@@ -29,9 +29,10 @@ pub struct Sub32Chip {
     pub operations: Vec<Operation>,
 }
 
-impl<M> Chip<M> for Sub32Chip
+impl<F, M> Chip<M> for Sub32Chip
 where
-    M: MachineWithGeneralBus,
+    F: PrimeField,
+    M: MachineWithGeneralBus<F = F>,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
@@ -39,11 +40,17 @@ where
             .par_iter()
             .map(|op| self.op_to_row(op))
             .collect::<Vec<_>>();
-        RowMajorMatrix::new(rows.concat(), NUM_SUB_COLS)
+
+        let mut trace =
+            RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_SUB_COLS);
+
+        pad_to_power_of_two::<NUM_SUB_COLS, F>(&mut trace.values);
+
+        trace
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
-        let opcode = VirtualPairCol::single_main(SUB_COL_MAP.opcode);
+        let opcode = VirtualPairCol::constant(M::F::from_canonical_u32(SUB32_OPCODE));
         let input_1 = SUB_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = SUB_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
         let output = SUB_COL_MAP.output.0.map(VirtualPairCol::single_main);
@@ -55,7 +62,7 @@ where
 
         let receive = Interaction {
             fields,
-            count: VirtualPairCol::one(),
+            count: VirtualPairCol::single_main(SUB_COL_MAP.is_real),
             argument_index: machine.general_bus(),
         };
         vec![receive]

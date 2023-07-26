@@ -1,6 +1,6 @@
 extern crate alloc;
 
-use super::ADD32_OPCODE;
+use crate::{pad_to_power_of_two, ADD32_OPCODE};
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Add32Cols, ADD_COL_MAP, NUM_ADD_COLS};
@@ -29,9 +29,10 @@ pub struct Add32Chip {
     pub operations: Vec<Operation>,
 }
 
-impl<M> Chip<M> for Add32Chip
+impl<F, M> Chip<M> for Add32Chip
 where
-    M: MachineWithGeneralBus + MachineWithRangeBus8,
+    F: PrimeField,
+    M: MachineWithGeneralBus<F = F> + MachineWithRangeBus8,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
@@ -40,7 +41,12 @@ where
             .map(|op| self.op_to_row(op))
             .collect::<Vec<_>>();
 
-        RowMajorMatrix::new(rows.concat(), NUM_ADD_COLS)
+        let mut trace =
+            RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_ADD_COLS);
+
+        pad_to_power_of_two::<NUM_ADD_COLS, F>(&mut trace.values);
+
+        trace
     }
 
     fn global_sends(&self, machine: &M) -> Vec<Interaction<M::F>> {
@@ -60,7 +66,7 @@ where
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
-        let opcode = VirtualPairCol::single_main(ADD_COL_MAP.opcode);
+        let opcode = VirtualPairCol::constant(M::F::from_canonical_u32(ADD32_OPCODE));
         let input_1 = ADD_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = ADD_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
         let output = ADD_COL_MAP.output.0.map(VirtualPairCol::single_main);
@@ -72,7 +78,7 @@ where
 
         let receive = Interaction {
             fields,
-            count: VirtualPairCol::one(),
+            count: VirtualPairCol::single_main(ADD_COL_MAP.is_real),
             argument_index: machine.general_bus(),
         };
         vec![receive]
@@ -86,8 +92,6 @@ impl Add32Chip {
     {
         let mut row = [F::ZERO; NUM_ADD_COLS];
         let cols: &mut Add32Cols<F> = unsafe { transmute(&mut row) };
-
-        cols.opcode = F::from_canonical_u32(ADD32_OPCODE);
 
         match op {
             Operation::Add32(a, b, c) => {
@@ -111,6 +115,11 @@ impl Add32Chip {
             }
         }
         row
+    }
+
+    fn pad_to_power_of_two<F: PrimeField>(values: &mut Vec<F>) {
+        let n_real_rows = values.len() / NUM_ADD_COLS;
+        values.resize(n_real_rows.next_power_of_two(), F::ZERO);
     }
 }
 
