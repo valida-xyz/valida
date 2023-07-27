@@ -1,19 +1,19 @@
-use super::columns::Mersenne31Cols;
-use super::{Mersenne31Chip, ADD_OPCODE, MUL_OPCODE, SUB_OPCODE};
+use super::columns::NativeFieldCols;
+use super::{NativeFieldChip, ADD_OPCODE, MUL_OPCODE, SUB_OPCODE};
 use core::borrow::Borrow;
 
 use p3_air::{Air, AirBuilder};
 use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRows;
 
-impl<F, AB> Air<AB> for Mersenne31Chip
+impl<F, AB> Air<AB> for NativeFieldChip
 where
     F: PrimeField,
     AB: AirBuilder<F = F>,
 {
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
-        let local: &Mersenne31Cols<AB::Var> = main.row(0).borrow();
+        let local: &NativeFieldCols<AB::Var> = main.row(0).borrow();
 
         let base_m = [1 << 24, 1 << 16, 1 << 8, 1].map(AB::Expr::from_canonical_u32);
         let x = local.input_1;

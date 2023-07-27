@@ -1,20 +1,20 @@
+#![no_std]
+
 extern crate alloc;
 
-use crate::pad_to_power_of_two;
 use alloc::vec;
 use alloc::vec::Vec;
-use columns::{Mersenne31Cols, COL_MAP, NUM_COLS};
+use columns::{NativeFieldCols, COL_MAP, NUM_COLS};
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
+use valida_machine::{instructions, Chip, Instruction, Interaction, Machine, Operands, Word};
 use valida_range::MachineWithRangeChip;
 
 use p3_air::VirtualPairCol;
-use p3_field::{AbstractField, PrimeField};
+use p3_field::{Field, PrimeField32};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
-use p3_mersenne_31::Mersenne31;
 
 const ADD_OPCODE: u32 = 13;
 const SUB_OPCODE: u32 = 14;
@@ -30,11 +30,11 @@ pub enum Operation {
     Mul(Word<u8>, Word<u8>, Word<u8>),
 }
 
-pub struct Mersenne31Chip {
+pub struct NativeFieldChip {
     operations: Vec<Operation>,
 }
 
-impl<M> Chip<M> for Mersenne31Chip
+impl<M> Chip<M> for NativeFieldChip
 where
     M: MachineWithGeneralBus + MachineWithRangeBus8,
 {
@@ -48,7 +48,7 @@ where
         let mut trace =
             RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_COLS);
 
-        pad_to_power_of_two::<NUM_COLS, M::F>(&mut trace.values);
+        Self::pad_to_power_of_two::<NUM_COLS, M::F>(&mut trace.values);
 
         trace
     }
@@ -89,13 +89,13 @@ where
     }
 }
 
-impl Mersenne31Chip {
+impl NativeFieldChip {
     fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_COLS]
     where
-        F: PrimeField,
+        F: Field,
     {
         let mut row = [F::ZERO; NUM_COLS];
-        let cols: &mut Mersenne31Cols<F> = unsafe { transmute(&mut row) };
+        let cols: &mut NativeFieldCols<F> = unsafe { transmute(&mut row) };
 
         match op {
             Operation::Add(a, b, c) => {
@@ -125,18 +125,24 @@ impl Mersenne31Chip {
 
         row
     }
+
+    fn pad_to_power_of_two<const N: usize, F: Field>(values: &mut Vec<F>) {
+        let n_real_rows = values.len() / N;
+        values.resize(n_real_rows.next_power_of_two() * N, F::ZERO);
+    }
 }
 
-pub trait MachineWithMersenne31Field: MachineWithCpuChip {
-    fn mersenne_31(&self) -> Mersenne31Chip;
-    fn mersenne_31_mut(&self) -> &mut Mersenne31Chip;
+pub trait MachineWithNativeFieldChip: MachineWithCpuChip {
+    fn native_field(&self) -> NativeFieldChip;
+    fn native_field_mut(&self) -> &mut NativeFieldChip;
 }
 
 instructions!(AddInstruction, SubInstruction, MulInstruction);
 
-impl<M> Instruction<M> for AddInstruction
+impl<F, M> Instruction<M> for AddInstruction
 where
-    M: MachineWithMersenne31Field + MachineWithRangeChip,
+    M: MachineWithNativeFieldChip + MachineWithRangeChip + Machine<F = F>,
+    F: PrimeField32,
 {
     const OPCODE: u32 = ADD_OPCODE;
 
@@ -155,13 +161,12 @@ where
             state.mem_mut().read(clk, read_addr_2, true)
         };
 
-        let a_m31 =
-            Mersenne31::from_canonical_u32(b.into()) + Mersenne31::from_canonical_u32(c.into());
-        let a = Word::from(a_m31.as_noncanonical_u32());
+        let a_native = F::from_canonical_u32(b.into()) + F::from_canonical_u32(c.into());
+        let a = Word::from(a_native.as_canonical_u32());
         state.mem_mut().write(clk, write_addr, a, true);
 
         state
-            .mersenne_31_mut()
+            .native_field_mut()
             .operations
             .push(Operation::Add(a, b, c));
         state
@@ -172,9 +177,10 @@ where
     }
 }
 
-impl<M> Instruction<M> for SubInstruction
+impl<F, M> Instruction<M> for SubInstruction
 where
-    M: MachineWithMersenne31Field + MachineWithRangeChip,
+    M: MachineWithNativeFieldChip + MachineWithRangeChip + Machine<F = F>,
+    F: PrimeField32,
 {
     const OPCODE: u32 = SUB_OPCODE;
 
@@ -193,13 +199,12 @@ where
             state.mem_mut().read(clk, read_addr_2, true)
         };
 
-        let a_m31 =
-            Mersenne31::from_canonical_u32(b.into()) - Mersenne31::from_canonical_u32(c.into());
-        let a = Word::from(a_m31.as_noncanonical_u32());
+        let a_native = F::from_canonical_u32(b.into()) - F::from_canonical_u32(c.into());
+        let a = Word::from(a_native.as_canonical_u32());
         state.mem_mut().write(clk, write_addr, a, true);
 
         state
-            .mersenne_31_mut()
+            .native_field_mut()
             .operations
             .push(Operation::Sub(a, b, c));
         state
@@ -210,9 +215,10 @@ where
     }
 }
 
-impl<M> Instruction<M> for MulInstruction
+impl<F, M> Instruction<M> for MulInstruction
 where
-    M: MachineWithMersenne31Field + MachineWithRangeChip,
+    M: MachineWithNativeFieldChip + MachineWithRangeChip + Machine<F = F>,
+    F: PrimeField32,
 {
     const OPCODE: u32 = MUL_OPCODE;
 
@@ -231,13 +237,12 @@ where
             state.mem_mut().read(clk, read_addr_2, true)
         };
 
-        let a_m31 =
-            Mersenne31::from_canonical_u32(b.into()) * Mersenne31::from_canonical_u32(c.into());
-        let a = Word::from(a_m31.as_noncanonical_u32());
+        let a_m31 = M::F::from_canonical_u32(b.into()) * M::F::from_canonical_u32(c.into());
+        let a = Word::from(a_m31.as_canonical_u32());
         state.mem_mut().write(clk, write_addr, a, true);
 
         state
-            .mersenne_31_mut()
+            .native_field()
             .operations
             .push(Operation::Mul(a, b, c));
         state
