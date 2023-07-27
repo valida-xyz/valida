@@ -1,51 +1,53 @@
-use super::columns::Add32Cols;
-use super::{Add32Chip, ADD32_OPCODE};
+use super::columns::Mersenne31Cols;
+use super::{Mersenne31Chip, ADD_OPCODE, MUL_OPCODE, SUB_OPCODE};
 use core::borrow::Borrow;
 
 use p3_air::{Air, AirBuilder};
-use p3_field::PrimeField;
+use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRows;
 
-impl<F, AB> Air<AB> for Add32Chip
+impl<F, AB> Air<AB> for Mersenne31Chip
 where
     F: PrimeField,
     AB: AirBuilder<F = F>,
 {
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
-        let local: &Add32Cols<AB::Var> = main.row(0).borrow();
+        let local: &Mersenne31Cols<AB::Var> = main.row(0).borrow();
 
-        let one = AB::F::ONE;
-        let base = AB::Expr::from(AB::F::from_canonical_u32(1 << 8));
+        let base_m = [1 << 24, 1 << 16, 1 << 8, 1].map(AB::Expr::from_canonical_u32);
+        let x = local.input_1;
+        let y = local.input_2;
+        let z = local.output;
+        let b = base_m[3].clone() * x[3]
+            + base_m[2].clone() * x[2]
+            + base_m[1].clone() * x[1]
+            + base_m[0].clone() * x[0];
+        let c = base_m[3].clone() * y[3]
+            + base_m[2].clone() * y[2]
+            + base_m[1].clone() * y[1]
+            + base_m[0].clone() * y[0];
+        let a = base_m[3].clone() * z[3]
+            + base_m[2].clone() * z[2]
+            + base_m[1].clone() * z[1]
+            + base_m[0].clone() * z[0];
 
-        let carry_1 = local.carry[0];
-        let carry_2 = local.carry[1];
-        let carry_3 = local.carry[2];
+        let a_add = b.clone() + c.clone();
+        let a_sub = b.clone() - c.clone();
+        let a_mul = b.clone() * c.clone();
 
-        let overflow_0 = local.input_1[3] + local.input_2[3] - local.output[3];
-        let overflow_1 = local.input_1[2] + local.input_2[2] - local.output[2] + carry_1;
-        let overflow_2 = local.input_1[1] + local.input_2[1] - local.output[1] + carry_2;
-        let overflow_3 = local.input_1[0] + local.input_2[0] - local.output[0] + carry_3;
+        builder.when(local.is_add).assert_eq(a.clone(), a_add);
+        builder.when(local.is_sub).assert_eq(a.clone(), a_sub);
+        builder.when(local.is_mul).assert_eq(a, a_mul);
 
-        // Limb constraints
-        builder.assert_zero(overflow_0.clone() * (overflow_0.clone() - base.clone()));
-        builder.assert_zero(overflow_1.clone() * (overflow_1.clone() - base.clone()));
-        builder.assert_zero(overflow_2.clone() * (overflow_2.clone() - base.clone()));
-        builder.assert_zero(overflow_3.clone() * (overflow_3 - base.clone()));
-
-        // Carry constraints
-        builder.assert_zero(
-            overflow_0.clone() * (carry_1 - one) + (overflow_0 - base.clone()) * carry_1,
-        );
-        builder.assert_zero(
-            overflow_1.clone() * (carry_2 - one) + (overflow_1 - base.clone()) * carry_2,
-        );
-        builder.assert_zero(overflow_2.clone() * (carry_3 - one) + (overflow_2 - base) * carry_3);
-
-        // Bus opcode constraint
-        builder.assert_eq(
-            local.opcode,
-            AB::Expr::from(AB::F::from_canonical_u32(ADD32_OPCODE)),
-        );
+        builder
+            .when(local.opcode - AB::F::from_canonical_u32(ADD_OPCODE))
+            .assert_one(local.is_add);
+        builder
+            .when(local.opcode - AB::F::from_canonical_u32(SUB_OPCODE))
+            .assert_one(local.is_sub);
+        builder
+            .when(local.opcode - AB::F::from_canonical_u32(MUL_OPCODE))
+            .assert_one(local.is_mul);
     }
 }

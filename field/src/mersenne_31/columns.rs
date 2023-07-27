@@ -12,7 +12,13 @@ pub struct Mersenne31Cols<T> {
     /// Witnessed output
     pub output: Word<T>,
 
+    pub is_add: T,
+    pub is_sub: T,
+    pub is_mul: T,
+
     pub opcode: T,
+
+    pub is_real: T,
 }
 
 pub const NUM_COLS: usize = size_of::<Mersenne31Cols<u8>>();

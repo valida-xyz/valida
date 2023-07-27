@@ -116,11 +116,6 @@ impl Add32Chip {
         }
         row
     }
-
-    fn pad_to_power_of_two<F: PrimeField>(values: &mut Vec<F>) {
-        let n_real_rows = values.len() / NUM_ADD_COLS;
-        values.resize(n_real_rows.next_power_of_two(), F::ZERO);
-    }
 }
 
 pub trait MachineWithAdd32Chip: MachineWithCpuChip {
