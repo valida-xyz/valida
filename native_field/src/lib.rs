@@ -34,9 +34,10 @@ pub struct NativeFieldChip {
     operations: Vec<Operation>,
 }
 
-impl<M> Chip<M> for NativeFieldChip
+impl<F, M> Chip<M> for NativeFieldChip
 where
-    M: MachineWithGeneralBus + MachineWithRangeBus8,
+    F: Field,
+    M: MachineWithGeneralBus<F = F> + MachineWithRangeBus8,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
@@ -70,7 +71,14 @@ where
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
-        let opcode = VirtualPairCol::single_main(COL_MAP.opcode);
+        let opcode = VirtualPairCol::new_main(
+            vec![
+                (COL_MAP.is_add, M::F::from_canonical_u32(ADD_OPCODE)),
+                (COL_MAP.is_sub, M::F::from_canonical_u32(SUB_OPCODE)),
+                (COL_MAP.is_mul, M::F::from_canonical_u32(MUL_OPCODE)),
+            ],
+            M::F::ZERO,
+        );
         let input_1 = COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = COL_MAP.input_2.0.map(VirtualPairCol::single_main);
         let output = COL_MAP.output.0.map(VirtualPairCol::single_main);
@@ -80,9 +88,18 @@ where
         fields.extend(input_2);
         fields.extend(output);
 
+        let is_real = VirtualPairCol::new_main(
+            vec![
+                (COL_MAP.is_add, M::F::ONE),
+                (COL_MAP.is_sub, M::F::ONE),
+                (COL_MAP.is_mul, M::F::ONE),
+            ],
+            M::F::ZERO,
+        );
+
         let receive = Interaction {
             fields,
-            count: VirtualPairCol::single_main(COL_MAP.is_real),
+            count: is_real,
             argument_index: machine.general_bus(),
         };
         vec![receive]
@@ -100,28 +117,23 @@ impl NativeFieldChip {
         match op {
             Operation::Add(a, b, c) => {
                 cols.is_add = F::ONE;
-                cols.opcode = F::from_canonical_u32(ADD_OPCODE);
                 cols.input_1 = b.transform(F::from_canonical_u8);
                 cols.input_2 = c.transform(F::from_canonical_u8);
                 cols.output = a.transform(F::from_canonical_u8);
             }
             Operation::Sub(a, b, c) => {
                 cols.is_sub = F::ONE;
-                cols.opcode = F::from_canonical_u32(SUB_OPCODE);
                 cols.input_1 = b.transform(F::from_canonical_u8);
                 cols.input_2 = c.transform(F::from_canonical_u8);
                 cols.output = a.transform(F::from_canonical_u8);
             }
             Operation::Mul(a, b, c) => {
                 cols.is_mul = F::ONE;
-                cols.opcode = F::from_canonical_u32(MUL_OPCODE);
                 cols.input_1 = b.transform(F::from_canonical_u8);
                 cols.input_2 = c.transform(F::from_canonical_u8);
                 cols.output = a.transform(F::from_canonical_u8);
             }
         }
-
-        cols.is_real = F::ONE;
 
         row
     }
