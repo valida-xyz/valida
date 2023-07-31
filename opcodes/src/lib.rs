@@ -1,0 +1,23 @@
+/// CORE
+pub const LOAD32: u32 = 1;
+pub const STORE32: u32 = 2;
+pub const JAL: u32 = 3;
+pub const JALV: u32 = 4;
+pub const BEQ: u32 = 5;
+pub const BNE: u32 = 6;
+pub const IMM32: u32 = 7;
+pub const STOP: u32 = 8;
+
+/// U32 ALU
+pub const ADD32: u32 = 100;
+pub const SUB32: u32 = 101;
+pub const MUL32: u32 = 102;
+pub const LT: u32 = 103;
+
+/// NATIVE FIELD
+pub const ADD: u32 = 200;
+pub const SUB: u32 = 201;
+pub const MUL: u32 = 202;
+
+/// OUTPUT
+pub const WRITE: u32 = 300;

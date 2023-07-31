@@ -1,5 +1,5 @@
 use super::columns::NativeFieldCols;
-use super::{NativeFieldChip, ADD_OPCODE, MUL_OPCODE, SUB_OPCODE};
+use super::NativeFieldChip;
 use core::borrow::Borrow;
 
 use p3_air::{Air, AirBuilder};

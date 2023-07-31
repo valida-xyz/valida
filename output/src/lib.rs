@@ -7,13 +7,12 @@ use valida_machine::{
     instructions, BusArgument, Chip, Instruction, Interaction, Operands, Word, CPU_MEMORY_CHANNELS,
     MEMORY_CELL_BYTES,
 };
+use valida_opcodes::WRITE;
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
-
-const WRITE_OPCODE: u32 = 102;
 
 pub mod columns;
 pub mod stark;
@@ -133,7 +132,7 @@ impl<M> Instruction<M> for WriteInstruction
 where
     M: MachineWithOutputChip,
 {
-    const OPCODE: u32 = WRITE_OPCODE;
+    const OPCODE: u32 = WRITE;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;

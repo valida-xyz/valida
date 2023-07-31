@@ -9,6 +9,7 @@ members = [
     "native_field",
     "machine",
     "memory",
+    "opcodes",
     "output",
     "range",
     "util",

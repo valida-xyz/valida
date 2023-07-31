@@ -13,6 +13,7 @@ use valida_machine::{
     instructions, Chip, Instruction, InstructionWord, Interaction, Operands, Word,
 };
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
+use valida_opcodes::{BEQ, BNE, IMM32, JAL, JALV, LOAD32, STOP, STORE32};
 use valida_util::batch_multiplicative_inverse;
 
 use p3_air::VirtualPairCol;
@@ -420,7 +421,7 @@ impl<M> Instruction<M> for Load32Instruction
 where
     M: MachineWithCpuChip,
 {
-    const OPCODE: u32 = 1;
+    const OPCODE: u32 = LOAD32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
@@ -440,7 +441,7 @@ impl<M> Instruction<M> for Store32Instruction
 where
     M: MachineWithCpuChip,
 {
-    const OPCODE: u32 = 2;
+    const OPCODE: u32 = STORE32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
@@ -459,7 +460,7 @@ impl<M> Instruction<M> for JalInstruction
 where
     M: MachineWithCpuChip,
 {
-    const OPCODE: u32 = 3;
+    const OPCODE: u32 = JAL;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
@@ -481,7 +482,7 @@ impl<M> Instruction<M> for JalvInstruction
 where
     M: MachineWithCpuChip,
 {
-    const OPCODE: u32 = 4;
+    const OPCODE: u32 = JALV;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
@@ -506,7 +507,7 @@ impl<M> Instruction<M> for BeqInstruction
 where
     M: MachineWithCpuChip,
 {
-    const OPCODE: u32 = 5;
+    const OPCODE: u32 = BEQ;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
@@ -536,7 +537,7 @@ impl<M> Instruction<M> for BneInstruction
 where
     M: MachineWithCpuChip,
 {
-    const OPCODE: u32 = 6;
+    const OPCODE: u32 = BNE;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
@@ -566,7 +567,7 @@ impl<M> Instruction<M> for Imm32Instruction
 where
     M: MachineWithCpuChip,
 {
-    const OPCODE: u32 = 7;
+    const OPCODE: u32 = IMM32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
@@ -584,7 +585,7 @@ impl<M> Instruction<M> for StopInstruction
 where
     M: MachineWithCpuChip,
 {
-    const OPCODE: u32 = 8;
+    const OPCODE: u32 = STOP;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         state.cpu_mut().pc = state.cpu().pc;

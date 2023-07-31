@@ -9,16 +9,13 @@ use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Machine, Operands, Word};
+use valida_opcodes::{ADD, MUL, SUB};
 use valida_range::MachineWithRangeChip;
 
 use p3_air::VirtualPairCol;
 use p3_field::{Field, PrimeField32};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
-
-const ADD_OPCODE: u32 = 13;
-const SUB_OPCODE: u32 = 14;
-const MUL_OPCODE: u32 = 15;
 
 pub mod columns;
 pub mod stark;
@@ -76,9 +73,9 @@ where
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
         let opcode = VirtualPairCol::new_main(
             vec![
-                (COL_MAP.is_add, M::F::from_canonical_u32(ADD_OPCODE)),
-                (COL_MAP.is_sub, M::F::from_canonical_u32(SUB_OPCODE)),
-                (COL_MAP.is_mul, M::F::from_canonical_u32(MUL_OPCODE)),
+                (COL_MAP.is_add, M::F::from_canonical_u32(ADD)),
+                (COL_MAP.is_sub, M::F::from_canonical_u32(SUB)),
+                (COL_MAP.is_mul, M::F::from_canonical_u32(MUL)),
             ],
             M::F::ZERO,
         );
@@ -153,7 +150,7 @@ where
     M: MachineWithNativeFieldChip + MachineWithRangeChip + Machine<F = F>,
     F: PrimeField32,
 {
-    const OPCODE: u32 = ADD_OPCODE;
+    const OPCODE: u32 = ADD;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
@@ -191,7 +188,7 @@ where
     M: MachineWithNativeFieldChip + MachineWithRangeChip + Machine<F = F>,
     F: PrimeField32,
 {
-    const OPCODE: u32 = SUB_OPCODE;
+    const OPCODE: u32 = SUB;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
@@ -229,7 +226,7 @@ where
     M: MachineWithNativeFieldChip + MachineWithRangeChip + Machine<F = F>,
     F: PrimeField32,
 {
-    const OPCODE: u32 = MUL_OPCODE;
+    const OPCODE: u32 = MUL;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;

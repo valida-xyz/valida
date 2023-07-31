@@ -19,3 +19,4 @@ valida-memory = { path = "../memory" }
 valida-cpu = { path = "../cpu" }
 valida-range = { path = "../range" }
 valida-util = { path = "../util" }
+valida-opcodes = { path = "../opcodes" }

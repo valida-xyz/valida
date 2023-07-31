@@ -1,6 +1,6 @@
 extern crate alloc;
 
-use crate::{pad_to_power_of_two, ADD32_OPCODE};
+use crate::pad_to_power_of_two;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Add32Cols, ADD_COL_MAP, NUM_ADD_COLS};
@@ -8,6 +8,7 @@ use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
+use valida_opcodes::ADD32;
 use valida_range::MachineWithRangeChip;
 
 use p3_air::VirtualPairCol;
@@ -66,7 +67,7 @@ where
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
-        let opcode = VirtualPairCol::constant(M::F::from_canonical_u32(ADD32_OPCODE));
+        let opcode = VirtualPairCol::constant(M::F::from_canonical_u32(ADD32));
         let input_1 = ADD_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = ADD_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
         let output = ADD_COL_MAP.output.0.map(VirtualPairCol::single_main);
@@ -129,7 +130,7 @@ impl<M> Instruction<M> for Add32Instruction
 where
     M: MachineWithAdd32Chip + MachineWithRangeChip,
 {
-    const OPCODE: u32 = ADD32_OPCODE;
+    const OPCODE: u32 = ADD32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
