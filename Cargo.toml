@@ -6,6 +6,7 @@ members = [
     "bus",
     "cpu",
     "derive",
+    "native_field",
     "machine",
     "memory",
     "output",
