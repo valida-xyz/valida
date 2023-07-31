@@ -25,9 +25,9 @@ pub mod stark;
 
 #[derive(Clone)]
 pub enum Operation {
-    Add(Word<u8>, Word<u8>, Word<u8>),
-    Sub(Word<u8>, Word<u8>, Word<u8>),
-    Mul(Word<u8>, Word<u8>, Word<u8>),
+    Add(Word<u8>, Word<u8>, Word<u8>), // dst, src1, src2
+    Sub(Word<u8>, Word<u8>, Word<u8>), // dst, src1, src2
+    Mul(Word<u8>, Word<u8>, Word<u8>), // dst, src1, src2
 }
 
 pub struct NativeFieldChip {
@@ -62,9 +62,12 @@ where
             .into_iter()
             .collect::<Vec<_>>();
 
+        let is_real =
+            VirtualPairCol::sum_main(vec![COL_MAP.is_add, COL_MAP.is_sub, COL_MAP.is_mul]);
+
         let send = Interaction {
             fields: output,
-            count: VirtualPairCol::one(),
+            count: is_real,
             argument_index: machine.range_bus(),
         };
         vec![send]
@@ -88,14 +91,8 @@ where
         fields.extend(input_2);
         fields.extend(output);
 
-        let is_real = VirtualPairCol::new_main(
-            vec![
-                (COL_MAP.is_add, M::F::ONE),
-                (COL_MAP.is_sub, M::F::ONE),
-                (COL_MAP.is_mul, M::F::ONE),
-            ],
-            M::F::ZERO,
-        );
+        let is_real =
+            VirtualPairCol::sum_main(vec![COL_MAP.is_add, COL_MAP.is_sub, COL_MAP.is_mul]);
 
         let receive = Interaction {
             fields,

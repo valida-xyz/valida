@@ -39,19 +39,5 @@ where
         builder.when(local.is_add).assert_eq(a.clone(), a_add);
         builder.when(local.is_sub).assert_eq(a.clone(), a_sub);
         builder.when(local.is_mul).assert_eq(a, a_mul);
-
-        let opcode = local.is_add * AB::F::from_canonical_u32(ADD_OPCODE)
-            + local.is_sub * AB::F::from_canonical_u32(SUB_OPCODE)
-            + local.is_mul * AB::F::from_canonical_u32(MUL_OPCODE);
-
-        builder
-            .when(opcode.clone() - AB::F::from_canonical_u32(ADD_OPCODE))
-            .assert_one(local.is_add);
-        builder
-            .when(opcode.clone() - AB::F::from_canonical_u32(SUB_OPCODE))
-            .assert_one(local.is_sub);
-        builder
-            .when(opcode - AB::F::from_canonical_u32(MUL_OPCODE))
-            .assert_one(local.is_mul);
     }
 }
