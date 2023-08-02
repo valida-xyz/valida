@@ -1,6 +1,7 @@
 use crate::columns::OutputCols;
-use crate::{OutputChip, WRITE_OPCODE};
+use crate::OutputChip;
 use core::borrow::Borrow;
+use valida_opcodes::WRITE;
 
 use p3_air::{Air, AirBuilder};
 use p3_field::PrimeField;
@@ -27,7 +28,7 @@ where
         // Bus opcode constraint
         builder.assert_eq(
             local.opcode,
-            AB::Expr::from(AB::F::from_canonical_u32(WRITE_OPCODE)),
+            AB::Expr::from(AB::F::from_canonical_u32(WRITE)),
         );
     }
 }
