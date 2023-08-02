@@ -12,7 +12,8 @@ pub const STOP: u32 = 8;
 pub const ADD32: u32 = 100;
 pub const SUB32: u32 = 101;
 pub const MUL32: u32 = 102;
-pub const LT: u32 = 103;
+pub const DIV32: u32 = 103;
+pub const LT: u32 = 104;
 
 /// NATIVE FIELD
 pub const ADD: u32 = 200;

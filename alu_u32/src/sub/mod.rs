@@ -26,7 +26,6 @@ pub enum Operation {
 
 #[derive(Default)]
 pub struct Sub32Chip {
-    pub clock: u32,
     pub operations: Vec<Operation>,
 }
 

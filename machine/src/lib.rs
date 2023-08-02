@@ -1,7 +1,5 @@
 #![cfg_attr(not(test), no_std)]
 
-// TODO: Convert memory from big endian to little endian
-
 extern crate alloc;
 extern crate self as valida_machine;
 
@@ -79,7 +77,7 @@ impl<F: PrimeField> Operands<F> {
 }
 
 #[derive(Default)]
-pub struct ProgramROM<F>(Vec<InstructionWord<F>>);
+pub struct ProgramROM<F>(pub Vec<InstructionWord<F>>);
 
 impl<F> ProgramROM<F> {
     pub fn new(instructions: Vec<InstructionWord<F>>) -> Self {

@@ -6,6 +6,7 @@ use alloc::vec::Vec;
 use p3_field::AbstractField;
 
 pub mod add;
+pub mod div;
 pub mod lt;
 pub mod mul;
 pub mod sub;
