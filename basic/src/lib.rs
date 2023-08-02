@@ -47,7 +47,7 @@ pub struct BasicMachine {
     #[instruction(add_u32)]
     add32: Add32Instruction,
     #[instruction(add_u32)]
-    sub32: Add32Instruction,
+    sub32: Sub32Instruction,
     #[instruction(mul_u32)]
     mul32: Mul32Instruction,
     #[instruction(div_u32)]
