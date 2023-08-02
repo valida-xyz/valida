@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
+[[bin]]
+name = "valida"
+path = "src/bin/valida.rs"
+
 [dependencies]
 valida-alu-u32 = { path = "../alu_u32" }
 valida-bus = { path = "../bus" }
@@ -11,8 +15,11 @@ valida-cpu = { path = "../cpu" }
 valida-derive = { path = "../derive" }
 valida-machine = { path = "../machine" }
 valida-memory = { path = "../memory" }
+valida-output = { path = "../output" }
 valida-range = { path = "../range" }
 p3-maybe-rayon = { path = "../../Plonky3/maybe-rayon" }
+byteorder = "1.4.3"
+clap = { version = "4.3.19", features = ["derive"] }
 
 [dev-dependencies]
 p3-brakedown = { path = "../../Plonky3/brakedown" }
