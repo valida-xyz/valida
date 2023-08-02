@@ -13,7 +13,9 @@ use valida_machine::{
     instructions, Chip, Instruction, InstructionWord, Interaction, Operands, Word,
 };
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
-use valida_opcodes::{BEQ, BNE, IMM32, JAL, JALV, LOAD32, STOP, STORE32};
+use valida_opcodes::{
+    BEQ, BNE, IMM32, JAL, JALV, LOAD32, READ_ADVICE, STOP, STORE32, WRITE_ADVICE,
+};
 use valida_util::batch_multiplicative_inverse;
 
 use p3_air::VirtualPairCol;
@@ -353,7 +355,7 @@ impl<M> Instruction<M> for ReadAdviceInstruction
 where
     M: MachineWithCpuChip,
 {
-    const OPCODE: u32 = 100;
+    const OPCODE: u32 = READ_ADVICE;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         // Advice tape location
@@ -384,7 +386,7 @@ impl<M> Instruction<M> for WriteAdviceInstruction
 where
     M: MachineWithCpuChip,
 {
-    const OPCODE: u32 = 101;
+    const OPCODE: u32 = WRITE_ADVICE;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         // Advice tape location

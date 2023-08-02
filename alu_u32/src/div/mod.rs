@@ -1,11 +1,12 @@
 extern crate alloc;
 
-use crate::{pad_to_power_of_two, DIV32_OPCODE};
+use crate::pad_to_power_of_two;
 use alloc::vec::Vec;
 use columns::NUM_DIV_COLS;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Operands, Word};
+use valida_opcodes::DIV32;
 use valida_range::MachineWithRangeChip;
 
 use p3_field::PrimeField;
@@ -66,7 +67,7 @@ impl<M> Instruction<M> for Div32Instruction
 where
     M: MachineWithDiv32Chip + MachineWithRangeChip,
 {
-    const OPCODE: u32 = DIV32_OPCODE;
+    const OPCODE: u32 = DIV32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
