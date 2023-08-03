@@ -80,6 +80,7 @@ impl Mul for Word<u8> {
 
 impl Div for Word<u8> {
     type Output = Self;
+
     fn div(self, other: Self) -> Self {
         let b: u32 = self.into();
         let c: u32 = other.into();
