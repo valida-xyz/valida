@@ -11,6 +11,14 @@ pub struct Div32Cols<T> {
 
     /// Witnessed output
     pub output: Word<T>,
+
+    /// Witnessed quotients in the congruence relation
+    pub r: T,
+    pub s: T,
+
+    pub is_real: T,
+
+    pub counter: T,
 }
 
 pub const NUM_DIV_COLS: usize = size_of::<Div32Cols<u8>>();
