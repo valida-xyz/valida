@@ -13,7 +13,9 @@ use valida_machine::{
     instructions, Chip, Instruction, InstructionWord, Interaction, Operands, Word,
 };
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
-use valida_opcodes::{BEQ, BNE, IMM32, JAL, JALV, LOAD32, STOP, STORE32};
+use valida_opcodes::{
+    BEQ, BNE, IMM32, JAL, JALV, LOAD32, READ_ADVICE, STOP, STORE32, WRITE_ADVICE,
+};
 use valida_util::batch_multiplicative_inverse;
 
 use p3_air::VirtualPairCol;
@@ -53,7 +55,7 @@ pub struct CpuChip {
 
 #[derive(Default)]
 pub struct AdviceTape {
-    data: Vec<Word<u8>>,
+    pub data: Vec<Word<u8>>,
 }
 
 impl AdviceTape {
@@ -353,7 +355,7 @@ impl<M> Instruction<M> for ReadAdviceInstruction
 where
     M: MachineWithCpuChip,
 {
-    const OPCODE: u32 = 100;
+    const OPCODE: u32 = READ_ADVICE;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         // Advice tape location
@@ -361,15 +363,16 @@ where
         let buf_len = ops.b() as u32;
 
         // Memory location
-        let mem_addr = ops.c() as u32;
+        let mem_addr = ops.c();
 
         // Read from the advice tape into memory
+        let fp = state.cpu().fp as i32;
         let segment = state.cpu().advice_tape.read(addr, buf_len);
         for (n, value) in segment.into_iter().enumerate() {
             state
                 .mem_mut()
                 .cells
-                .insert((mem_addr + n as u32 * 4) as u32, value);
+                .insert((fp + mem_addr + n as i32 * 4) as u32, value);
         }
 
         state.cpu_mut().pc += 1;
@@ -383,18 +386,19 @@ impl<M> Instruction<M> for WriteAdviceInstruction
 where
     M: MachineWithCpuChip,
 {
-    const OPCODE: u32 = 101;
+    const OPCODE: u32 = WRITE_ADVICE;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         // Advice tape location
         let addr = ops.a();
 
         // Memory location
-        let mem_addr = ops.b();
-        let mem_buf_len = ops.c();
+        let mem_addr = ops.b() as u32;
+        let mem_buf_len = ops.c() as u32;
 
         // Write a memory segment to the advice tape
-        let segment = (mem_addr..mem_addr + mem_buf_len)
+        let fp = state.cpu().fp as u32;
+        let segment = ((fp + mem_addr)..(fp + mem_addr) + mem_buf_len)
             .map(|n| {
                 state
                     .mem()

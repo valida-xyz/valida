@@ -1,5 +1,5 @@
 use super::{Field, PrimeField, MEMORY_CELL_BYTES};
-use core::ops::{Add, Index, IndexMut, Mul, Sub};
+use core::ops::{Add, Div, Index, IndexMut, Mul, Sub};
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Word<F>(pub [F; MEMORY_CELL_BYTES]);
@@ -74,6 +74,16 @@ impl Mul for Word<u8> {
         let b: u32 = self.into();
         let c: u32 = other.into();
         let res = b * c;
+        res.into()
+    }
+}
+
+impl Div for Word<u8> {
+    type Output = Self;
+    fn div(self, other: Self) -> Self {
+        let b: u32 = self.into();
+        let c: u32 = other.into();
+        let res = b / c;
         res.into()
     }
 }

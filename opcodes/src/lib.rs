@@ -8,11 +8,16 @@ pub const BNE: u32 = 6;
 pub const IMM32: u32 = 7;
 pub const STOP: u32 = 8;
 
+/// NONDETERMINISTIC
+pub const READ_ADVICE: u32 = 9;
+pub const WRITE_ADVICE: u32 = 10;
+
 /// U32 ALU
 pub const ADD32: u32 = 100;
 pub const SUB32: u32 = 101;
 pub const MUL32: u32 = 102;
-pub const LT: u32 = 103;
+pub const DIV32: u32 = 103;
+pub const LT: u32 = 104;
 
 /// NATIVE FIELD
 pub const ADD: u32 = 200;

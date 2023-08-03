@@ -1,7 +1,5 @@
 #![cfg_attr(not(test), no_std)]
 
-// TODO: Convert memory from big endian to little endian
-
 extern crate alloc;
 extern crate self as valida_machine;
 
@@ -41,7 +39,7 @@ pub struct InstructionWord<F> {
 }
 
 #[derive(Copy, Clone, Default)]
-pub struct Operands<F>(pub [F; 5]);
+pub struct Operands<F>(pub [F; OPERAND_ELEMENTS]);
 
 impl<F: Copy> Operands<F> {
     pub fn a(&self) -> F {
@@ -69,7 +67,7 @@ impl<F: Copy> Operands<F> {
 
 impl<F: PrimeField> Operands<F> {
     pub fn from_i32_slice(slice: &[i32]) -> Self {
-        let mut operands = [F::ZERO; 5];
+        let mut operands = [F::ZERO; OPERAND_ELEMENTS];
         for (i, &operand) in slice.iter().enumerate() {
             let abs = F::from_canonical_u32(operand.abs() as u32);
             operands[i] = if operand < 0 { -abs } else { abs };
@@ -79,7 +77,7 @@ impl<F: PrimeField> Operands<F> {
 }
 
 #[derive(Default)]
-pub struct ProgramROM<F>(Vec<InstructionWord<F>>);
+pub struct ProgramROM<F>(pub Vec<InstructionWord<F>>);
 
 impl<F> ProgramROM<F> {
     pub fn new(instructions: Vec<InstructionWord<F>>) -> Self {

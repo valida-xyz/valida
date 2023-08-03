@@ -26,7 +26,6 @@ pub enum Operation {
 
 #[derive(Default)]
 pub struct Mul32Chip {
-    pub clock: u32,
     pub operations: Vec<Operation>,
 }
 

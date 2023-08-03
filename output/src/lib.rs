@@ -17,6 +17,7 @@ use p3_maybe_rayon::*;
 pub mod columns;
 pub mod stark;
 
+#[derive(Default)]
 pub struct OutputChip {
     pub values: Vec<(u32, u8)>, // (clk, byte)
 }
@@ -71,12 +72,14 @@ where
             .concat();
 
         // Add final row
-        let mut last_row = [M::F::ZERO; NUM_OUTPUT_COLS];
-        let mut cols: &mut OutputCols<M::F> = unsafe { transmute(&mut last_row) };
-        cols.is_real = M::F::ONE;
-        cols.clk = M::F::from_canonical_u32(self.values.last().unwrap().0);
-        cols.value = M::F::from_canonical_u8(self.values.last().unwrap().1);
-        rows.push(last_row);
+        if let Some(last_row) = self.values.last() {
+            let mut row = [M::F::ZERO; NUM_OUTPUT_COLS];
+            let mut cols: &mut OutputCols<M::F> = unsafe { transmute(&mut row) };
+            cols.is_real = M::F::ONE;
+            cols.clk = M::F::from_canonical_u32(last_row.0);
+            cols.value = M::F::from_canonical_u8(last_row.1);
+            rows.push(row);
+        }
 
         RowMajorMatrix::new(rows.concat(), NUM_OUTPUT_COLS)
     }
@@ -142,6 +145,10 @@ where
             .output_mut()
             .values
             .push((clk, b.into_iter().last().unwrap()));
+
+        state
+            .cpu_mut()
+            .push_bus_op(None, <Self as Instruction<M>>::OPCODE, ops);
 
         // The immediate value flag should be set, and the immediate operand value should
         // equal zero. We only write one byte of one word at a time to output.
