@@ -5,7 +5,9 @@ use std::io::{BufReader, Read, Result};
 
 use valida_basic::BasicMachine;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{InstructionWord, Machine, Operands, ProgramROM, Word};
+use valida_machine::{
+    InstructionWord, Machine, Operands, ProgramROM, Word, MEMORY_CELL_BYTES, OPERAND_ELEMENTS,
+};
 use valida_output::MachineWithOutputChip;
 
 #[derive(Parser)]
@@ -31,12 +33,15 @@ fn main() {
     let mut input_bytes = Vec::new();
     std::io::stdin().read_to_end(&mut input_bytes).unwrap();
     let input_words = input_bytes
-        .chunks(4)
+        .chunks(MEMORY_CELL_BYTES)
         .map(|chunk| {
             let mut word = Word::default();
-            chunk.iter().rev().enumerate().for_each(|(i, b)| {
-                word[i] = *b;
-            });
+            (0..MEMORY_CELL_BYTES)
+                .rev()
+                .zip(chunk.iter())
+                .for_each(|(i, b)| {
+                    word[i] = *b;
+                });
             word
         })
         .collect::<Vec<_>>();
@@ -57,8 +62,8 @@ fn load_program_rom(filename: &str) -> Result<ProgramROM<i32>> {
     let mut instructions = Vec::new();
 
     while let Ok(opcode) = reader.read_u32::<LittleEndian>() {
-        let mut operands_arr = [0i32; 5];
-        for i in 0..5 {
+        let mut operands_arr = [0i32; OPERAND_ELEMENTS];
+        for i in 0..OPERAND_ELEMENTS {
             operands_arr[i] = reader.read_i32::<LittleEndian>()?;
         }
         let operands = Operands(operands_arr);

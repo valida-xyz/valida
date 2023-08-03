@@ -11,5 +11,7 @@ where
     F: PrimeField,
     AB: AirBuilder<F = F>,
 {
-    fn eval(&self, builder: &mut AB) {}
+    fn eval(&self, builder: &mut AB) {
+        // TODO
+    }
 }
