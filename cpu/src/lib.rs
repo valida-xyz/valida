@@ -320,6 +320,9 @@ impl CpuChip {
                 padded_row[CPU_COL_MAP.fp] = fp;
                 padded_row[CPU_COL_MAP.clk] = clk + F::from_canonical_u32(n as u32 + 1);
                 padded_row[CPU_COL_MAP.opcode_flags.is_stop] = F::ONE;
+                padded_row[CPU_COL_MAP.mem_channels[0].is_read] = F::ONE;
+                padded_row[CPU_COL_MAP.mem_channels[1].is_read] = F::ONE;
+                padded_row[CPU_COL_MAP.mem_channels[2].is_read] = F::ZERO;
             });
     }
 

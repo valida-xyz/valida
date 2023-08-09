@@ -189,11 +189,11 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                 chip.generate_trace(self)
             }).collect::<Vec<_>>();
 
-            // TODO: Want to avoid cloning, but this leads to lifetime issues...
-            // let main_trace_views = main_traces.iter().map(|trace| trace.as_view()).collect();
+            //// TODO: Want to avoid cloning, but this leads to lifetime issues...
+            //// let main_trace_views = main_traces.iter().map(|trace| trace.as_view()).collect();
 
-            let (main_commit, main_data) = config.pcs().commit_batches(main_traces.clone());
-            // TODO: Have challenger observe main_commit.
+            //let (main_commit, main_data) = config.pcs().commit_batches(main_traces.clone());
+            //// TODO: Have challenger observe main_commit.
 
             let mut perm_challenges = Vec::new();
             for _ in 0..3 {
@@ -204,19 +204,23 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                 generate_permutation_trace(self, *chip, &main_traces[i], perm_challenges.clone())
             }).collect::<Vec<_>>();
 
-            // TODO: Want to avoid cloning, but this leads to lifetime issues...
-            // let perm_trace_views = perm_traces.iter().map(|trace| trace.as_view()).collect();
+            //// TODO: Want to avoid cloning, but this leads to lifetime issues...
+            //// let perm_trace_views = perm_traces.iter().map(|trace| trace.as_view()).collect();
 
-            let (perm_commit, perm_data) = config.pcs().commit_batches(perm_traces.clone());
-            // TODO: Have challenger observe perm_commit.
+            //let (perm_commit, perm_data) = config.pcs().commit_batches(perm_traces.clone());
+            //// TODO: Have challenger observe perm_commit.
 
-            let opening_points = &[vec![Self::EF::TWO], vec![Self::EF::TWO]]; // TODO
-            let (openings, opening_proof) = config.pcs().open_multi_batches::<Self::EF, SC::Chal>(
-                &[&main_data, &perm_data], opening_points, &mut challenger);
+            //let opening_points = &[vec![Self::EF::TWO], vec![Self::EF::TWO]]; // TODO
+            //let (openings, opening_proof) = config.pcs().open_multi_batches::<Self::EF, SC::Chal>(
+            //    &[&main_data, &perm_data], opening_points, &mut challenger);
 
             let mut chip_proofs = vec![];
             #prove_starks
-            MachineProof { opening_proof, chip_proofs }
+            MachineProof {
+                // opening_proof,
+                chip_proofs,
+                phantom: core::marker::PhantomData,
+            }
         }
     }
 }

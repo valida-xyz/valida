@@ -19,7 +19,7 @@ where
         let next: &Mul32Cols<AB::Var> = main.row(1).borrow();
 
         // Limb weights modulo 2^32
-        let base_m = [1 << 24, 1 << 16, 1 << 8, 1].map(AB::Expr::from_canonical_u32);
+        let base_m = [1, 1 << 8, 1 << 16, 1 << 24].map(AB::Expr::from_canonical_u32);
 
         // Partially reduced summation of input product limbs (mod 2^32)
         let pi = pi_m::<4, AB>(&base_m, local.input_1, local.input_2);
@@ -35,7 +35,7 @@ where
 
         // Congruence checks
         builder.assert_eq(pi - sigma, local.r * AB::Expr::TWO);
-        builder.assert_eq(pi_prime - sigma_prime, local.s * base_m[1].clone());
+        builder.assert_eq(pi_prime - sigma_prime, local.s * base_m[2].clone());
 
         // Range check counter
         builder
@@ -57,13 +57,15 @@ fn pi_m<const N: usize, AB: AirBuilder>(
 ) -> AB::Expr {
     iproduct!(0..N, 0..N)
         .filter(|(i, j)| i + j < N)
-        .map(|(i, j)| base[i + j].clone() * input_1[i] * input_2[j])
+        .map(|(i, j)| base[i + j].clone() * input_1[3 - i] * input_2[3 - j])
         .sum()
 }
 
 fn sigma_m<const N: usize, AB: AirBuilder>(base: &[AB::Expr], input: Word<AB::Var>) -> AB::Expr {
     input
         .into_iter()
+        .rev()
+        .take(N)
         .enumerate()
         .map(|(i, x)| base[i].clone() * x)
         .sum()

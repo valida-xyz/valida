@@ -118,10 +118,8 @@ where
         // Compute address difference values
         Self::compute_address_diffs(ops, &mut rows);
 
-        let mut trace =
+        let trace =
             RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_MEM_COLS);
-
-        Self::pad_to_power_of_two(&mut trace.values);
 
         trace
     }
@@ -228,6 +226,18 @@ impl MemoryChip {
                 ops[idx_addr..(idx_addr + num_ops)].partition_point(|(clk2, _)| clk2 < clk);
             ops.insert(idx_addr + idx_clk, (*clk, *op));
         }
+
+        // Pad the end of the table with dummy reads (to the next power of two)
+        let num_dummy_ops = ops.len().next_power_of_two() - ops.len();
+        let dummy_op_clk = ops.last().unwrap().0;
+        let dummy_op_addr = ops.last().unwrap().1.get_address();
+        let dummy_op_value = ops.last().unwrap().1.get_value();
+        for _ in 0..num_dummy_ops {
+            ops.push((
+                dummy_op_clk,
+                Operation::DummyRead(dummy_op_addr, dummy_op_value),
+            ));
+        }
     }
 
     fn compute_address_diffs<F: PrimeField>(
@@ -266,30 +276,5 @@ impl MemoryChip {
                 rows[n][MEM_COL_MAP.addr_not_equal] = F::ONE;
             }
         }
-    }
-
-    fn pad_to_power_of_two<F: PrimeField>(values: &mut Vec<F>) {
-        let len = values.len();
-        let n_real_rows = values.len() / NUM_MEM_COLS;
-
-        let last_row = &values[len - NUM_MEM_COLS..];
-        let counter = last_row[MEM_COL_MAP.counter];
-
-        values.resize(n_real_rows.next_power_of_two() * NUM_MEM_COLS, F::ZERO);
-
-        // Interpret values as a slice of arrays of length `NUM_MEM_COLS`
-        let rows = unsafe {
-            core::slice::from_raw_parts_mut(
-                values.as_mut_ptr() as *mut [F; NUM_MEM_COLS],
-                values.len() / NUM_MEM_COLS,
-            )
-        };
-
-        rows[n_real_rows..]
-            .par_iter_mut()
-            .enumerate()
-            .for_each(|(n, padded_row)| {
-                padded_row[MEM_COL_MAP.counter] = counter + F::from_canonical_u32(n as u32 + 1);
-            });
     }
 }

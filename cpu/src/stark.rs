@@ -45,6 +45,7 @@ where
 
         // "Stop" constraints (to check that program execution was not stopped prematurely)
         builder
+            .when_transition()
             .when(local.opcode_flags.is_stop)
             .assert_eq(next.pc, local.pc);
         builder
