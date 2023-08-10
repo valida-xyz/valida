@@ -13,5 +13,7 @@ pub mod sub;
 
 fn pad_to_power_of_two<const N: usize, F: AbstractField>(values: &mut Vec<F>) {
     let n_real_rows = values.len() / N;
-    values.resize(n_real_rows.next_power_of_two() * N, F::ZERO);
+    if n_real_rows > 0 {
+        values.resize(n_real_rows.next_power_of_two() * N, F::ZERO);
+    }
 }
