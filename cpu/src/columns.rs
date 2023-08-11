@@ -114,7 +114,7 @@ const fn make_col_map() -> CpuCols<usize> {
 
 #[cfg(test)]
 mod tests {
-    type F = p3_mersenne_31::Mersenne31;
+    type F = p3_baby_bear::BabyBear;
 
     #[test]
     fn aligned_borrow() {
