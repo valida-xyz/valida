@@ -22,12 +22,12 @@ byteorder = "1.4.3"
 clap = { version = "4.3.19", features = ["derive"] }
 
 [dev-dependencies]
-p3-brakedown = { path = "../../Plonky3/brakedown" }
+p3-baby-bear = { path = "../../Plonky3/baby-bear" }
 p3-challenger = { path = "../../Plonky3/challenger" }
+p3-dft = { path = "../../Plonky3/dft" }
 p3-field = { path = "../../Plonky3/field" }
+p3-fri = { path = "../../Plonky3/fri" }
 p3-merkle-tree = { path = "../../Plonky3/merkle-tree" }
-p3-mersenne-31 = { path = "../../Plonky3/mersenne-31" }
 p3-poseidon = { path = "../../Plonky3/poseidon" }
 p3-symmetric = { path = "../../Plonky3/symmetric" }
-p3-tensor-pcs = { path = "../../Plonky3/tensor-pcs" }
 rand = "0.8.5"

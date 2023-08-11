@@ -1,28 +1,23 @@
-use rand::thread_rng;
-use valida_alu_u32::{
-    add::{Add32Chip, Add32Instruction, MachineWithAdd32Chip},
-    div::{Div32Chip, Div32Instruction, MachineWithDiv32Chip},
-    mul::{MachineWithMul32Chip, Mul32Chip, Mul32Instruction},
-    sub::{MachineWithSub32Chip, Sub32Chip, Sub32Instruction},
-};
+use p3_baby_bear::BabyBear;
+use valida_alu_u32::add::{Add32Instruction, MachineWithAdd32Chip};
 use valida_basic::BasicMachine;
 use valida_cpu::{
-    BeqInstruction, BneInstruction, CpuChip, Imm32Instruction, JalInstruction, JalvInstruction,
-    MachineWithCpuChip, ReadAdviceInstruction, StopInstruction, Store32Instruction,
+    BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
+    MachineWithCpuChip, StopInstruction, Store32Instruction,
 };
 use valida_machine::config::StarkConfigImpl;
 use valida_machine::{Instruction, InstructionWord, Machine, Operands, ProgramROM, Word};
-use valida_memory::{MachineWithMemoryChip, MemoryChip};
+use valida_memory::MachineWithMemoryChip;
 
 use p3_challenger::DuplexChallenger;
+use p3_dft::Radix2BowersFft;
 use p3_field::AbstractField;
+use p3_fri::{FRIBasedPCS, FriConfigImpl};
 use p3_merkle_tree::MerkleTreeMMCS;
-use p3_mersenne_31::Mersenne31;
 use p3_poseidon::Poseidon;
 use p3_symmetric::compression::TruncatedPermutation;
 use p3_symmetric::mds::NaiveMDSMatrix;
 use p3_symmetric::sponge::PaddingFreeSponge;
-use p3_tensor_pcs::TensorPCS;
 
 #[test]
 fn prove_fibonacci() {
@@ -184,20 +179,34 @@ fn prove_fibonacci() {
                                              // automatically by the machine, not manually here
     machine.run(rom);
 
-    type Val = Mersenne31;
+    type Val = BabyBear;
     type Challenge = Val; // TODO
     type PackedChallenge = Challenge; // TODO
 
-    let mds = NaiveMDSMatrix::<Val, 8>::new([[Val::ONE; 8]; 8]); // TODO: Use a real MDS matrix
-    type Perm = Poseidon<Val, NaiveMDSMatrix<Val, 8>, 8, 7>;
-    let perm = Perm::new_from_rng(5, 5, mds, &mut thread_rng()); // TODO: Use deterministic RNG
-    let h4 = PaddingFreeSponge::<Val, Perm, { 4 + 4 }>::new(perm.clone());
-    let c = TruncatedPermutation::<Val, Perm, 2, 4, { 2 * 4 }>::new(perm.clone());
-    let mmcs = MerkleTreeMMCS::new(h4, c);
-    let codes = p3_brakedown::fast_registry();
-    let pcs = TensorPCS::new(codes, mmcs);
+    type MDS = NaiveMDSMatrix<Val, 8>;
+    let mds = MDS::new([[Val::ONE; 8]; 8]); // TODO: Use a real MDS matrix
+
+    type Perm = Poseidon<Val, MDS, 8, 7>;
+    let perm = Perm::new(5, 5, vec![], mds);
+
+    type H4 = PaddingFreeSponge<Val, Perm, { 4 + 4 }>;
+    let h4 = H4::new(perm.clone());
+
+    type C = TruncatedPermutation<Val, Perm, 2, 4, { 2 * 4 }>;
+    let c = C::new(perm.clone());
+
+    type MMCS = MerkleTreeMMCS<Val, [Val; 4], H4, C>;
+    type DFT = Radix2BowersFft;
+
+    type Chal = DuplexChallenger<Val, Perm, 8>;
+    type MyFriConfig = FriConfigImpl<Val, Challenge, MMCS, MMCS, Chal>;
+    type PCS = FRIBasedPCS<MyFriConfig, DFT>;
+    type MyConfig = StarkConfigImpl<Val, Challenge, PackedChallenge, PCS, DFT, Chal>;
+
+    let mmcs = MMCS::new(h4, c);
+    let pcs = PCS::new(DFT::default(), 1, mmcs);
     let challenger = DuplexChallenger::new(perm);
-    let config = StarkConfigImpl::<Val, Challenge, PackedChallenge, _, _>::new(pcs, challenger);
+    let config = MyConfig::new(pcs, DFT::default(), challenger);
     machine.prove(&config);
 
     assert_eq!(machine.cpu().clock, 191);
