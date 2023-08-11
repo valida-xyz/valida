@@ -3,7 +3,7 @@ use super::Add32Chip;
 use core::borrow::Borrow;
 
 use p3_air::{Air, AirBuilder};
-use p3_field::{AbstractField, PrimeField};
+use p3_field::PrimeField;
 use p3_matrix::MatrixRows;
 
 impl<F, AB> Air<AB> for Add32Chip

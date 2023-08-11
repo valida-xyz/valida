@@ -1,7 +1,6 @@
 use core::borrow::{Borrow, BorrowMut};
 use core::mem::{size_of, transmute};
 use valida_derive::AlignedBorrow;
-use valida_machine::Word;
 use valida_util::indices_arr;
 
 #[derive(AlignedBorrow, Default)]

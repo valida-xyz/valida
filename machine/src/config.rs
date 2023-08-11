@@ -1,5 +1,5 @@
 use core::marker::PhantomData;
-use p3_challenger::Challenger;
+use p3_challenger::FieldChallenger;
 use p3_commit::MultivariatePCS;
 use p3_field::{AbstractExtensionField, ExtensionField, Field, PackedField, PrimeField64};
 use p3_matrix::dense::RowMajorMatrix;
@@ -14,10 +14,10 @@ pub trait StarkConfig {
         + AbstractExtensionField<<Self::Val as Field>::Packing>;
 
     /// The polynomial commitment scheme used.
-    type PCS: MultivariatePCS<Self::Val, RowMajorMatrix<Self::Val>>;
+    type PCS: MultivariatePCS<Self::Val, RowMajorMatrix<Self::Val>, Self::Chal>;
 
     /// The `Challenger` (Fiat-Shamir) implementation used.
-    type Chal: Challenger<Self::Val>;
+    type Chal: FieldChallenger<Self::Val>;
 
     fn pcs(&self) -> &Self::PCS;
 
@@ -54,8 +54,8 @@ where
     Val: PrimeField64,
     Challenge: ExtensionField<Val>,
     PackedChallenge: PackedField<Scalar = Challenge> + AbstractExtensionField<Val::Packing>,
-    PCS: MultivariatePCS<Val, RowMajorMatrix<Val>>,
-    Chal: Challenger<Val> + Clone,
+    PCS: MultivariatePCS<Val, RowMajorMatrix<Val>, Chal>,
+    Chal: FieldChallenger<Val> + Clone,
 {
     type Val = Val;
     type Challenge = Challenge;
