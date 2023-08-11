@@ -171,7 +171,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             SC: ::valida_machine::config::StarkConfig<Val = Self::F, Challenge = Self::EF>,
         {
             use ::valida_machine::__internal::*;
-            use ::valida_machine::__internal::p3_challenger::Challenger;
+            use ::valida_machine::__internal::p3_challenger::FieldChallenger;
             use ::valida_machine::__internal::p3_commit::{PCS, MultivariatePCS};
             use ::valida_machine::__internal::p3_matrix::dense::RowMajorMatrix;
             use ::valida_machine::chip::generate_permutation_trace;
@@ -197,7 +197,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
 
             let mut perm_challenges = Vec::new();
             for _ in 0..3 {
-                perm_challenges.push(challenger.random_ext_element());
+                perm_challenges.push(challenger.sample_ext_element());
             }
 
             let perm_traces = chips.into_par_iter().enumerate().map(|(i, chip)| {
