@@ -18,6 +18,7 @@ use p3_poseidon::Poseidon;
 use p3_symmetric::compression::TruncatedPermutation;
 use p3_symmetric::mds::NaiveMDSMatrix;
 use p3_symmetric::sponge::PaddingFreeSponge;
+use rand::thread_rng;
 
 #[test]
 fn prove_fibonacci() {
@@ -187,7 +188,7 @@ fn prove_fibonacci() {
     let mds = MDS::new([[Val::ONE; 8]; 8]); // TODO: Use a real MDS matrix
 
     type Perm = Poseidon<Val, MDS, 8, 7>;
-    let perm = Perm::new(5, 5, vec![], mds);
+    let perm = Perm::new_from_rng(5, 5, mds, &mut thread_rng()); // TODO: Use deterministic RNG
 
     type H4 = PaddingFreeSponge<Val, Perm, { 4 + 4 }>;
     let h4 = H4::new(perm.clone());
