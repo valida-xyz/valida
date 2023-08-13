@@ -1,13 +1,14 @@
 use byteorder::{LittleEndian, ReadBytesExt};
 use clap::Parser;
 use std::fs::File;
-use std::io::{BufReader, Read, Result};
+use std::io::{BufReader, Read, Result, Write};
 
 use valida_basic::BasicMachine;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{
     InstructionWord, Machine, Operands, ProgramROM, Word, MEMORY_CELL_BYTES, OPERAND_ELEMENTS,
 };
+use valida_memory::MachineWithMemoryChip;
 use valida_output::MachineWithOutputChip;
 
 #[derive(Parser)]
@@ -51,9 +52,16 @@ fn main() {
     machine.run(rom);
 
     // Write output chip values to standard output
-    for (_, byte) in machine.output().values.iter() {
-        print!("{}", *byte as char);
-    }
+    std::io::stdout()
+        .write_all(
+            &machine
+                .output()
+                .values
+                .iter()
+                .map(|(_, b)| *b)
+                .collect::<Vec<_>>(),
+        )
+        .unwrap();
 }
 
 fn load_program_rom(filename: &str) -> Result<ProgramROM<i32>> {
