@@ -10,7 +10,7 @@ Our roadmap also includes implementing fast recursion and continuations to enabl
 ## Interpreter
 A standalone binary interpreter is available to execute Valida programs (skipping proof generation), and can be built by running `cargo build --release`.
 
-For example, the 25th Fibonacci number can be returned by executing the command `echo -n '\x19' | ./target/release/valida basic/tests/data/fibonacci.bin | hexdump`.
+For example, the 25th Fibonacci number can be returned by executing the command `printf "\x19" | ./target/release/valida basic/tests/data/fibonacci.bin | hexdump`.
 
 ## Tests
 A proof of a Fibonacci program execution can be generated and tested for soundness by running `cargo test prove_fibonacci`.
