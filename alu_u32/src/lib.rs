@@ -10,6 +10,7 @@ pub mod bitwise;
 pub mod div;
 pub mod lt;
 pub mod mul;
+pub mod shift;
 pub mod sub;
 
 fn pad_to_power_of_two<const N: usize, F: AbstractField>(values: &mut Vec<F>) {
