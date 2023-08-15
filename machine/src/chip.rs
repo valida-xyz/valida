@@ -5,7 +5,7 @@ use valida_util::batch_multiplicative_inverse;
 
 use p3_air::{AirBuilder, PermutationAirBuilder, VirtualPairCol};
 use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Powers, PrimeField};
-use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRows};
+use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRowSlices};
 
 pub trait Chip<M: Machine>: Sync {
     /// Generate the main trace for the chip given the provided machine.
@@ -179,12 +179,12 @@ where
     let rand_elems = builder.permutation_randomness().to_vec();
 
     let main = builder.main();
-    let main_local: &[AB::Var] = main.row(0);
+    let main_local: &[AB::Var] = main.row_slice(0);
 
     let perm = builder.permutation();
     let perm_width = perm.width();
-    let perm_local: &[AB::VarEF] = perm.row(0);
-    let perm_next: &[AB::VarEF] = perm.row(1);
+    let perm_local: &[AB::VarEF] = perm.row_slice(0);
+    let perm_next: &[AB::VarEF] = perm.row_slice(1);
 
     let phi_local = perm_local[perm_width - 1].clone();
     let phi_next = perm_next[perm_width - 1].clone();

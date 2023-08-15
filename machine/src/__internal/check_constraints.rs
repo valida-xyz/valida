@@ -4,8 +4,9 @@ use crate::{Chip, Machine};
 use p3_air::{Air, TwoRowMatrixView};
 use p3_field::AbstractField;
 use p3_matrix::dense::RowMajorMatrix;
-use p3_matrix::{Matrix, MatrixRows};
+use p3_matrix::Matrix;
 use p3_maybe_rayon::{MaybeIntoParIter, ParallelIterator};
+use p3_matrix::MatrixRowSlices;
 
 /// Check that all constraints vanish on the subgroup.
 pub fn check_constraints<M, A>(
@@ -24,16 +25,16 @@ pub fn check_constraints<M, A>(
         return;
     }
 
-    let cumulative_sum = *perm.row(perm.height() - 1).last().unwrap();
+    let cumulative_sum = *perm.row_slice(perm.height() - 1).last().unwrap();
 
     // Check that constraints are satisfied.
     (0..height).into_par_iter().for_each(|i| {
         let i_next = (i + 1) % height;
 
-        let main_local = main.row(i);
-        let main_next = main.row(i_next);
-        let perm_local = perm.row(i);
-        let perm_next = perm.row(i_next);
+        let main_local = main.row_slice(i);
+        let main_next = main.row_slice(i_next);
+        let perm_local = perm.row_slice(i);
+        let perm_next = perm.row_slice(i_next);
 
         let mut builder = DebugConstraintBuilder {
             machine,

@@ -5,7 +5,7 @@ use valida_opcodes::WRITE;
 
 use p3_air::{Air, AirBuilder};
 use p3_field::PrimeField;
-use p3_matrix::MatrixRows;
+use p3_matrix::MatrixRowSlices;
 
 impl<F, AB> Air<AB> for OutputChip
 where
@@ -14,8 +14,8 @@ where
 {
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
-        let local: &OutputCols<AB::Var> = main.row(0).borrow();
-        let next: &OutputCols<AB::Var> = main.row(1).borrow();
+        let local: &OutputCols<AB::Var> = main.row_slice(0).borrow();
+        let next: &OutputCols<AB::Var> = main.row_slice(1).borrow();
 
         // Range check constraints
         builder
