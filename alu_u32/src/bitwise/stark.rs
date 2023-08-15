@@ -36,7 +36,7 @@ where
 
             let bitwise_and: AB::Expr = local.bits_1[i]
                 .into_iter()
-                .zip(local.bits_2[i].into_iter())
+                .zip(local.bits_2[i])
                 .zip(base_2.iter().cloned())
                 .map(|((bit_1, bit_2), base)| bit_1 * bit_2 * base)
                 .sum();
@@ -55,12 +55,14 @@ where
                 .assert_eq(bitwise_xor.clone(), local.output[i]);
 
             // Check that bits are boolean values
-            for bit in local.bits_1[i]
-                .into_iter()
-                .chain(local.bits_2[i].into_iter())
-            {
+            for bit in local.bits_1[i].into_iter().chain(local.bits_2[i]) {
                 builder.assert_bool(bit);
             }
         }
+
+        builder.assert_bool(local.is_and);
+        builder.assert_bool(local.is_or);
+        builder.assert_bool(local.is_xor);
+        builder.assert_one(local.is_and + local.is_or + local.is_xor);
     }
 }
