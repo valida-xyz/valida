@@ -4,7 +4,7 @@ use core::borrow::Borrow;
 
 use p3_air::{Air, AirBuilder};
 use p3_field::AbstractField;
-use p3_matrix::MatrixRows;
+use p3_matrix::MatrixRowSlices;
 
 impl<AB> Air<AB> for MemoryChip
 where
@@ -18,8 +18,8 @@ where
 impl MemoryChip {
     fn eval_main<AB: AirBuilder>(&self, builder: &mut AB) {
         let main = builder.main();
-        let local: &MemoryCols<AB::Var> = main.row(0).borrow();
-        let next: &MemoryCols<AB::Var> = main.row(1).borrow();
+        let local: &MemoryCols<AB::Var> = main.row_slice(0).borrow();
+        let next: &MemoryCols<AB::Var> = main.row_slice(1).borrow();
 
         // Address equality
         builder

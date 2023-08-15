@@ -4,7 +4,7 @@ use core::borrow::Borrow;
 
 use p3_air::{Air, AirBuilder};
 use p3_field::PrimeField;
-use p3_matrix::MatrixRows;
+use p3_matrix::MatrixRowSlices;
 
 impl<F, AB> Air<AB> for Add32Chip
 where
@@ -13,7 +13,7 @@ where
 {
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
-        let local: &Add32Cols<AB::Var> = main.row(0).borrow();
+        let local: &Add32Cols<AB::Var> = main.row_slice(0).borrow();
 
         let one = AB::F::ONE;
         let base = AB::F::from_canonical_u32(1 << 8);

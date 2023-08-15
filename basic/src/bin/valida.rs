@@ -8,7 +8,6 @@ use valida_cpu::MachineWithCpuChip;
 use valida_machine::{
     InstructionWord, Machine, Operands, ProgramROM, Word, MEMORY_CELL_BYTES, OPERAND_ELEMENTS,
 };
-use valida_memory::MachineWithMemoryChip;
 use valida_output::MachineWithOutputChip;
 
 #[derive(Parser)]

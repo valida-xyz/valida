@@ -5,7 +5,7 @@ use valida_machine::Word;
 
 use p3_air::{Air, AirBuilder};
 use p3_field::{AbstractField, PrimeField};
-use p3_matrix::MatrixRows;
+use p3_matrix::MatrixRowSlices;
 
 impl<F, AB> Air<AB> for CpuChip
 where
@@ -14,8 +14,8 @@ where
 {
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
-        let local: &CpuCols<AB::Var> = main.row(0).borrow();
-        let next: &CpuCols<AB::Var> = main.row(1).borrow();
+        let local: &CpuCols<AB::Var> = main.row_slice(0).borrow();
+        let next: &CpuCols<AB::Var> = main.row_slice(1).borrow();
 
         let base = [1 << 24, 1 << 16, 1 << 8, 1].map(AB::Expr::from_canonical_u32);
 
