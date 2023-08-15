@@ -5,7 +5,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Bitwise32Cols, COL_MAP, NUM_COLS};
 use core::mem::transmute;
-use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
+use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 use valida_opcodes::{AND32, OR32, XOR32};
@@ -34,7 +34,7 @@ pub struct Bitwise32Chip {
 impl<F, M> Chip<M> for Bitwise32Chip
 where
     F: PrimeField,
-    M: MachineWithGeneralBus<F = F> + MachineWithRangeBus8,
+    M: MachineWithGeneralBus<F = F>,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
@@ -49,22 +49,6 @@ where
         pad_to_power_of_two::<NUM_COLS, F>(&mut trace.values);
 
         trace
-    }
-
-    fn global_sends(&self, machine: &M) -> Vec<Interaction<M::F>> {
-        let output = COL_MAP
-            .output
-            .0
-            .map(VirtualPairCol::single_main)
-            .into_iter()
-            .collect::<Vec<_>>();
-
-        let send = Interaction {
-            fields: output,
-            count: VirtualPairCol::one(),
-            argument_index: machine.range_bus(),
-        };
-        vec![send]
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
@@ -251,7 +235,5 @@ where
         state
             .cpu_mut()
             .push_bus_op(imm, <Self as Instruction<M>>::OPCODE, ops);
-
-        state.range_check(a);
     }
 }
