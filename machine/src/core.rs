@@ -1,5 +1,5 @@
 use super::{Field, PrimeField, MEMORY_CELL_BYTES};
-use core::ops::{Add, Div, Index, IndexMut, Mul, Sub};
+use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Index, IndexMut, Mul, Sub};
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Word<F>(pub [F; MEMORY_CELL_BYTES]);
@@ -85,6 +85,39 @@ impl Div for Word<u8> {
         let c: u32 = other.into();
         let res = b / c;
         res.into()
+    }
+}
+
+impl BitXor for Word<u8> {
+    type Output = Self;
+    fn bitxor(self, other: Self) -> Self {
+        let mut res = self;
+        for i in 0..MEMORY_CELL_BYTES {
+            res[i] ^= other[i];
+        }
+        res
+    }
+}
+
+impl BitAnd for Word<u8> {
+    type Output = Self;
+    fn bitand(self, other: Self) -> Self {
+        let mut res = self;
+        for i in 0..MEMORY_CELL_BYTES {
+            res[i] &= other[i];
+        }
+        res
+    }
+}
+
+impl BitOr for Word<u8> {
+    type Output = Self;
+    fn bitor(self, other: Self) -> Self {
+        let mut res = self;
+        for i in 0..MEMORY_CELL_BYTES {
+            res[i] |= other[i];
+        }
+        res
     }
 }
 

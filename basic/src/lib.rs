@@ -5,6 +5,10 @@ extern crate alloc;
 
 use valida_alu_u32::{
     add::{Add32Chip, Add32Instruction, MachineWithAdd32Chip},
+    bitwise::{
+        And32Instruction, Bitwise32Chip, MachineWithBitwise32Chip, Or32Instruction,
+        Xor32Instruction,
+    },
     div::{Div32Chip, Div32Instruction, MachineWithDiv32Chip},
     mul::{MachineWithMul32Chip, Mul32Chip, Mul32Instruction},
     sub::{MachineWithSub32Chip, Sub32Chip, Sub32Instruction},
@@ -52,6 +56,12 @@ pub struct BasicMachine {
     mul32: Mul32Instruction,
     #[instruction(div_u32)]
     div32: Div32Instruction,
+    #[instruction(bitwise_u32)]
+    and32: And32Instruction,
+    #[instruction(bitwise_u32)]
+    or32: Or32Instruction,
+    #[instruction(bitwise_u32)]
+    xor32: Xor32Instruction,
 
     // Input/output instructions
     #[instruction]
@@ -71,6 +81,8 @@ pub struct BasicMachine {
     mul_u32: Mul32Chip,
     #[chip]
     div_u32: Div32Chip,
+    #[chip]
+    bitwise_u32: Bitwise32Chip,
     #[chip]
     output: OutputChip,
     #[chip]
@@ -152,6 +164,16 @@ impl MachineWithDiv32Chip for BasicMachine {
 
     fn div_u32_mut(&mut self) -> &mut Div32Chip {
         &mut self.div_u32
+    }
+}
+
+impl MachineWithBitwise32Chip for BasicMachine {
+    fn bitwise_u32(&self) -> &Bitwise32Chip {
+        &self.bitwise_u32
+    }
+
+    fn bitwise_u32_mut(&mut self) -> &mut Bitwise32Chip {
+        &mut self.bitwise_u32
     }
 }
 
