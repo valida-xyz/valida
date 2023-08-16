@@ -12,8 +12,8 @@ use valida_memory::MachineWithMemoryChip;
 use p3_challenger::DuplexChallenger;
 use p3_dft::Radix2BowersFft;
 use p3_field::AbstractField;
-use p3_fri::{FRIBasedPCS, FriConfigImpl};
-use p3_merkle_tree::MerkleTreeMMCS;
+use p3_fri::{FriBasedPcs, FriConfigImpl};
+use p3_merkle_tree::MerkleTreeMmcs;
 use p3_poseidon::Poseidon;
 use p3_symmetric::compression::TruncatedPermutation;
 use p3_symmetric::mds::NaiveMDSMatrix;
@@ -196,12 +196,12 @@ fn prove_fibonacci() {
     type C = TruncatedPermutation<Val, Perm, 2, 4, { 2 * 4 }>;
     let c = C::new(perm.clone());
 
-    type MMCS = MerkleTreeMMCS<Val, [Val; 4], H4, C>;
+    type MMCS = MerkleTreeMmcs<Val, [Val; 4], H4, C>;
     type DFT = Radix2BowersFft;
 
     type Chal = DuplexChallenger<Val, Perm, 8>;
     type MyFriConfig = FriConfigImpl<Val, Challenge, MMCS, MMCS, Chal>;
-    type PCS = FRIBasedPCS<MyFriConfig, DFT>;
+    type PCS = FriBasedPcs<MyFriConfig, DFT>;
     type MyConfig = StarkConfigImpl<Val, Challenge, PackedChallenge, PCS, DFT, Chal>;
 
     let mmcs = MMCS::new(h4, c);

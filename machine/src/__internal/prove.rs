@@ -8,7 +8,7 @@ pub fn prove<M, A, SC>(
     _machine: &M,
     _config: &SC,
     _air: &A,
-    _challenger: &mut SC::Chal,
+    _challenger: &mut SC::Challenger,
 ) -> ChipProof
 where
     M: Machine,

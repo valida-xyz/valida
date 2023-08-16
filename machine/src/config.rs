@@ -17,18 +17,18 @@ pub trait StarkConfig {
         + AbstractExtensionField<<Self::Val as Field>::Packing>;
 
     /// The polynomial commitment scheme used.
-    type PCS: UnivariatePcs<Self::Val, RowMajorMatrix<Self::Val>, Self::Chal>;
+    type PCS: UnivariatePcs<Self::Val, RowMajorMatrix<Self::Val>, Self::Challenger>;
 
     type DFT: TwoAdicSubgroupDft<Self::Val>;
 
-    /// The `Challenger` (Fiat-Shamir) implementation used.
-    type Chal: FieldChallenger<Self::Val>;
+    /// The challenger (Fiat-Shamir) implementation used.
+    type Challenger: FieldChallenger<Self::Val>;
 
     fn pcs(&self) -> &Self::PCS;
 
     fn dft(&self) -> &Self::DFT;
 
-    fn challenger(&self) -> Self::Chal;
+    fn challenger(&self) -> Self::Challenger;
 }
 
 pub struct StarkConfigImpl<Val, Challenge, PackedChallenge, PCS, DFT, Chal> {
@@ -72,7 +72,7 @@ where
     type PackedChallenge = PackedChallenge;
     type PCS = PCS;
     type DFT = DFT;
-    type Chal = Chal;
+    type Challenger = Chal;
 
     fn pcs(&self) -> &Self::PCS {
         &self.pcs
@@ -82,7 +82,7 @@ where
         &self.dft
     }
 
-    fn challenger(&self) -> Self::Chal {
+    fn challenger(&self) -> Self::Challenger {
         self.init_challenger.clone()
     }
 }
