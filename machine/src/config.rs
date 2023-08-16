@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 use p3_challenger::FieldChallenger;
-use p3_commit::UnivariatePCS;
+use p3_commit::UnivariatePcs;
 use p3_dft::TwoAdicSubgroupDft;
 use p3_field::{
     AbstractExtensionField, ExtensionField, Field, PackedField, PrimeField64, TwoAdicField,
@@ -17,7 +17,7 @@ pub trait StarkConfig {
         + AbstractExtensionField<<Self::Val as Field>::Packing>;
 
     /// The polynomial commitment scheme used.
-    type PCS: UnivariatePCS<Self::Val, RowMajorMatrix<Self::Val>, Self::Chal>;
+    type PCS: UnivariatePcs<Self::Val, RowMajorMatrix<Self::Val>, Self::Chal>;
 
     type DFT: TwoAdicSubgroupDft<Self::Val>;
 
@@ -63,7 +63,7 @@ where
     Val: PrimeField64 + TwoAdicField,
     Challenge: ExtensionField<Val>,
     PackedChallenge: PackedField<Scalar = Challenge> + AbstractExtensionField<Val::Packing>,
-    PCS: UnivariatePCS<Val, RowMajorMatrix<Val>, Chal>,
+    PCS: UnivariatePcs<Val, RowMajorMatrix<Val>, Chal>,
     DFT: TwoAdicSubgroupDft<Val>,
     Chal: FieldChallenger<Val> + Clone,
 {

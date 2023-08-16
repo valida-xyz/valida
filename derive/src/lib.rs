@@ -172,7 +172,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
         {
             use ::valida_machine::__internal::*;
             use ::valida_machine::__internal::p3_challenger::FieldChallenger;
-            use ::valida_machine::__internal::p3_commit::{PCS, MultivariatePCS};
+            use ::valida_machine::__internal::p3_commit::{Pcs, MultivariatePcs};
             use ::valida_machine::__internal::p3_matrix::dense::RowMajorMatrix;
             use ::valida_machine::chip::generate_permutation_trace;
             use ::valida_machine::proof::MachineProof;

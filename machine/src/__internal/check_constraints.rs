@@ -5,8 +5,8 @@ use p3_air::{Air, TwoRowMatrixView};
 use p3_field::AbstractField;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_matrix::Matrix;
-use p3_maybe_rayon::{MaybeIntoParIter, ParallelIterator};
 use p3_matrix::MatrixRowSlices;
+use p3_maybe_rayon::{MaybeIntoParIter, ParallelIterator};
 
 /// Check that all constraints vanish on the subgroup.
 pub fn check_constraints<M, A>(
