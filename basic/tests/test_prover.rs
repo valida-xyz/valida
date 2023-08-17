@@ -12,7 +12,8 @@ use valida_memory::MachineWithMemoryChip;
 use p3_challenger::DuplexChallenger;
 use p3_dft::Radix2BowersFft;
 use p3_field::AbstractField;
-use p3_fri::{FriBasedPcs, FriConfigImpl};
+use p3_fri::{FriBasedPcs, FriConfigImpl, FriLdt};
+use p3_ldt::QuotientMmcs;
 use p3_merkle_tree::MerkleTreeMmcs;
 use p3_poseidon::Poseidon;
 use p3_symmetric::compression::TruncatedPermutation;
@@ -181,13 +182,14 @@ fn prove_fibonacci() {
     machine.run(rom);
 
     type Val = BabyBear;
+    type Dom = BabyBear;
     type Challenge = Val; // TODO
     type PackedChallenge = Challenge; // TODO
 
-    type MDS = NaiveMDSMatrix<Val, 8>;
-    let mds = MDS::new([[Val::ONE; 8]; 8]); // TODO: Use a real MDS matrix
+    type MyMds = NaiveMDSMatrix<Val, 8>;
+    let mds = MyMds::new([[Val::ONE; 8]; 8]); // TODO: Use a real MDS matrix
 
-    type Perm = Poseidon<Val, MDS, 8, 7>;
+    type Perm = Poseidon<Val, MyMds, 8, 7>;
     let perm = Perm::new_from_rng(5, 5, mds, &mut thread_rng()); // TODO: Use deterministic RNG
 
     type H4 = PaddingFreeSponge<Val, Perm, { 4 + 4 }>;
@@ -196,18 +198,24 @@ fn prove_fibonacci() {
     type C = TruncatedPermutation<Val, Perm, 2, 4, { 2 * 4 }>;
     let c = C::new(perm.clone());
 
-    type MMCS = MerkleTreeMmcs<Val, [Val; 4], H4, C>;
-    type DFT = Radix2BowersFft;
+    type MyMmcs = MerkleTreeMmcs<Val, [Val; 4], H4, C>;
+    let mmcs = MyMmcs::new(h4, c);
+
+    type MyDft = Radix2BowersFft;
+    let dft = MyDft::default();
 
     type Chal = DuplexChallenger<Val, Perm, 8>;
-    type MyFriConfig = FriConfigImpl<Val, Challenge, MMCS, MMCS, Chal>;
-    type PCS = FriBasedPcs<MyFriConfig, DFT>;
-    type MyConfig = StarkConfigImpl<Val, Challenge, PackedChallenge, PCS, DFT, Chal>;
+    type Quotient = QuotientMmcs<Dom, MyMmcs>;
+    type MyFriConfig = FriConfigImpl<Val, Challenge, Quotient, MyMmcs, Chal>;
+    let fri_config = MyFriConfig::new(40, mmcs.clone());
+    let ldt = FriLdt { config: fri_config };
 
-    let mmcs = MMCS::new(h4, c);
-    let pcs = PCS::new(DFT::default(), 1, mmcs);
+    type PCS = FriBasedPcs<MyFriConfig, MyMmcs, MyDft>;
+    type MyConfig = StarkConfigImpl<Val, Challenge, PackedChallenge, PCS, MyDft, Chal>;
+
+    let pcs = PCS::new(dft.clone(), 1, mmcs, ldt);
     let challenger = DuplexChallenger::new(perm);
-    let config = MyConfig::new(pcs, DFT::default(), challenger);
+    let config = MyConfig::new(pcs, dft, challenger);
     machine.prove(&config);
 
     assert_eq!(machine.cpu().clock, 191);

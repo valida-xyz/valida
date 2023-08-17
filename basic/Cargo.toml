@@ -27,6 +27,7 @@ p3-challenger = { path = "../../Plonky3/challenger" }
 p3-dft = { path = "../../Plonky3/dft" }
 p3-field = { path = "../../Plonky3/field" }
 p3-fri = { path = "../../Plonky3/fri" }
+p3-ldt = { path = "../../Plonky3/ldt" }
 p3-merkle-tree = { path = "../../Plonky3/merkle-tree" }
 p3-poseidon = { path = "../../Plonky3/poseidon" }
 p3-symmetric = { path = "../../Plonky3/symmetric" }
