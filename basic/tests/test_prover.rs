@@ -218,8 +218,8 @@ fn prove_fibonacci() {
     let config = MyConfig::new(pcs, dft, challenger);
     machine.prove(&config);
 
-    assert_eq!(machine.cpu().clock, 191);
-    assert_eq!(machine.cpu().operations.len(), 191);
+    assert_eq!(machine.cpu().clock, 192);
+    assert_eq!(machine.cpu().operations.len(), 192);
     assert_eq!(machine.mem().operations.values().flatten().count(), 401);
     assert_eq!(machine.add_u32().operations.len(), 50);
 

@@ -46,6 +46,8 @@ pub struct BasicMachine {
     bne: BneInstruction,
     #[instruction]
     imm32: Imm32Instruction,
+    #[instruction]
+    stop: StopInstruction,
 
     // ALU instructions
     #[instruction(add_u32)]

@@ -124,16 +124,16 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
                 let opcode = instruction.opcode;
                 let ops = instruction.operands;
 
-                // A STOP instruction signals the end of the program
-                if opcode == <StopInstruction as Instruction<Self>>::OPCODE {
-                    break;
-                }
-
                 // Execute
                 match opcode {
                     #opcode_arms
                     _ => panic!("Unrecognized opcode: {}", opcode),
                 };
+
+                // A STOP instruction signals the end of the program
+                if opcode == <StopInstruction as Instruction<Self>>::OPCODE {
+                    break;
+                }
             }
         }
     }

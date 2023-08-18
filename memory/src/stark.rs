@@ -47,7 +47,10 @@ impl MemoryChip {
                 .when_ne(local.addr_not_equal, AB::Expr::ONE)
                 .assert_eq(value_next, value);
         }
-        builder.when(next.is_read).assert_eq(local.addr, next.addr);
+        builder
+            .when(next.is_read)
+            .when(next.is_real)
+            .assert_eq(local.addr, next.addr);
 
         // Counter increments from zero.
         builder.when_first_row().assert_zero(local.counter);
