@@ -63,6 +63,6 @@ where
         builder.assert_bool(local.is_and);
         builder.assert_bool(local.is_or);
         builder.assert_bool(local.is_xor);
-        builder.assert_one(local.is_and + local.is_or + local.is_xor);
+        builder.assert_bool(local.is_and + local.is_or + local.is_xor);
     }
 }

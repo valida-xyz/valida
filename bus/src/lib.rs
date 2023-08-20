@@ -17,3 +17,7 @@ pub trait MachineWithMemBus: Machine {
 pub trait MachineWithRangeBus8: Machine {
     fn range_bus(&self) -> BusArgument;
 }
+
+pub trait MachineWithPowerOfTwoBus: Machine {
+    fn power_of_two_bus(&self) -> BusArgument;
+}
