@@ -4,7 +4,7 @@ use core::borrow::Borrow;
 
 use p3_air::{Air, AirBuilder};
 use p3_field::{AbstractField, PrimeField};
-use p3_matrix::MatrixRows;
+use p3_matrix::MatrixRowSlices;
 
 impl<F, AB> Air<AB> for NativeFieldChip
 where
@@ -13,7 +13,7 @@ where
 {
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
-        let local: &NativeFieldCols<AB::Var> = main.row(0).borrow();
+        let local: &NativeFieldCols<AB::Var> = main.row_slice(0).borrow();
 
         let base_m = [1 << 24, 1 << 16, 1 << 8, 1].map(AB::Expr::from_canonical_u32);
         let x = local.input_1;

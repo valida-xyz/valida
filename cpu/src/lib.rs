@@ -20,7 +20,7 @@ use valida_util::batch_multiplicative_inverse;
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
-use p3_matrix::dense::RowMajorMatrix;
+use p3_matrix::{dense::RowMajorMatrix, Matrix};
 use p3_maybe_rayon::*;
 
 pub mod columns;

@@ -190,15 +190,32 @@ impl MemoryChip {
     }
 
     fn insert_dummy_reads(ops: &mut Vec<(u32, Operation)>) {
+        if ops.is_empty() {
+            return;
+        }
+
         let table_len = ops.len() as u32;
         let mut dummy_ops = Vec::new();
         for (op1, op2) in ops.iter().zip(ops.iter().skip(1)) {
             let addr_diff = op2.1.get_address() - op1.1.get_address();
             if addr_diff != 0 {
-                // TODO: We should add dummy reads when addr_diff is greater than
-                // the number of operations
-                continue;
+                // Add dummy reads when addr_diff is greater than the number of operations
+                if addr_diff > table_len {
+                    let num_dummy_ops = addr_diff / table_len;
+                    for i in 0..num_dummy_ops {
+                        let dummy_op_clk = op1.0;
+                        let dummy_op_addr = op1.1.get_address() + table_len * (i + 1);
+                        let dummy_op_value = Word::default();
+                        dummy_ops.push((
+                            dummy_op_clk,
+                            Operation::DummyRead(dummy_op_addr, dummy_op_value),
+                        ));
+                    }
+                } else {
+                    continue;
+                }
             }
+
             let clk_diff = op2.0 - op1.0;
             if clk_diff > table_len {
                 let num_dummy_ops = clk_diff / table_len;
@@ -213,18 +230,24 @@ impl MemoryChip {
                 }
             }
         }
+
         // TODO: Track number of operations at a given address instead of recounting here
-        for (clk, op) in dummy_ops.iter() {
-            let idx_addr = ops
-                .binary_search_by_key(&op.get_address(), |(_, op)| op.get_address())
-                .unwrap();
-            let num_ops = ops[idx_addr..]
-                .iter()
-                .take_while(|(_, op2)| op.get_address() == op2.get_address())
-                .count();
-            let idx_clk =
-                ops[idx_addr..(idx_addr + num_ops)].partition_point(|(clk2, _)| clk2 < clk);
-            ops.insert(idx_addr + idx_clk, (*clk, *op));
+        for (clk, dummy_op) in dummy_ops.iter() {
+            let idx_addr = ops.binary_search_by_key(&dummy_op.get_address(), |(_, dummy_op)| {
+                dummy_op.get_address()
+            });
+            if let Ok(idx_addr) = idx_addr {
+                ops.insert(idx_addr, (*clk, dummy_op.clone()));
+                let num_ops = ops[idx_addr..]
+                    .iter()
+                    .take_while(|(_, op2)| dummy_op.get_address() == op2.get_address())
+                    .count();
+                let idx_clk =
+                    ops[idx_addr..(idx_addr + num_ops)].partition_point(|(clk2, _)| clk2 < clk);
+                ops.insert(idx_addr + idx_clk, (*clk, *dummy_op));
+            } else if let Err(idx_addr) = idx_addr {
+                ops.insert(idx_addr, (*clk, dummy_op.clone()));
+            }
         }
 
         // Pad the end of the table with dummy reads (to the next power of two)
@@ -244,6 +267,10 @@ impl MemoryChip {
         ops: Vec<(u32, Operation)>,
         rows: &mut Vec<[F; NUM_MEM_COLS]>,
     ) {
+        if ops.is_empty() {
+            return;
+        }
+
         // Compute `diff` and `counter_mult`
         let mut diff = vec![F::ZERO; rows.len()];
         let mut mult = vec![F::ZERO; rows.len()];
