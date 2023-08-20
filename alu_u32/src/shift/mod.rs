@@ -117,19 +117,27 @@ impl Shift32Chip {
         match op {
             Operation::Shr32(a, b, c) => {
                 cols.is_shl = F::ONE;
-                cols.input_1 = b.transform(F::from_canonical_u8);
-                cols.input_2 = c.transform(F::from_canonical_u8);
-                cols.output = a.transform(F::from_canonical_u8);
+                self.set_cols(cols, a, b, c);
             }
             Operation::Shl32(a, b, c) => {
                 cols.is_shr = F::ONE;
-                cols.input_1 = b.transform(F::from_canonical_u8);
-                cols.input_2 = c.transform(F::from_canonical_u8);
-                cols.output = a.transform(F::from_canonical_u8);
+                self.set_cols(cols, a, b, c);
             }
         }
 
         row
+    }
+
+    fn set_cols<F>(&self, cols: &mut Shift32Cols<F>, a: &Word<u8>, b: &Word<u8>, c: &Word<u8>)
+    where
+        F: PrimeField,
+    {
+        cols.input_1 = b.transform(F::from_canonical_u8);
+        cols.input_2 = c.transform(F::from_canonical_u8);
+        cols.output = a.transform(F::from_canonical_u8);
+
+        let temp_1 = (c[3] & 0b1) + 2 * ((c[3] >> 1) & 0b1) + 4 * ((c[3] >> 2) & 0b1);
+        cols.temp_1 = F::from_canonical_u8(temp_1);
     }
 }
 

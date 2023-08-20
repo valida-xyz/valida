@@ -37,21 +37,22 @@ where
         let temp_1 = (local.bits_2[0] * pow_base[0].clone())
             * (local.bits_2[1] * pow_base[1].clone())
             * (local.bits_2[2] * pow_base[2].clone());
+        builder.assert_eq(local.temp_1, temp_1);
         builder.assert_eq(
             local.power_of_two[0],
-            temp_1.clone() * (one.clone() - local.bits_2[3]) * (one.clone() - local.bits_2[4]),
+            local.temp_1 * (one.clone() - local.bits_2[3]) * (one.clone() - local.bits_2[4]),
         );
         builder.assert_eq(
             local.power_of_two[1],
-            temp_1.clone() * local.bits_2[3] * (one.clone() - local.bits_2[4]),
+            local.temp_1 * local.bits_2[3] * (one.clone() - local.bits_2[4]),
         );
         builder.assert_eq(
             local.power_of_two[2],
-            temp_1.clone() * (one - local.bits_2[3]) * local.bits_2[4],
+            local.temp_1 * (one - local.bits_2[3]) * local.bits_2[4],
         );
         builder.assert_eq(
             local.power_of_two[3],
-            temp_1 * local.bits_2[3] * local.bits_2[4],
+            local.temp_1 * local.bits_2[3] * local.bits_2[4],
         );
 
         builder.assert_bool(local.is_shl);
