@@ -11,13 +11,12 @@ use valida_memory::MachineWithMemoryChip;
 
 use p3_challenger::DuplexChallenger;
 use p3_dft::Radix2BowersFft;
-use p3_field::AbstractField;
 use p3_fri::{FriBasedPcs, FriConfigImpl, FriLdt};
 use p3_ldt::QuotientMmcs;
+use p3_mds::babybear::MDSMatrixBabyBear;
 use p3_merkle_tree::MerkleTreeMmcs;
 use p3_poseidon::Poseidon;
 use p3_symmetric::compression::TruncatedPermutation;
-use p3_symmetric::mds::NaiveMDSMatrix;
 use p3_symmetric::sponge::PaddingFreeSponge;
 use rand::thread_rng;
 
@@ -186,8 +185,8 @@ fn prove_fibonacci() {
     type Challenge = Val; // TODO
     type PackedChallenge = Challenge; // TODO
 
-    type MyMds = NaiveMDSMatrix<Val, 8>;
-    let mds = MyMds::new([[Val::ONE; 8]; 8]); // TODO: Use a real MDS matrix
+    type MyMds = MDSMatrixBabyBear;
+    let mds = MyMds {};
 
     type Perm = Poseidon<Val, MyMds, 8, 7>;
     let perm = Perm::new_from_rng(5, 5, mds, &mut thread_rng()); // TODO: Use deterministic RNG
@@ -206,11 +205,11 @@ fn prove_fibonacci() {
 
     type Chal = DuplexChallenger<Val, Perm, 8>;
     type Quotient = QuotientMmcs<Dom, MyMmcs>;
-    type MyFriConfig = FriConfigImpl<Val, Challenge, Quotient, MyMmcs, Chal>;
+    type MyFriConfig = FriConfigImpl<Val, Dom, Challenge, Quotient, MyMmcs, Chal>;
     let fri_config = MyFriConfig::new(40, mmcs.clone());
     let ldt = FriLdt { config: fri_config };
 
-    type PCS = FriBasedPcs<MyFriConfig, MyMmcs, MyDft>;
+    type PCS = FriBasedPcs<MyFriConfig, MyMmcs, MyDft, Chal>;
     type MyConfig = StarkConfigImpl<Val, Challenge, PackedChallenge, PCS, MyDft, Chal>;
 
     let pcs = PCS::new(dft.clone(), 1, mmcs, ldt);

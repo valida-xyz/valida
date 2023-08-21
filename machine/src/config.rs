@@ -2,24 +2,31 @@ use core::marker::PhantomData;
 use p3_challenger::FieldChallenger;
 use p3_commit::UnivariatePcs;
 use p3_dft::TwoAdicSubgroupDft;
-use p3_field::{
-    AbstractExtensionField, ExtensionField, Field, PackedField, PrimeField64, TwoAdicField,
-};
+use p3_field::{AbstractExtensionField, ExtensionField, Field, PackedField, TwoAdicField};
 use p3_matrix::dense::RowMajorMatrix;
 
 pub trait StarkConfig {
     /// The field over which trace data is encoded.
-    type Val: PrimeField64 + TwoAdicField;
-    /// The field from which the verifier draws random challenges.
-    type Challenge: ExtensionField<Self::Val>;
+    type Val: Field;
 
+    /// The domain over which trace polynomials are defined.
+    type Domain: ExtensionField<Self::Val> + TwoAdicField;
+    type PackedDomain: PackedField<Scalar = Self::Domain>;
+
+    /// The field from which most random challenges are drawn.
+    type Challenge: ExtensionField<Self::Val> + ExtensionField<Self::Domain> + TwoAdicField;
     type PackedChallenge: PackedField<Scalar = Self::Challenge>
-        + AbstractExtensionField<<Self::Val as Field>::Packing>;
+        + AbstractExtensionField<Self::PackedDomain>;
 
-    /// The polynomial commitment scheme used.
-    type PCS: UnivariatePcs<Self::Val, RowMajorMatrix<Self::Val>, Self::Challenger>;
+    /// The PCS used to commit to trace polynomials.
+    type PCS: for<'a> UnivariatePcs<
+        Self::Val,
+        Self::Domain,
+        RowMajorMatrix<Self::Val>,
+        Self::Challenger,
+    >;
 
-    type DFT: TwoAdicSubgroupDft<Self::Val>;
+    type DFT: TwoAdicSubgroupDft<Self::Domain> + TwoAdicSubgroupDft<Self::Challenge>;
 
     /// The challenger (Fiat-Shamir) implementation used.
     type Challenger: FieldChallenger<Self::Val>;
@@ -31,13 +38,13 @@ pub trait StarkConfig {
     fn challenger(&self) -> Self::Challenger;
 }
 
-pub struct StarkConfigImpl<Val, Challenge, PackedChallenge, PCS, DFT, Chal> {
+pub struct StarkConfigImpl<Val, Domain, Challenge, PCS, DFT, Chal> {
     pcs: PCS,
     dft: DFT,
     init_challenger: Chal,
     _phantom_val: PhantomData<Val>,
+    _phantom_domain: PhantomData<Domain>,
     _phantom_challenge: PhantomData<Challenge>,
-    _phantom_packed_challenge: PhantomData<PackedChallenge>,
     _phantom_chal: PhantomData<Chal>,
 }
 
@@ -50,26 +57,29 @@ impl<Val, Challenge, PackedChallenge, PCS, DFT, Chal>
             dft,
             init_challenger,
             _phantom_val: PhantomData,
+            _phantom_domain: PhantomData,
             _phantom_challenge: PhantomData,
-            _phantom_packed_challenge: PhantomData,
             _phantom_chal: PhantomData,
         }
     }
 }
 
-impl<Val, Challenge, PackedChallenge, PCS, DFT, Chal> StarkConfig
-    for StarkConfigImpl<Val, Challenge, PackedChallenge, PCS, DFT, Chal>
+impl<Val, Domain, Challenge, PCS, DFT, Chal> StarkConfig
+    for StarkConfigImpl<Val, Domain, Challenge, PCS, DFT, Chal>
 where
-    Val: PrimeField64 + TwoAdicField,
-    Challenge: ExtensionField<Val>,
-    PackedChallenge: PackedField<Scalar = Challenge> + AbstractExtensionField<Val::Packing>,
-    PCS: UnivariatePcs<Val, RowMajorMatrix<Val>, Chal>,
-    DFT: TwoAdicSubgroupDft<Val>,
+    Val: Field,
+    Domain: ExtensionField<Val> + TwoAdicField,
+    Challenge: ExtensionField<Val> + ExtensionField<Domain> + TwoAdicField,
+    Challenge::Packing: AbstractExtensionField<Domain::Packing>,
+    PCS: UnivariatePcs<Val, Domain, RowMajorMatrix<Val>, Chal>,
+    DFT: TwoAdicSubgroupDft<Domain> + TwoAdicSubgroupDft<Challenge>,
     Chal: FieldChallenger<Val> + Clone,
 {
     type Val = Val;
+    type Domain = Domain;
+    type PackedDomain = Domain::Packing;
     type Challenge = Challenge;
-    type PackedChallenge = PackedChallenge;
+    type PackedChallenge = Challenge::Packing;
     type PCS = PCS;
     type DFT = DFT;
     type Challenger = Chal;
