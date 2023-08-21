@@ -13,7 +13,7 @@ use p3_challenger::DuplexChallenger;
 use p3_dft::Radix2BowersFft;
 use p3_fri::{FriBasedPcs, FriConfigImpl, FriLdt};
 use p3_ldt::QuotientMmcs;
-use p3_mds::babybear::MDSMatrixBabyBear;
+use p3_mds::babybear::MdsMatrixBabyBear;
 use p3_merkle_tree::MerkleTreeMmcs;
 use p3_poseidon::Poseidon;
 use p3_symmetric::compression::TruncatedPermutation;
@@ -185,7 +185,7 @@ fn prove_fibonacci() {
     type Challenge = Val; // TODO
     type PackedChallenge = Challenge; // TODO
 
-    type MyMds = MDSMatrixBabyBear;
+    type MyMds = MdsMatrixBabyBear;
     let mds = MyMds {};
 
     type Perm = Poseidon<Val, MyMds, 8, 7>;

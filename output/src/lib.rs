@@ -42,7 +42,7 @@ where
                 let mut rows = Vec::with_capacity(num_rows);
                 for n in 0..num_rows {
                     let mut row = [M::F::ZERO; NUM_OUTPUT_COLS];
-                    let mut cols: &mut OutputCols<M::F> = unsafe { transmute(&mut row) };
+                    let cols: &mut OutputCols<M::F> = unsafe { transmute(&mut row) };
                     if n == 0 {
                         cols.is_real = M::F::ONE;
                         cols.clk = M::F::from_canonical_u32(clk_1);
@@ -62,7 +62,7 @@ where
                     .windows(2)
                     .enumerate()
                     .for_each(|(n, clks)| {
-                        let mut cols: &mut OutputCols<M::F> = unsafe { transmute(&mut rows[n]) };
+                        let cols: &mut OutputCols<M::F> = unsafe { transmute(&mut rows[n]) };
                         cols.diff = clks[1] - clks[0];
                     });
 
@@ -74,7 +74,7 @@ where
         // Add final row
         if let Some(last_row) = self.values.last() {
             let mut row = [M::F::ZERO; NUM_OUTPUT_COLS];
-            let mut cols: &mut OutputCols<M::F> = unsafe { transmute(&mut row) };
+            let cols: &mut OutputCols<M::F> = unsafe { transmute(&mut row) };
             cols.is_real = M::F::ONE;
             cols.clk = M::F::from_canonical_u32(last_row.0);
             cols.value = M::F::from_canonical_u8(last_row.1);
