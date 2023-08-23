@@ -1,4 +1,5 @@
 use super::{Field, PrimeField, MEMORY_CELL_BYTES};
+use core::cmp::Ordering;
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Index, IndexMut, Mul, Sub};
 
 #[derive(Copy, Clone, Debug, Default)]
@@ -146,6 +147,25 @@ impl<F: Ord> Eq for Word<F> {}
 impl<F: Ord> PartialEq for Word<F> {
     fn eq(&self, other: &Self) -> bool {
         self.0.iter().zip(other.0.iter()).all(|(a, b)| a == b)
+    }
+}
+
+impl<F: Ord> PartialOrd for Word<F> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(
+            self.0
+                .iter()
+                .zip(other.0.iter())
+                .map(|(a, b)| a.cmp(b))
+                .find(|&ord| ord != Ordering::Equal)
+                .unwrap_or(Ordering::Equal),
+        )
+    }
+}
+
+impl<F: Ord> Ord for Word<F> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
     }
 }
 
