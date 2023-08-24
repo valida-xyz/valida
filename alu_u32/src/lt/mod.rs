@@ -108,8 +108,8 @@ impl Lt32Chip {
 }
 
 pub trait MachineWithLt32Chip: MachineWithCpuChip {
-    fn add_u32(&self) -> &Lt32Chip;
-    fn add_u32_mut(&mut self) -> &mut Lt32Chip;
+    fn lt_u32(&self) -> &Lt32Chip;
+    fn lt_u32_mut(&mut self) -> &mut Lt32Chip;
 }
 
 instructions!(Lt32Instruction);
@@ -143,7 +143,7 @@ where
         state.mem_mut().write(clk, write_addr, dst, true);
 
         state
-            .add_u32_mut()
+            .lt_u32_mut()
             .operations
             .push(Operation::Lt32(dst, src1, src2));
         state
