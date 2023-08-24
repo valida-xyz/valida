@@ -57,8 +57,7 @@ where
         let input_2 = LT_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
         let output = (0..MEMORY_CELL_BYTES - 1)
             .map(|_| VirtualPairCol::constant(M::F::ZERO))
-            .chain(iter::once(VirtualPairCol::single_main(LT_COL_MAP.output)))
-            .collect::<Vec<_>>();
+            .chain(iter::once(VirtualPairCol::single_main(LT_COL_MAP.output)));
 
         let mut fields = vec![opcode];
         fields.extend(input_1);
@@ -67,7 +66,7 @@ where
 
         let receive = Interaction {
             fields,
-            count: VirtualPairCol::single_main(LT_COL_MAP.is_real),
+            count: VirtualPairCol::single_main(LT_COL_MAP.multiplicity),
             argument_index: machine.general_bus(),
         };
         vec![receive]
@@ -83,25 +82,25 @@ impl Lt32Chip {
         let cols: &mut Lt32Cols<F> = unsafe { transmute(&mut row) };
 
         match op {
-            Operation::Lt32(a, b, c) => {
-                if let Some(n) = b
+            Operation::Lt32(dst, src1, src2) => {
+                if let Some(n) = src1
                     .into_iter()
-                    .zip(c.into_iter())
+                    .zip(src2.into_iter())
                     .enumerate()
                     .find_map(|(n, (x, y))| if x == y { Some(n) } else { None })
                 {
-                    let z = 128 + b[n] - c[n];
-                    for i in 0..9 {
-                        cols.bits[i] = F::from_canonical_u8(z >> i & 1);
+                    let z = 256u16 + src1[n] as u16 - src2[n] as u16;
+                    for i in 0..10 {
+                        cols.bits[i] = F::from_canonical_u16(z >> i & 1);
                     }
                     if n < 3 {
                         cols.byte_flag[n] = F::ONE;
                     }
                 }
-                cols.input_1 = b.transform(F::from_canonical_u8);
-                cols.input_2 = c.transform(F::from_canonical_u8);
-                cols.output = F::from_canonical_u8(a[3]);
-                cols.is_real = F::ONE;
+                cols.input_1 = src1.transform(F::from_canonical_u8);
+                cols.input_2 = src2.transform(F::from_canonical_u8);
+                cols.output = F::from_canonical_u8(dst[3]);
+                cols.multiplicity = F::ONE;
             }
         }
         row
@@ -126,8 +125,8 @@ where
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let b = state.mem_mut().read(clk, read_addr_1, true);
-        let c = if ops.is_imm() == 1 {
+        let src1 = state.mem_mut().read(clk, read_addr_1, true);
+        let src2 = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
@@ -136,13 +135,17 @@ where
             state.mem_mut().read(clk, read_addr_2, true)
         };
 
-        let a = if b < c { Word::from(1) } else { Word::from(0) };
-        state.mem_mut().write(clk, write_addr, a, true);
+        let dst = if src1 < src2 {
+            Word::from(1)
+        } else {
+            Word::from(0)
+        };
+        state.mem_mut().write(clk, write_addr, dst, true);
 
         state
             .add_u32_mut()
             .operations
-            .push(Operation::Lt32(a, b, c));
+            .push(Operation::Lt32(dst, src1, src2));
         state
             .cpu_mut()
             .push_bus_op(imm, <Self as Instruction<M>>::OPCODE, ops);

@@ -12,12 +12,12 @@ pub struct Lt32Cols<T> {
     /// Boolean flags indicating which byte pair differs
     pub byte_flag: [T; 3],
 
-    /// Bit decomposition of 128 + input_1 - input_2
-    pub bits: [T; 9],
+    /// Bit decomposition of 256 + input_1 - input_2
+    pub bits: [T; 10],
 
     pub output: T,
 
-    pub is_real: T,
+    pub multiplicity: T,
 }
 
 pub const NUM_LT_COLS: usize = size_of::<Lt32Cols<u8>>();

@@ -152,20 +152,18 @@ impl<F: Ord> PartialEq for Word<F> {
 
 impl<F: Ord> PartialOrd for Word<F> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(
-            self.0
-                .iter()
-                .zip(other.0.iter())
-                .map(|(a, b)| a.cmp(b))
-                .find(|&ord| ord != Ordering::Equal)
-                .unwrap_or(Ordering::Equal),
-        )
+        Some(self.cmp(other))
     }
 }
 
 impl<F: Ord> Ord for Word<F> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap()
+        self.0
+            .iter()
+            .zip(other.0.iter())
+            .map(|(a, b)| a.cmp(b))
+            .find(|&ord| ord != Ordering::Equal)
+            .unwrap_or(Ordering::Equal)
     }
 }
 
