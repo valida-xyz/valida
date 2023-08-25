@@ -10,7 +10,9 @@ use valida_alu_u32::{
         Xor32Instruction,
     },
     div::{Div32Chip, Div32Instruction, MachineWithDiv32Chip},
+    lt::{Lt32Chip, Lt32Instruction, MachineWithLt32Chip},
     mul::{MachineWithMul32Chip, Mul32Chip, Mul32Instruction},
+    shift::{MachineWithShift32Chip, Shift32Chip, Shl32Instruction, Shr32Instruction},
     sub::{MachineWithSub32Chip, Sub32Chip, Sub32Instruction},
 };
 use valida_bus::{MachineWithGeneralBus, MachineWithMemBus, MachineWithRangeBus8};
@@ -58,6 +60,12 @@ pub struct BasicMachine {
     mul32: Mul32Instruction,
     #[instruction(div_u32)]
     div32: Div32Instruction,
+    #[instruction(shift_u32)]
+    shl32: Shl32Instruction,
+    #[instruction(shift_u32)]
+    shr32: Shr32Instruction,
+    #[instruction(lt_u32)]
+    lt32: Lt32Instruction,
     #[instruction(bitwise_u32)]
     and32: And32Instruction,
     #[instruction(bitwise_u32)]
@@ -83,6 +91,10 @@ pub struct BasicMachine {
     mul_u32: Mul32Chip,
     #[chip]
     div_u32: Div32Chip,
+    #[chip]
+    shift_u32: Shift32Chip,
+    #[chip]
+    lt_u32: Lt32Chip,
     #[chip]
     bitwise_u32: Bitwise32Chip,
     #[chip]
@@ -176,6 +188,26 @@ impl MachineWithBitwise32Chip for BasicMachine {
 
     fn bitwise_u32_mut(&mut self) -> &mut Bitwise32Chip {
         &mut self.bitwise_u32
+    }
+}
+
+impl MachineWithLt32Chip for BasicMachine {
+    fn lt_u32(&self) -> &Lt32Chip {
+        &self.lt_u32
+    }
+
+    fn lt_u32_mut(&mut self) -> &mut Lt32Chip {
+        &mut self.lt_u32
+    }
+}
+
+impl MachineWithShift32Chip for BasicMachine {
+    fn shift_u32(&self) -> &Shift32Chip {
+        &self.shift_u32
+    }
+
+    fn shift_u32_mut(&mut self) -> &mut Shift32Chip {
+        &mut self.shift_u32
     }
 }
 
