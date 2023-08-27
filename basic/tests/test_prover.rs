@@ -204,7 +204,7 @@ fn prove_fibonacci() {
     let dft = MyDft::default();
 
     type Chal = DuplexChallenger<Val, Perm, 8>;
-    type Quotient = QuotientMmcs<Dom, MyMmcs>;
+    type Quotient = QuotientMmcs<Dom, Challenge, MyMmcs>;
     type MyFriConfig = FriConfigImpl<Val, Dom, Challenge, Quotient, MyMmcs, Chal>;
     let fri_config = MyFriConfig::new(40, mmcs.clone());
     let ldt = FriLdt { config: fri_config };
