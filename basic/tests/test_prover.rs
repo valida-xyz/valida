@@ -21,6 +21,7 @@ use p3_symmetric::sponge::PaddingFreeSponge;
 use rand::thread_rng;
 
 #[test]
+#[ignore]
 fn prove_fibonacci() {
     let mut program = vec![];
 

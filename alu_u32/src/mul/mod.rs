@@ -1,6 +1,5 @@
 extern crate alloc;
 
-use crate::pad_to_power_of_two;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Mul32Cols, MUL_COL_MAP, NUM_MUL_COLS};
@@ -11,6 +10,7 @@ use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Wor
 use valida_opcodes::MUL32;
 use valida_range::MachineWithRangeChip;
 
+use core::borrow::BorrowMut;
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
@@ -35,18 +35,33 @@ where
     M: MachineWithGeneralBus<F = F>,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
-        let rows = self
-            .operations
-            .par_iter()
-            .map(|op| self.op_to_row(op))
-            .collect::<Vec<_>>();
+        const MIN_LENGTH: usize = 1 << 10; // for the range check counter
 
-        let mut trace =
-            RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_MUL_COLS);
+        let num_ops = self.operations.len();
+        let num_padded_ops = num_ops.next_power_of_two().max(MIN_LENGTH);
+        let mut values = vec![F::ZERO; num_padded_ops * NUM_MUL_COLS];
 
-        pad_to_power_of_two::<NUM_MUL_COLS, F>(&mut trace.values);
+        // Encode the real operations.
+        for (i, op) in self.operations.iter().enumerate() {
+            let row = &mut values[i * NUM_MUL_COLS..(i + 1) * NUM_MUL_COLS];
+            let cols: &mut Mul32Cols<F> = row.borrow_mut();
+            cols.counter = F::from_canonical_usize(i + 1);
+            self.op_to_row(op, cols);
+        }
 
-        trace
+        // Encode dummy operations as needed to pad the trace.
+        let dummy_op = Operation::Mul32(Word::default(), Word::default(), Word::default());
+        for i in num_ops..num_padded_ops {
+            let row = &mut values[i * NUM_MUL_COLS..(i + 1) * NUM_MUL_COLS];
+            let cols: &mut Mul32Cols<F> = row.borrow_mut();
+            cols.counter = F::from_canonical_usize(i + 1);
+            self.op_to_row(&dummy_op, cols);
+        }
+
+        RowMajorMatrix {
+            values,
+            width: NUM_MUL_COLS,
+        }
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
@@ -75,13 +90,10 @@ where
 }
 
 impl Mul32Chip {
-    fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_MUL_COLS]
+    fn op_to_row<F>(&self, op: &Operation, cols: &mut Mul32Cols<F>)
     where
         F: PrimeField,
     {
-        let mut row = [F::ZERO; NUM_MUL_COLS];
-        let cols: &mut Mul32Cols<F> = unsafe { transmute(&mut row) };
-
         match op {
             Operation::Mul32(a, b, c) => {
                 cols.input_1 = b.transform(F::from_canonical_u8);
@@ -89,7 +101,6 @@ impl Mul32Chip {
                 cols.output = a.transform(F::from_canonical_u8);
             }
         }
-        row
     }
 }
 
@@ -102,7 +113,7 @@ instructions!(Mul32Instruction);
 
 impl<M> Instruction<M> for Mul32Instruction
 where
-    M: MachineWithMul32Chip + MachineWithRangeChip,
+    M: MachineWithMul32Chip + MachineWithRangeChip<256>,
 {
     const OPCODE: u32 = MUL32;
 

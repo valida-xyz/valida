@@ -42,3 +42,9 @@ pub fn batch_multiplicative_inverse<F: Field>(values: Vec<F>) -> Vec<F> {
 
     result
 }
+
+pub fn pad_to_power_of_two<const N: usize, T: Clone + Default>(values: &mut Vec<T>) {
+    debug_assert!(values.len() % N == 0);
+    let n_real_rows = values.len() / N;
+    values.resize(n_real_rows.next_power_of_two() * N, T::default());
+}

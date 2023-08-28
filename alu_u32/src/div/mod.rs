@@ -1,6 +1,5 @@
 extern crate alloc;
 
-use crate::pad_to_power_of_two;
 use alloc::vec::Vec;
 use columns::NUM_DIV_COLS;
 use valida_bus::MachineWithGeneralBus;
@@ -12,6 +11,7 @@ use valida_range::MachineWithRangeChip;
 use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
+use valida_util::pad_to_power_of_two;
 
 pub mod columns;
 pub mod stark;
@@ -65,7 +65,7 @@ instructions!(Div32Instruction);
 
 impl<M> Instruction<M> for Div32Instruction
 where
-    M: MachineWithDiv32Chip + MachineWithRangeChip,
+    M: MachineWithDiv32Chip + MachineWithRangeChip<256>,
 {
     const OPCODE: u32 = DIV32;
 

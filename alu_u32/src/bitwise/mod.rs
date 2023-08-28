@@ -1,6 +1,5 @@
 extern crate alloc;
 
-use crate::pad_to_power_of_two;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Bitwise32Cols, COL_MAP, NUM_COLS};
@@ -9,12 +8,12 @@ use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 use valida_opcodes::{AND32, OR32, XOR32};
-use valida_range::MachineWithRangeChip;
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
+use valida_util::pad_to_power_of_two;
 
 pub mod columns;
 pub mod stark;
@@ -134,7 +133,7 @@ instructions!(And32Instruction, Or32Instruction, Xor32Instruction);
 
 impl<M> Instruction<M> for Xor32Instruction
 where
-    M: MachineWithBitwise32Chip + MachineWithRangeChip,
+    M: MachineWithBitwise32Chip,
 {
     const OPCODE: u32 = XOR32;
 
@@ -168,7 +167,7 @@ where
 
 impl<M> Instruction<M> for And32Instruction
 where
-    M: MachineWithBitwise32Chip + MachineWithRangeChip,
+    M: MachineWithBitwise32Chip,
 {
     const OPCODE: u32 = AND32;
 
@@ -202,7 +201,7 @@ where
 
 impl<M> Instruction<M> for Or32Instruction
 where
-    M: MachineWithBitwise32Chip + MachineWithRangeChip,
+    M: MachineWithBitwise32Chip,
 {
     const OPCODE: u32 = OR32;
 

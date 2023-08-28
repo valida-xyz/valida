@@ -1,6 +1,5 @@
 extern crate alloc;
 
-use crate::pad_to_power_of_two;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Lt32Cols, LT_COL_MAP, NUM_LT_COLS};
@@ -17,6 +16,7 @@ use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
+use valida_util::pad_to_power_of_two;
 
 pub mod columns;
 pub mod stark;

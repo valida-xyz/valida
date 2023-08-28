@@ -1,6 +1,5 @@
 extern crate alloc;
 
-use crate::pad_to_power_of_two;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Shift32Cols, COL_MAP, NUM_COLS};
@@ -9,12 +8,12 @@ use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 use valida_opcodes::{DIV32, MUL32, SHL32, SHR32};
-use valida_range::MachineWithRangeChip;
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
+use valida_util::pad_to_power_of_two;
 
 pub mod columns;
 pub mod stark;
@@ -150,7 +149,7 @@ instructions!(Shl32Instruction, Shr32Instruction);
 
 impl<M> Instruction<M> for Shl32Instruction
 where
-    M: MachineWithShift32Chip + MachineWithRangeChip,
+    M: MachineWithShift32Chip,
 {
     const OPCODE: u32 = SHL32;
 
@@ -187,7 +186,7 @@ where
 
 impl<M> Instruction<M> for Shr32Instruction
 where
-    M: MachineWithShift32Chip + MachineWithRangeChip,
+    M: MachineWithShift32Chip,
 {
     const OPCODE: u32 = SHR32;
 
