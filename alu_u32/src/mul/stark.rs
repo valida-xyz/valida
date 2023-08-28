@@ -41,9 +41,10 @@ where
         builder
             .when_first_row()
             .assert_eq(local.counter, AB::Expr::ONE);
-        builder.when_transition().assert_zero(
-            (local.counter - next.counter) * (local.counter + AB::Expr::ONE - next.counter),
-        );
+        let counter_diff = next.counter - local.counter;
+        builder
+            .when_transition()
+            .assert_zero(counter_diff.clone() * (counter_diff - AB::Expr::ONE));
         builder
             .when_last_row()
             .assert_eq(local.counter, AB::Expr::from_canonical_u32(1 << 10));
