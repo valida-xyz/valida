@@ -1,6 +1,5 @@
 extern crate alloc;
 
-use crate::pad_to_power_of_two;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Mul32Cols, MUL_COL_MAP, NUM_MUL_COLS};
@@ -15,6 +14,7 @@ use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
+use valida_util::pad_to_power_of_two;
 
 pub mod columns;
 pub mod stark;
@@ -102,7 +102,7 @@ instructions!(Mul32Instruction);
 
 impl<M> Instruction<M> for Mul32Instruction
 where
-    M: MachineWithMul32Chip + MachineWithRangeChip,
+    M: MachineWithMul32Chip + MachineWithRangeChip<256>,
 {
     const OPCODE: u32 = MUL32;
 

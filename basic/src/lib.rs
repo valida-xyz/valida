@@ -100,7 +100,7 @@ pub struct BasicMachine {
     #[chip]
     output: OutputChip,
     #[chip]
-    range: RangeCheckerChip, // TODO: Specify 8-bit RC chip
+    range: RangeCheckerChip<256>,
 }
 
 impl MachineWithGeneralBus for BasicMachine {
@@ -221,12 +221,12 @@ impl MachineWithOutputChip for BasicMachine {
     }
 }
 
-impl MachineWithRangeChip for BasicMachine {
-    fn range(&self) -> &RangeCheckerChip {
+impl MachineWithRangeChip<256> for BasicMachine {
+    fn range(&self) -> &RangeCheckerChip<256> {
         &self.range
     }
 
-    fn range_mut(&mut self) -> &mut RangeCheckerChip {
+    fn range_mut(&mut self) -> &mut RangeCheckerChip<256> {
         &mut self.range
     }
 }

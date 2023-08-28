@@ -12,19 +12,18 @@ pub mod columns;
 pub mod stark;
 
 #[derive(Default)]
-pub struct RangeCheckerChip {
+pub struct RangeCheckerChip<const MAX: u32> {
     pub count: BTreeMap<u32, u32>,
-    pub range_max: u32,
 }
 
-impl<F, M> Chip<M> for RangeCheckerChip
+impl<F, M, const MAX: u32> Chip<M> for RangeCheckerChip<MAX>
 where
     F: PrimeField,
     M: Machine<F = F>,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
-        let mut col = vec![M::F::ZERO; self.range_max as usize];
-        for n in 0..self.range_max {
+        let mut col = vec![M::F::ZERO; MAX as usize];
+        for n in 0..MAX {
             if let Some(c) = self.count.get(&n) {
                 col[n as usize] = M::F::from_canonical_u32(*c);
             }
@@ -33,9 +32,9 @@ where
     }
 }
 
-pub trait MachineWithRangeChip: Machine {
-    fn range(&self) -> &RangeCheckerChip;
-    fn range_mut(&mut self) -> &mut RangeCheckerChip;
+pub trait MachineWithRangeChip<const MAX: u32>: Machine {
+    fn range(&self) -> &RangeCheckerChip<MAX>;
+    fn range_mut(&mut self) -> &mut RangeCheckerChip<MAX>;
 
     /// Record the components of the word in the range check counter
     fn range_check<I: Into<u32>>(&mut self, value: Word<I>) {

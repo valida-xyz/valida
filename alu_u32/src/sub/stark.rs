@@ -39,6 +39,6 @@ where
         builder.assert_zero(borrow_2.clone() * (base.clone() - sub_2 - local.output[1]));
         builder.assert_zero(borrow_2 * (sub_3 - local.output[0] - AB::Expr::ONE));
 
-        todo!()
+        // TODO: unfinished?
     }
 }

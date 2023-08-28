@@ -1,6 +1,5 @@
 extern crate alloc;
 
-use crate::pad_to_power_of_two;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Sub32Cols, NUM_SUB_COLS, SUB_COL_MAP};
@@ -15,6 +14,7 @@ use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
+use valida_util::pad_to_power_of_two;
 
 pub mod columns;
 pub mod stark;
@@ -97,7 +97,7 @@ instructions!(Sub32Instruction);
 
 impl<M> Instruction<M> for Sub32Instruction
 where
-    M: MachineWithSub32Chip + MachineWithRangeChip,
+    M: MachineWithSub32Chip + MachineWithRangeChip<256>,
 {
     const OPCODE: u32 = SUB32;
 

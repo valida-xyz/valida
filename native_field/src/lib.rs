@@ -131,11 +131,6 @@ impl NativeFieldChip {
 
         row
     }
-
-    fn pad_to_power_of_two<const N: usize, F: Field>(values: &mut Vec<F>) {
-        let n_real_rows = values.len() / N;
-        values.resize(n_real_rows.next_power_of_two() * N, F::ZERO);
-    }
 }
 
 pub trait MachineWithNativeFieldChip: MachineWithCpuChip {

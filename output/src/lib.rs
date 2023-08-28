@@ -13,6 +13,7 @@ use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
+use valida_util::pad_to_power_of_two;
 
 pub mod columns;
 pub mod stark;
@@ -81,7 +82,9 @@ where
             rows.push(row);
         }
 
-        RowMajorMatrix::new(rows.concat(), NUM_OUTPUT_COLS)
+        let mut values = rows.concat();
+        pad_to_power_of_two::<NUM_OUTPUT_COLS, F>(&mut values);
+        RowMajorMatrix::new(values, NUM_OUTPUT_COLS)
     }
 
     fn local_sends(&self) -> Vec<Interaction<M::F>> {
