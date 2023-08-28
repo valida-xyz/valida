@@ -64,20 +64,14 @@ pub fn check_constraints<M, A>(
     });
 }
 
+/// Check that the combined cumulative sum across all lookup tables is zero.
 pub fn check_cumulative_sums<M>(perms: &[RowMajorMatrix<M::EF>])
 where
     M: Machine + Sync,
 {
     let sum: M::EF = perms
         .iter()
-        .map(|perm| {
-            let sum = if perm.height() > 0 {
-                *perm.row_slice(perm.height() - 1).last().unwrap()
-            } else {
-                M::EF::ZERO
-            };
-            sum
-        })
+        .map(|perm| *perm.row_slice(perm.height() - 1).last().unwrap())
         .sum();
     assert_eq!(sum, M::EF::ZERO);
 }

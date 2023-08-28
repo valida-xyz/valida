@@ -53,22 +53,23 @@ where
     }
 
     fn global_sends(&self, machine: &M) -> Vec<Interaction<M::F>> {
-        let output = COL_MAP
+        let sends = COL_MAP
             .output
             .0
-            .map(VirtualPairCol::single_main)
+            .map(|field| {
+                let output = VirtualPairCol::single_main(field);
+                let is_real =
+                    VirtualPairCol::sum_main(vec![COL_MAP.is_add, COL_MAP.is_sub, COL_MAP.is_mul]);
+
+                Interaction {
+                    fields: vec![output],
+                    count: is_real,
+                    argument_index: machine.range_bus(),
+                }
+            })
             .into_iter()
             .collect::<Vec<_>>();
-
-        let is_real =
-            VirtualPairCol::sum_main(vec![COL_MAP.is_add, COL_MAP.is_sub, COL_MAP.is_mul]);
-
-        let send = Interaction {
-            fields: output,
-            count: is_real,
-            argument_index: machine.range_bus(),
-        };
-        vec![send]
+        sends
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
