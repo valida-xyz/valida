@@ -63,3 +63,21 @@ pub fn check_constraints<M, A>(
         eval_permutation_constraints(air, &mut builder, cumulative_sum);
     });
 }
+
+pub fn check_cumulative_sums<M>(perms: &[RowMajorMatrix<M::EF>])
+where
+    M: Machine + Sync,
+{
+    let sum: M::EF = perms
+        .iter()
+        .map(|perm| {
+            let sum = if perm.height() > 0 {
+                *perm.row_slice(perm.height() - 1).last().unwrap()
+            } else {
+                M::EF::ZERO
+            };
+            sum
+        })
+        .sum();
+    assert_eq!(sum, M::EF::ZERO);
+}

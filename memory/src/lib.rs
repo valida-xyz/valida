@@ -19,7 +19,7 @@ use p3_maybe_rayon::*;
 pub mod columns;
 pub mod stark;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum Operation {
     Read(u32, Word<u8>),
     Write(u32, Word<u8>),
@@ -178,6 +178,7 @@ impl MemoryChip {
             Operation::Write(addr, value) => {
                 cols.addr = F::from_canonical_u32(addr);
                 cols.value = value.transform(F::from_canonical_u8);
+                cols.is_real = F::ONE;
             }
             Operation::DummyRead(addr, value) => {
                 cols.addr = F::from_canonical_u32(addr);
@@ -205,7 +206,7 @@ impl MemoryChip {
                     for i in 0..num_dummy_ops {
                         let dummy_op_clk = op1.0;
                         let dummy_op_addr = op1.1.get_address() + table_len * (i + 1);
-                        let dummy_op_value = Word::default();
+                        let dummy_op_value = op1.1.get_value();
                         dummy_ops.push((
                             dummy_op_clk,
                             Operation::DummyRead(dummy_op_addr, dummy_op_value),
@@ -214,19 +215,19 @@ impl MemoryChip {
                 } else {
                     continue;
                 }
-            }
-
-            let clk_diff = op2.0 - op1.0;
-            if clk_diff > table_len {
-                let num_dummy_ops = clk_diff / table_len;
-                for j in 0..num_dummy_ops {
-                    let dummy_op_clk = op1.0 + table_len * (j + 1);
-                    let dummy_op_addr = op1.1.get_address();
-                    let dummy_op_value = op1.1.get_value();
-                    dummy_ops.push((
-                        dummy_op_clk,
-                        Operation::DummyRead(dummy_op_addr, dummy_op_value),
-                    ));
+            } else {
+                let clk_diff = op2.0 - op1.0;
+                if clk_diff > table_len {
+                    let num_dummy_ops = clk_diff / table_len;
+                    for j in 0..num_dummy_ops {
+                        let dummy_op_clk = op1.0 + table_len * (j + 1);
+                        let dummy_op_addr = op1.1.get_address();
+                        let dummy_op_value = op1.1.get_value();
+                        dummy_ops.push((
+                            dummy_op_clk,
+                            Operation::DummyRead(dummy_op_addr, dummy_op_value),
+                        ));
+                    }
                 }
             }
         }
@@ -261,6 +262,10 @@ impl MemoryChip {
                 Operation::DummyRead(dummy_op_addr, dummy_op_value),
             ));
         }
+
+        // Resort (TODO: this shouldn't be necessary if `insert_dummy_reads` is
+        // implemented correctly...)
+        ops.sort_by_key(|(clk, op)| (op.get_address(), *clk));
     }
 
     fn compute_address_diffs<F: PrimeField>(
@@ -303,5 +308,9 @@ impl MemoryChip {
                 rows[n][MEM_COL_MAP.addr_not_equal] = F::ONE;
             }
         }
+
+        // The first row should have a zero-valued diff, which is "sent" to the local
+        // range check bus. We need to account for that value on the receiving end here.
+        rows[0][MEM_COL_MAP.counter_mult] += F::ONE;
     }
 }

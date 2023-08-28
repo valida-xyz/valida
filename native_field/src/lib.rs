@@ -11,6 +11,7 @@ use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Machine, Operands, Word};
 use valida_opcodes::{ADD, MUL, SUB};
 use valida_range::MachineWithRangeChip;
+use valida_util::pad_to_power_of_two;
 
 use p3_air::VirtualPairCol;
 use p3_field::{Field, PrimeField32};
@@ -46,7 +47,7 @@ where
         let mut trace =
             RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_COLS);
 
-        Self::pad_to_power_of_two::<NUM_COLS, M::F>(&mut trace.values);
+        pad_to_power_of_two::<NUM_COLS, M::F>(&mut trace.values);
 
         trace
     }
@@ -142,7 +143,7 @@ instructions!(AddInstruction, SubInstruction, MulInstruction);
 
 impl<F, M> Instruction<M> for AddInstruction
 where
-    M: MachineWithNativeFieldChip + MachineWithRangeChip + Machine<F = F>,
+    M: MachineWithNativeFieldChip + MachineWithRangeChip<256> + Machine<F = F>,
     F: PrimeField32,
 {
     const OPCODE: u32 = ADD;
@@ -180,7 +181,7 @@ where
 
 impl<F, M> Instruction<M> for SubInstruction
 where
-    M: MachineWithNativeFieldChip + MachineWithRangeChip + Machine<F = F>,
+    M: MachineWithNativeFieldChip + MachineWithRangeChip<256> + Machine<F = F>,
     F: PrimeField32,
 {
     const OPCODE: u32 = SUB;
@@ -218,7 +219,7 @@ where
 
 impl<F, M> Instruction<M> for MulInstruction
 where
-    M: MachineWithNativeFieldChip + MachineWithRangeChip + Machine<F = F>,
+    M: MachineWithNativeFieldChip + MachineWithRangeChip<256> + Machine<F = F>,
     F: PrimeField32,
 {
     const OPCODE: u32 = MUL;
