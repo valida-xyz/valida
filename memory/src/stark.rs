@@ -44,6 +44,7 @@ impl MemoryChip {
             builder
                 .when_transition()
                 .when(next.is_read)
+                .when(next.is_real) // FIXME: Degree constraint 4, need to remove
                 .when_ne(local.addr_not_equal, AB::Expr::ONE)
                 .assert_eq(value_next, value);
         }

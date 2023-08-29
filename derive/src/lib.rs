@@ -216,6 +216,10 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
 
             let mut chip_proofs = vec![];
             #prove_starks
+
+            #[cfg(debug_assertions)]
+            check_cumulative_sums::<Self>(&perm_traces[..]);
+
             MachineProof {
                 // opening_proof,
                 chip_proofs,

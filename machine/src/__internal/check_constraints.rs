@@ -63,3 +63,15 @@ pub fn check_constraints<M, A>(
         eval_permutation_constraints(air, &mut builder, cumulative_sum);
     });
 }
+
+/// Check that the combined cumulative sum across all lookup tables is zero.
+pub fn check_cumulative_sums<M>(perms: &[RowMajorMatrix<M::EF>])
+where
+    M: Machine + Sync,
+{
+    let sum: M::EF = perms
+        .iter()
+        .map(|perm| *perm.row_slice(perm.height() - 1).last().unwrap())
+        .sum();
+    assert_eq!(sum, M::EF::ZERO);
+}

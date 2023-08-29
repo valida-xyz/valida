@@ -11,4 +11,6 @@ p3-field = { path = "../../Plonky3/field" }
 p3-matrix = { path = "../../Plonky3/matrix" }
 p3-maybe-rayon = { path = "../../Plonky3/maybe-rayon" }
 
+valida-bus = { path = "../bus" }
 valida-machine = { path = "../machine" }
+valida-util = { path = "../util" }

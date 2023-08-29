@@ -26,7 +26,7 @@ where
             .assert_eq(next.counter, local.counter + AB::Expr::from(AB::F::ONE));
 
         // Bus opcode constraint
-        builder.assert_eq(
+        builder.when(local.is_real).assert_eq(
             local.opcode,
             AB::Expr::from(AB::F::from_canonical_u32(WRITE)),
         );

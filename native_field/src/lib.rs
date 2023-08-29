@@ -11,6 +11,7 @@ use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Machine, Operands, Word};
 use valida_opcodes::{ADD, MUL, SUB};
 use valida_range::MachineWithRangeChip;
+use valida_util::pad_to_power_of_two;
 
 use p3_air::VirtualPairCol;
 use p3_field::{Field, PrimeField32};
@@ -46,28 +47,29 @@ where
         let mut trace =
             RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_COLS);
 
-        Self::pad_to_power_of_two::<NUM_COLS, M::F>(&mut trace.values);
+        pad_to_power_of_two::<NUM_COLS, M::F>(&mut trace.values);
 
         trace
     }
 
     fn global_sends(&self, machine: &M) -> Vec<Interaction<M::F>> {
-        let output = COL_MAP
+        let sends = COL_MAP
             .output
             .0
-            .map(VirtualPairCol::single_main)
+            .map(|field| {
+                let output = VirtualPairCol::single_main(field);
+                let is_real =
+                    VirtualPairCol::sum_main(vec![COL_MAP.is_add, COL_MAP.is_sub, COL_MAP.is_mul]);
+
+                Interaction {
+                    fields: vec![output],
+                    count: is_real,
+                    argument_index: machine.range_bus(),
+                }
+            })
             .into_iter()
             .collect::<Vec<_>>();
-
-        let is_real =
-            VirtualPairCol::sum_main(vec![COL_MAP.is_add, COL_MAP.is_sub, COL_MAP.is_mul]);
-
-        let send = Interaction {
-            fields: output,
-            count: is_real,
-            argument_index: machine.range_bus(),
-        };
-        vec![send]
+        sends
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
@@ -142,7 +144,7 @@ instructions!(AddInstruction, SubInstruction, MulInstruction);
 
 impl<F, M> Instruction<M> for AddInstruction
 where
-    M: MachineWithNativeFieldChip + MachineWithRangeChip + Machine<F = F>,
+    M: MachineWithNativeFieldChip + MachineWithRangeChip<256> + Machine<F = F>,
     F: PrimeField32,
 {
     const OPCODE: u32 = ADD;
@@ -180,7 +182,7 @@ where
 
 impl<F, M> Instruction<M> for SubInstruction
 where
-    M: MachineWithNativeFieldChip + MachineWithRangeChip + Machine<F = F>,
+    M: MachineWithNativeFieldChip + MachineWithRangeChip<256> + Machine<F = F>,
     F: PrimeField32,
 {
     const OPCODE: u32 = SUB;
@@ -218,7 +220,7 @@ where
 
 impl<F, M> Instruction<M> for MulInstruction
 where
-    M: MachineWithNativeFieldChip + MachineWithRangeChip + Machine<F = F>,
+    M: MachineWithNativeFieldChip + MachineWithRangeChip<256> + Machine<F = F>,
     F: PrimeField32,
 {
     const OPCODE: u32 = MUL;

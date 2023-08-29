@@ -42,14 +42,18 @@ where
         // Check final byte (if no other byte flags were set)
         let flag_sum = local.byte_flag[0] + local.byte_flag[1] + local.byte_flag[2];
         builder.assert_bool(flag_sum.clone());
-        builder.when_ne(flag_sum, AB::Expr::ONE).assert_eq(
-            AB::Expr::from_canonical_u32(256) + local.input_1[3] - local.input_2[3],
-            bit_comp.clone(),
-        );
+        builder
+            .when_ne(local.multiplicity, AB::Expr::ZERO)
+            .when_ne(flag_sum, AB::Expr::ONE)
+            .assert_eq(
+                AB::Expr::from_canonical_u32(256) + local.input_1[3] - local.input_2[3],
+                bit_comp.clone(),
+            );
 
         // Output constraints
         builder.when(local.bits[8]).assert_zero(local.output);
         builder
+            .when_ne(local.multiplicity, AB::Expr::ZERO)
             .when_ne(local.bits[8], AB::Expr::ONE)
             .assert_one(local.output);
 
