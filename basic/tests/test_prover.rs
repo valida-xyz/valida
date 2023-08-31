@@ -10,7 +10,7 @@ use valida_machine::{Instruction, InstructionWord, Machine, Operands, ProgramROM
 use valida_memory::MachineWithMemoryChip;
 
 use p3_challenger::DuplexChallenger;
-use p3_dft::Radix2BowersFft;
+use p3_dft::Radix2Bowers;
 use p3_fri::{FriBasedPcs, FriConfigImpl, FriLdt};
 use p3_ldt::QuotientMmcs;
 use p3_mds::babybear::MdsMatrixBabyBear;
@@ -200,7 +200,7 @@ fn prove_fibonacci() {
     type MyMmcs = MerkleTreeMmcs<Val, [Val; 4], H4, C>;
     let mmcs = MyMmcs::new(h4, c);
 
-    type MyDft = Radix2BowersFft;
+    type MyDft = Radix2Bowers;
     let dft = MyDft::default();
 
     type Chal = DuplexChallenger<Val, Perm, 8>;

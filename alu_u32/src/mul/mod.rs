@@ -3,7 +3,6 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Mul32Cols, MUL_COL_MAP, NUM_MUL_COLS};
-use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
@@ -14,7 +13,6 @@ use core::borrow::BorrowMut;
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
 use p3_matrix::dense::RowMajorMatrix;
-use p3_maybe_rayon::*;
 
 pub mod columns;
 pub mod stark;
