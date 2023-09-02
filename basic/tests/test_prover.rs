@@ -13,7 +13,7 @@ use p3_challenger::DuplexChallenger;
 use p3_dft::Radix2Bowers;
 use p3_fri::{FriBasedPcs, FriConfigImpl, FriLdt};
 use p3_ldt::QuotientMmcs;
-use p3_mds::babybear::MdsMatrixBabyBear;
+use p3_mds::coset_mds::CosetMds;
 use p3_merkle_tree::MerkleTreeMmcs;
 use p3_poseidon::Poseidon;
 use p3_symmetric::compression::TruncatedPermutation;
@@ -185,25 +185,29 @@ fn prove_fibonacci() {
     type Challenge = Val; // TODO
     type PackedChallenge = Challenge; // TODO
 
-    type MyMds = MdsMatrixBabyBear;
-    let mds = MyMds {};
+    type Mds16 = CosetMds<Val, 16>;
+    type Mds32 = CosetMds<Val, 32>;
+    let mds16 = Mds16::default();
+    let mds32 = Mds32::default();
 
-    type Perm = Poseidon<Val, MyMds, 8, 7>;
-    let perm = Perm::new_from_rng(5, 5, mds, &mut thread_rng()); // TODO: Use deterministic RNG
+    type Perm16 = Poseidon<Val, Mds16, 16, 5>;
+    type Perm32 = Poseidon<Val, Mds32, 32, 5>;
+    let perm16 = Perm16::new_from_rng(4, 22, mds16, &mut thread_rng()); // TODO: Use deterministic RNG
+    let perm32 = Perm32::new_from_rng(4, 22, mds32, &mut thread_rng()); // TODO: Use deterministic RNG
 
-    type H4 = PaddingFreeSponge<Val, Perm, { 4 + 4 }>;
-    let h4 = H4::new(perm.clone());
+    type H4 = PaddingFreeSponge<Val, Perm32, 32, 24, 8>;
+    let h4 = H4::new(perm32.clone());
 
-    type C = TruncatedPermutation<Val, Perm, 2, 4, { 2 * 4 }>;
-    let c = C::new(perm.clone());
+    type C = TruncatedPermutation<Val, Perm16, 2, 8, 16>;
+    let c = C::new(perm16.clone());
 
-    type MyMmcs = MerkleTreeMmcs<Val, [Val; 4], H4, C>;
+    type MyMmcs = MerkleTreeMmcs<Val, [Val; 8], H4, C>;
     let mmcs = MyMmcs::new(h4, c);
 
     type MyDft = Radix2Bowers;
     let dft = MyDft::default();
 
-    type Chal = DuplexChallenger<Val, Perm, 8>;
+    type Chal = DuplexChallenger<Val, Perm16, 16>;
     type Quotient = QuotientMmcs<Dom, Challenge, MyMmcs>;
     type MyFriConfig = FriConfigImpl<Val, Dom, Challenge, Quotient, MyMmcs, Chal>;
     let fri_config = MyFriConfig::new(40, mmcs.clone());
@@ -213,7 +217,7 @@ fn prove_fibonacci() {
     type MyConfig = StarkConfigImpl<Val, Challenge, PackedChallenge, PCS, MyDft, Chal>;
 
     let pcs = PCS::new(dft.clone(), 1, mmcs, ldt);
-    let challenger = DuplexChallenger::new(perm);
+    let challenger = DuplexChallenger::new(perm16);
     let config = MyConfig::new(pcs, dft, challenger);
     machine.prove(&config);
 
