@@ -4,8 +4,7 @@ use alloc::vec::Vec;
 use valida_util::batch_multiplicative_inverse;
 
 use crate::__internal::ConstraintFolder;
-use p3_air::Air;
-use p3_air::{AirBuilder, PermutationAirBuilder, VirtualPairCol};
+use p3_air::{Air, AirBuilder, PairBuilder, PermutationAirBuilder, VirtualPairCol};
 use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Powers, PrimeField};
 use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRowSlices};
 
@@ -55,7 +54,7 @@ pub trait Chip<M: Machine>: for<'a> Air<ConstraintFolder<'a, M::F, M::EF, M>> {
     }
 }
 
-pub trait ValidaAirBuilder: PermutationAirBuilder {
+pub trait ValidaAirBuilder: PairBuilder + PermutationAirBuilder {
     type Machine;
 
     fn machine(&self) -> &Self::Machine;
@@ -177,7 +176,7 @@ pub fn eval_permutation_constraints<F, M, C, AB>(chip: &C, builder: &mut AB, cum
 where
     F: PrimeField,
     M: Machine<F = F>,
-    C: Chip<M>,
+    C: Chip<M> + Air<AB>,
     AB: ValidaAirBuilder<Machine = M, F = F>,
 {
     let rand_elems = builder.permutation_randomness().to_vec();
@@ -185,6 +184,9 @@ where
     let main = builder.main();
     let main_local: &[AB::Var] = main.row_slice(0);
     let main_next: &[AB::Var] = main.row_slice(1);
+
+    let preprocessed = builder.preprocessed();
+    let preprocessed_local = preprocessed.row_slice(0);
 
     let perm = builder.permutation();
     let perm_width = perm.width();
@@ -206,7 +208,7 @@ where
         // Reciprocal constraints
         let mut rlc = AB::ExprEF::from_base(AB::Expr::ZERO);
         for (field, beta) in interaction.fields.iter().zip(betas.clone()) {
-            let elem = field.apply::<AB::Expr, AB::Var>(&[], main_local);
+            let elem = field.apply::<AB::Expr, AB::Var>(preprocessed_local, main_local);
             rlc += AB::ExprEF::from(beta) * elem;
         }
         if interaction.is_local() {

@@ -8,6 +8,7 @@ use valida_cpu::{
 use valida_machine::config::StarkConfigImpl;
 use valida_machine::{Instruction, InstructionWord, Machine, Operands, ProgramROM, Word};
 use valida_memory::MachineWithMemoryChip;
+use valida_program::MachineWithProgramChip;
 
 use p3_challenger::DuplexChallenger;
 use p3_dft::Radix2Bowers;
@@ -176,10 +177,11 @@ fn prove_fibonacci() {
 
     let mut machine = BasicMachine::default();
     let rom = ProgramROM::new(program);
+    machine.program_mut().set_program_rom(&rom);
     machine.cpu_mut().fp = 0x1000;
     machine.cpu_mut().save_register_state(); // TODO: Initial register state should be saved
                                              // automatically by the machine, not manually here
-    machine.run(rom);
+    machine.run(&rom);
 
     type Val = BabyBear;
     type Dom = BabyBear;

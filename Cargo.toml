@@ -11,6 +11,7 @@ members = [
     "memory",
     "opcodes",
     "output",
+    "program",
     "range",
     "util",
     "verifier"
