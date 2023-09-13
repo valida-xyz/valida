@@ -3,9 +3,11 @@ use crate::OutputChip;
 use core::borrow::Borrow;
 use valida_opcodes::WRITE;
 
-use p3_air::{Air, AirBuilder};
+use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::PrimeField;
 use p3_matrix::MatrixRowSlices;
+
+impl<F> BaseAir<F> for OutputChip {}
 
 impl<F, AB> Air<AB> for OutputChip
 where

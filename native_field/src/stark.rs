@@ -2,9 +2,11 @@ use super::columns::NativeFieldCols;
 use super::NativeFieldChip;
 use core::borrow::Borrow;
 
-use p3_air::{Air, AirBuilder};
+use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRowSlices;
+
+impl<F> BaseAir<F> for NativeFieldChip {}
 
 impl<F, AB> Air<AB> for NativeFieldChip
 where

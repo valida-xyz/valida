@@ -4,9 +4,11 @@ use core::borrow::Borrow;
 use itertools::iproduct;
 use valida_machine::Word;
 
-use p3_air::{Air, AirBuilder};
+use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRowSlices;
+
+impl<F> BaseAir<F> for Mul32Chip {}
 
 impl<F, AB> Air<AB> for Mul32Chip
 where

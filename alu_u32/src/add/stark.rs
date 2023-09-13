@@ -2,9 +2,11 @@ use super::columns::Add32Cols;
 use super::Add32Chip;
 use core::borrow::Borrow;
 
-use p3_air::{Air, AirBuilder};
+use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::PrimeField;
 use p3_matrix::MatrixRowSlices;
+
+impl<F> BaseAir<F> for Add32Chip {}
 
 impl<F, AB> Air<AB> for Add32Chip
 where

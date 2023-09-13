@@ -3,9 +3,11 @@ use super::Bitwise32Chip;
 use core::borrow::Borrow;
 use valida_machine::MEMORY_CELL_BYTES;
 
-use p3_air::{Air, AirBuilder};
+use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::AbstractField;
 use p3_matrix::MatrixRowSlices;
+
+impl<F> BaseAir<F> for Bitwise32Chip {}
 
 impl<F, AB> Air<AB> for Bitwise32Chip
 where
