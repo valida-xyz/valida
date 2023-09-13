@@ -3,11 +3,13 @@ use alloc::vec;
 use alloc::vec::Vec;
 use valida_util::batch_multiplicative_inverse;
 
+use crate::__internal::ConstraintFolder;
+use p3_air::Air;
 use p3_air::{AirBuilder, PermutationAirBuilder, VirtualPairCol};
 use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Powers, PrimeField};
 use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRowSlices};
 
-pub trait Chip<M: Machine>: Sync {
+pub trait Chip<M: Machine>: for<'a> Air<ConstraintFolder<'a, M::F, M::EF, M>> {
     /// Generate the main trace for the chip given the provided machine.
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F>;
 
