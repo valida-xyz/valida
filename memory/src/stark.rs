@@ -2,9 +2,11 @@ use crate::columns::MemoryCols;
 use crate::MemoryChip;
 use core::borrow::Borrow;
 
-use p3_air::{Air, AirBuilder};
+use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::AbstractField;
 use p3_matrix::MatrixRowSlices;
+
+impl<F> BaseAir<F> for MemoryChip {}
 
 impl<AB> Air<AB> for MemoryChip
 where
