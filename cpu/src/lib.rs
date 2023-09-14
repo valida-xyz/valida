@@ -164,8 +164,7 @@ where
                 .instruction
                 .operands
                 .0
-                .iter()
-                .map(|op| VirtualPairCol::single_main(*op)),
+                .map(|op| VirtualPairCol::single_main(op)),
         );
         let send_program = Interaction {
             fields,
@@ -329,11 +328,6 @@ impl CpuChip {
         let fp = last_row[CPU_COL_MAP.fp];
         let clk = last_row[CPU_COL_MAP.clk];
 
-        let opcode = last_row[CPU_COL_MAP.instruction.opcode];
-        let operands = &last_row[CPU_COL_MAP.instruction.operands.0[0]
-            ..CPU_COL_MAP.instruction.operands.0[0] + OPERAND_ELEMENTS]
-            .to_vec();
-
         values.resize(n_real_rows.next_power_of_two() * NUM_CPU_COLS, F::ZERO);
 
         // Interpret values as a slice of arrays of length `NUM_CPU_COLS`
@@ -352,12 +346,9 @@ impl CpuChip {
                 padded_row[CPU_COL_MAP.fp] = fp;
                 padded_row[CPU_COL_MAP.clk] = clk + F::from_canonical_u32(n as u32 + 1);
 
-                // Instruction columns
+                // STOP instructions
                 padded_row[CPU_COL_MAP.opcode_flags.is_stop] = F::ONE;
-                padded_row[CPU_COL_MAP.instruction.opcode] = opcode;
-                for i in 0..OPERAND_ELEMENTS {
-                    padded_row[CPU_COL_MAP.instruction.operands.0[i]] = operands[i];
-                }
+                padded_row[CPU_COL_MAP.instruction.opcode] = F::from_canonical_u32(STOP);
 
                 // Memory columns
                 padded_row[CPU_COL_MAP.mem_channels[0].is_read] = F::ONE;

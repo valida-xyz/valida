@@ -2,12 +2,12 @@
 
 extern crate alloc;
 
-use crate::columns::{COL_MAP, PREPROCESSED_COL_MAP};
+use crate::columns::{COL_MAP, NUM_COLS, PREPROCESSED_COL_MAP};
 use alloc::vec;
 use alloc::vec::Vec;
-use core::iter;
 use valida_bus::MachineWithProgramBus;
 use valida_machine::{Chip, Interaction, Machine, PrimeField32, ProgramROM};
+use valida_util::pad_to_power_of_two;
 
 use p3_air::VirtualPairCol;
 use p3_matrix::dense::RowMajorMatrix;
@@ -35,21 +35,19 @@ where
     M: MachineWithProgramBus<F = F>,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
-        let n = self.program_rom.0.len();
-        let cols = self
+        let mut values = self
             .counts
             .iter()
-            .enumerate()
-            .flat_map(|(n, c)| [F::from_canonical_usize(n), F::from_canonical_u32(*c)])
-            .chain(iter::repeat(F::ZERO))
-            .take(2 * n.next_power_of_two())
+            .map(|c| F::from_canonical_u32(*c))
             .collect();
 
-        RowMajorMatrix::new(cols, 2)
+        pad_to_power_of_two::<NUM_COLS, F>(&mut values);
+
+        RowMajorMatrix::new(values, NUM_COLS)
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<F>> {
-        let pc = VirtualPairCol::single_main(COL_MAP.counter);
+        let pc = VirtualPairCol::single_preprocessed(PREPROCESSED_COL_MAP.pc);
         let opcode = VirtualPairCol::single_preprocessed(PREPROCESSED_COL_MAP.opcode);
         let mut fields = vec![pc, opcode];
         fields.extend(

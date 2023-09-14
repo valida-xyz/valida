@@ -137,7 +137,7 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
                 }
             }
 
-            // Record infinite loop cycles
+            // Record padded STOP instructions
             let n = self.cpu().clock.next_power_of_two() - self.cpu().clock;
             for _ in 0..n {
                 self.read_word(self.cpu().pc as usize);

@@ -6,12 +6,12 @@ use valida_util::indices_arr;
 
 #[derive(AlignedBorrow, Default)]
 pub struct ProgramCols<T> {
-    pub counter: T,
     pub multiplicity: T,
 }
 
 #[derive(AlignedBorrow, Default)]
 pub struct ProgramPreprocessedCols<T> {
+    pub pc: T,
     pub opcode: T,
     pub operands: Operands<T>,
 }
