@@ -7,7 +7,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::iter;
 use valida_bus::MachineWithProgramBus;
-use valida_machine::{Chip, Interaction, Machine, PrimeField, ProgramROM};
+use valida_machine::{Chip, Interaction, Machine, PrimeField32, ProgramROM};
 
 use p3_air::VirtualPairCol;
 use p3_matrix::dense::RowMajorMatrix;
@@ -31,19 +31,21 @@ impl ProgramChip {
 
 impl<F, M> Chip<M> for ProgramChip
 where
-    F: PrimeField,
+    F: PrimeField32,
     M: MachineWithProgramBus<F = F>,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let n = self.program_rom.0.len();
-        let col = self
+        let cols = self
             .counts
             .iter()
-            .map(|c| F::from_canonical_u32(*c))
+            .enumerate()
+            .flat_map(|(n, c)| [F::from_canonical_usize(n), F::from_canonical_u32(*c)])
             .chain(iter::repeat(F::ZERO))
-            .take(n.next_power_of_two())
+            .take(2 * n.next_power_of_two())
             .collect();
-        RowMajorMatrix::new(col, 1)
+
+        RowMajorMatrix::new(cols, 2)
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<F>> {

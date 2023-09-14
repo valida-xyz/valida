@@ -1,9 +1,9 @@
 use crate::Machine;
+use crate::__internal::ConstraintFolder;
 use alloc::vec;
 use alloc::vec::Vec;
 use valida_util::batch_multiplicative_inverse;
 
-use crate::__internal::ConstraintFolder;
 use p3_air::{Air, AirBuilder, PairBuilder, PermutationAirBuilder, VirtualPairCol};
 use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Powers, PrimeField};
 use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRowSlices};
@@ -119,6 +119,8 @@ where
     let (alphas_local, alphas_global) = generate_rlc_elements(machine, chip, &random_elements);
     let betas = random_elements[2].powers();
 
+    let preprocessed = chip.preprocessed_trace();
+
     // Compute the reciprocal columns
     //
     // Row: | q_1 | q_2 | q_3 | ... | q_n | \phi |
@@ -131,15 +133,26 @@ where
     let perm_width = all_interactions.len() + 1;
     let mut perm_values = Vec::with_capacity(main.height() * perm_width);
 
-    for main_row in main.rows() {
+    for (n, main_row) in main.rows().enumerate() {
         let mut row = vec![M::EF::ZERO; perm_width];
-        for (n, (interaction, _)) in all_interactions.iter().enumerate() {
-            let alpha_i = if interaction.is_local() {
+        for (m, (interaction, _)) in all_interactions.iter().enumerate() {
+            let alpha_m = if interaction.is_local() {
                 alphas_local[interaction.argument_index()]
             } else {
                 alphas_global[interaction.argument_index()]
             };
-            row[n] = reduce_row(main_row, &interaction.fields, alpha_i, betas.clone());
+            let preprocessed_row = if preprocessed.is_some() {
+                preprocessed.as_ref().unwrap().row_slice(n)
+            } else {
+                &[]
+            };
+            row[m] = reduce_row(
+                main_row,
+                preprocessed_row,
+                &interaction.fields,
+                alpha_m,
+                betas.clone(),
+            );
         }
         perm_values.extend(row);
     }
@@ -152,8 +165,15 @@ where
         if n > 0 {
             phi[n] = phi[n - 1];
         }
+        let preprocessed_row = if preprocessed.is_some() {
+            preprocessed.as_ref().unwrap().row_slice(n)
+        } else {
+            &[]
+        };
         for (m, (interaction, interaction_type)) in all_interactions.iter().enumerate() {
-            let mult = interaction.count.apply::<M::F, M::F>(&[], main_row);
+            let mult = interaction
+                .count
+                .apply::<M::F, M::F>(preprocessed_row, main_row);
             match interaction_type {
                 InteractionType::LocalSend | InteractionType::GlobalSend => {
                     phi[n] += M::EF::from_base(mult) * perm_row[m];
@@ -187,6 +207,7 @@ where
 
     let preprocessed = builder.preprocessed();
     let preprocessed_local = preprocessed.row_slice(0);
+    let preprocessed_next = preprocessed.row_slice(1);
 
     let perm = builder.permutation();
     let perm_width = perm.width();
@@ -220,8 +241,10 @@ where
 
         let mult_local = interaction
             .count
-            .apply::<AB::Expr, AB::Var>(&[], main_local);
-        let mult_next = interaction.count.apply::<AB::Expr, AB::Var>(&[], main_next);
+            .apply::<AB::Expr, AB::Var>(preprocessed_local, main_local);
+        let mult_next = interaction
+            .count
+            .apply::<AB::Expr, AB::Var>(preprocessed_next, main_next);
 
         // Build the RHS of the permutation constraint
         match interaction_type {
@@ -294,14 +317,20 @@ where
 
 // TODO: Use Var and Expr type bounds in place of concrete fields so that
 // this function can be used in `eval_permutation_constraints`.
-fn reduce_row<F, EF>(row: &[F], fields: &[VirtualPairCol<F>], alpha: EF, betas: Powers<EF>) -> EF
+fn reduce_row<F, EF>(
+    main_row: &[F],
+    preprocessed_row: &[F],
+    fields: &[VirtualPairCol<F>],
+    alpha: EF,
+    betas: Powers<EF>,
+) -> EF
 where
     F: Field,
     EF: ExtensionField<F>,
 {
     let mut rlc = EF::ZERO;
     for (columns, beta) in fields.iter().zip(betas) {
-        rlc += beta * columns.apply::<F, F>(&[], row)
+        rlc += beta * columns.apply::<F, F>(preprocessed_row, main_row)
     }
     rlc += alpha;
     rlc

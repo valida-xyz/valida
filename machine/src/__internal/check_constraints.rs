@@ -26,9 +26,7 @@ pub fn check_constraints<M, A>(
         return;
     }
 
-    let preprocessed = air
-        .preprocessed_trace()
-        .unwrap_or(RowMajorMatrix::new(vec![], 0));
+    let preprocessed = air.preprocessed_trace();
 
     let cumulative_sum = *perm.row_slice(perm.height() - 1).last().unwrap();
 
@@ -38,8 +36,16 @@ pub fn check_constraints<M, A>(
 
         let main_local = main.row_slice(i);
         let main_next = main.row_slice(i_next);
-        let preprocessed_local = preprocessed.row_slice(i);
-        let preprocessed_next = preprocessed.row_slice(i_next);
+        let preprocessed_local = if preprocessed.is_some() {
+            preprocessed.as_ref().unwrap().row_slice(i)
+        } else {
+            &[]
+        };
+        let preprocessed_next = if preprocessed.is_some() {
+            preprocessed.as_ref().unwrap().row_slice(i_next)
+        } else {
+            &[]
+        };
         let perm_local = perm.row_slice(i);
         let perm_next = perm.row_slice(i_next);
 

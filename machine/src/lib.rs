@@ -43,13 +43,7 @@ impl InstructionWord<i32> {
     pub fn flatten<F: PrimeField32>(&self) -> [F; INSTRUCTION_ELEMENTS] {
         let mut result = [F::default(); INSTRUCTION_ELEMENTS];
         result[0] = F::from_canonical_u32(self.opcode);
-        self.operands.0.into_iter().enumerate().for_each(|(i, x)| {
-            result[i] = if x >= 0 {
-                F::from_canonical_u32(x as u32)
-            } else {
-                F::from_wrapped_u32((x as i64 + F::ORDER_U32 as i64) as u32)
-            };
-        });
+        result[1..].copy_from_slice(&Operands::<F>::from_i32_slice(&self.operands.0).0);
         result
     }
 }

@@ -123,18 +123,24 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
                 let instruction = program.get_instruction(pc);
                 let opcode = instruction.opcode;
                 let ops = instruction.operands;
-                self.read_word(pc as usize);
 
                 // Execute
                 match opcode {
                     #opcode_arms
                     _ => panic!("Unrecognized opcode: {}", opcode),
                 };
+                self.read_word(pc as usize);
 
                 // A STOP instruction signals the end of the program
                 if opcode == <StopInstruction as Instruction<Self>>::OPCODE {
                     break;
                 }
+            }
+
+            // Record infinite loop cycles
+            let n = self.cpu().clock.next_power_of_two() - self.cpu().clock;
+            for _ in 0..n {
+                self.read_word(self.cpu().pc as usize);
             }
         }
     }
