@@ -1,6 +1,7 @@
 use crate::__internal::DebugConstraintBuilder;
 use crate::chip::eval_permutation_constraints;
 use crate::{Chip, Machine};
+use alloc::vec;
 use p3_air::{Air, TwoRowMatrixView};
 use p3_field::AbstractField;
 use p3_matrix::dense::RowMajorMatrix;
@@ -25,6 +26,8 @@ pub fn check_constraints<M, A>(
         return;
     }
 
+    let preprocessed = air.preprocessed_trace();
+
     let cumulative_sum = *perm.row_slice(perm.height() - 1).last().unwrap();
 
     // Check that constraints are satisfied.
@@ -33,6 +36,16 @@ pub fn check_constraints<M, A>(
 
         let main_local = main.row_slice(i);
         let main_next = main.row_slice(i_next);
+        let preprocessed_local = if preprocessed.is_some() {
+            preprocessed.as_ref().unwrap().row_slice(i)
+        } else {
+            &[]
+        };
+        let preprocessed_next = if preprocessed.is_some() {
+            preprocessed.as_ref().unwrap().row_slice(i_next)
+        } else {
+            &[]
+        };
         let perm_local = perm.row_slice(i);
         let perm_next = perm.row_slice(i_next);
 
@@ -41,6 +54,10 @@ pub fn check_constraints<M, A>(
             main: TwoRowMatrixView {
                 local: &main_local,
                 next: &main_next,
+            },
+            preprocessed: TwoRowMatrixView {
+                local: &preprocessed_local,
+                next: &preprocessed_next,
             },
             perm: TwoRowMatrixView {
                 local: &perm_local,

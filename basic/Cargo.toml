@@ -16,6 +16,7 @@ valida-derive = { path = "../derive" }
 valida-machine = { path = "../machine" }
 valida-memory = { path = "../memory" }
 valida-output = { path = "../output" }
+valida-program = { path = "../program" }
 valida-range = { path = "../range" }
 p3-maybe-rayon = { path = "../../Plonky3/maybe-rayon" }
 byteorder = "1.4.3"

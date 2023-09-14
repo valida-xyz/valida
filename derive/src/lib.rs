@@ -116,7 +116,7 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
         .collect::<TokenStream2>();
 
     quote! {
-        fn run(&mut self, program: ProgramROM<i32>) {
+        fn run(&mut self, program: &ProgramROM<i32>) {
             loop {
                 // Fetch
                 let pc = self.cpu().pc;
@@ -129,11 +129,18 @@ fn run_method(machine: &Ident, instructions: &[&Field]) -> TokenStream2 {
                     #opcode_arms
                     _ => panic!("Unrecognized opcode: {}", opcode),
                 };
+                self.read_word(pc as usize);
 
                 // A STOP instruction signals the end of the program
                 if opcode == <StopInstruction as Instruction<Self>>::OPCODE {
                     break;
                 }
+            }
+
+            // Record padded STOP instructions
+            let n = self.cpu().clock.next_power_of_two() - self.cpu().clock;
+            for _ in 0..n {
+                self.read_word(self.cpu().pc as usize);
             }
         }
     }
@@ -158,7 +165,12 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             quote! {
                 #[cfg(debug_assertions)]
                 check_constraints(
-                    self, self.#chip_name(), &main_traces[#n], &perm_traces[#n], &perm_challenges);
+                    self,
+                    self.#chip_name(),
+                    &main_traces[#n],
+                    &perm_traces[#n],
+                    &perm_challenges,
+                );
 
                 chip_proofs.push(prove(self, config, self.#chip_name(), &mut challenger));
             }

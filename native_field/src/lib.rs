@@ -34,7 +34,7 @@ pub struct NativeFieldChip {
 
 impl<F, M> Chip<M> for NativeFieldChip
 where
-    F: PrimeField,
+    F: PrimeField32,
     M: MachineWithGeneralBus<F = F> + MachineWithRangeBus8,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {

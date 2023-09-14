@@ -10,6 +10,10 @@ pub trait MachineWithGeneralBus: Machine {
     fn general_bus(&self) -> BusArgument;
 }
 
+pub trait MachineWithProgramBus: Machine {
+    fn program_bus(&self) -> BusArgument;
+}
+
 pub trait MachineWithMemBus: Machine {
     fn mem_bus(&self) -> BusArgument;
 }

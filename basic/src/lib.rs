@@ -15,7 +15,9 @@ use valida_alu_u32::{
     shift::{MachineWithShift32Chip, Shift32Chip, Shl32Instruction, Shr32Instruction},
     sub::{MachineWithSub32Chip, Sub32Chip, Sub32Instruction},
 };
-use valida_bus::{MachineWithGeneralBus, MachineWithMemBus, MachineWithRangeBus8};
+use valida_bus::{
+    MachineWithGeneralBus, MachineWithMemBus, MachineWithProgramBus, MachineWithRangeBus8,
+};
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
     Load32Instruction, ReadAdviceInstruction, StopInstruction, Store32Instruction,
@@ -24,9 +26,11 @@ use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
 use valida_machine::{
     AbstractExtensionField, AbstractField, BusArgument, Chip, Instruction, Machine, ProgramROM,
+    ValidaAirBuilder,
 };
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_output::{MachineWithOutputChip, OutputChip, WriteInstruction};
+use valida_program::{MachineWithProgramChip, ProgramChip};
 use valida_range::{MachineWithRangeChip, RangeCheckerChip};
 
 use p3_maybe_rayon::*;
@@ -82,6 +86,8 @@ pub struct BasicMachine {
     #[chip]
     cpu: CpuChip,
     #[chip]
+    program: ProgramChip,
+    #[chip]
     mem: MemoryChip,
     #[chip]
     add_u32: Add32Chip,
@@ -109,15 +115,21 @@ impl MachineWithGeneralBus for BasicMachine {
     }
 }
 
+impl MachineWithProgramBus for BasicMachine {
+    fn program_bus(&self) -> BusArgument {
+        BusArgument::Global(1)
+    }
+}
+
 impl MachineWithMemBus for BasicMachine {
     fn mem_bus(&self) -> BusArgument {
-        BusArgument::Global(1)
+        BusArgument::Global(2)
     }
 }
 
 impl MachineWithRangeBus8 for BasicMachine {
     fn range_bus(&self) -> BusArgument {
-        BusArgument::Global(2)
+        BusArgument::Global(3)
     }
 }
 
@@ -128,6 +140,16 @@ impl MachineWithCpuChip for BasicMachine {
 
     fn cpu_mut(&mut self) -> &mut CpuChip {
         &mut self.cpu
+    }
+}
+
+impl MachineWithProgramChip for BasicMachine {
+    fn program(&self) -> &ProgramChip {
+        &self.program
+    }
+
+    fn program_mut(&mut self) -> &mut ProgramChip {
+        &mut self.program
     }
 }
 

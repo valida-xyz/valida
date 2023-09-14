@@ -48,7 +48,7 @@ fn main() {
     machine.cpu_mut().advice_tape.data.extend(input_words);
 
     // Run the program
-    machine.run(rom);
+    machine.run(&rom);
 
     // Write output chip values to standard output
     std::io::stdout()

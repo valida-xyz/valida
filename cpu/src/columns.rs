@@ -37,9 +37,9 @@ pub struct CpuCols<T> {
 }
 
 #[derive(Default)]
-pub struct InstructionCols<F> {
-    pub opcode: F,
-    pub operands: Operands<F>,
+pub struct InstructionCols<T> {
+    pub opcode: T,
+    pub operands: Operands<T>,
 }
 
 #[derive(Default)]

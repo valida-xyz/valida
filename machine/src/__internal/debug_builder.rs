@@ -1,5 +1,5 @@
 use crate::{Machine, ValidaAirBuilder};
-use p3_air::{AirBuilder, PermutationAirBuilder, TwoRowMatrixView};
+use p3_air::{AirBuilder, PairBuilder, PermutationAirBuilder, TwoRowMatrixView};
 use p3_field::{ExtensionField, Field};
 
 /// An `AirBuilder` which asserts that each constraint is zero, allowing any failed constraints to
@@ -7,6 +7,7 @@ use p3_field::{ExtensionField, Field};
 pub struct DebugConstraintBuilder<'a, F: Field, EF: ExtensionField<F>, M: Machine> {
     pub(crate) machine: &'a M,
     pub(crate) main: TwoRowMatrixView<'a, F>,
+    pub(crate) preprocessed: TwoRowMatrixView<'a, F>,
     pub(crate) perm: TwoRowMatrixView<'a, EF>,
     pub(crate) perm_challenges: &'a [EF],
     pub(crate) is_first_row: F,
@@ -32,6 +33,17 @@ where
     fn permutation_randomness(&self) -> &[Self::EF] {
         // TODO: implement
         self.perm_challenges
+    }
+}
+
+impl<'a, F, EF, M> PairBuilder for DebugConstraintBuilder<'a, F, EF, M>
+where
+    F: Field,
+    EF: ExtensionField<F>,
+    M: Machine<EF = EF>,
+{
+    fn preprocessed(&self) -> Self::M {
+        self.preprocessed
     }
 }
 

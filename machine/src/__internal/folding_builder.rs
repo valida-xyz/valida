@@ -1,10 +1,11 @@
 use crate::{Machine, ValidaAirBuilder};
-use p3_air::{AirBuilder, PermutationAirBuilder, TwoRowMatrixView};
+use p3_air::{AirBuilder, PairBuilder, PermutationAirBuilder, TwoRowMatrixView};
 use p3_field::{ExtensionField, Field};
 
 pub struct ConstraintFolder<'a, F: Field, EF: ExtensionField<F>, M: Machine> {
     pub(crate) machine: &'a M,
     pub(crate) main: TwoRowMatrixView<'a, F>,
+    pub(crate) preprocessed: TwoRowMatrixView<'a, F>,
     pub(crate) perm: TwoRowMatrixView<'a, EF>,
     pub(crate) rand_elems: &'a [EF],
     pub(crate) is_first_row: F,
@@ -30,6 +31,17 @@ where
     fn permutation_randomness(&self) -> &[Self::EF] {
         // TODO: implement
         self.rand_elems
+    }
+}
+
+impl<'a, F, EF, M> PairBuilder for ConstraintFolder<'a, F, EF, M>
+where
+    F: Field,
+    EF: ExtensionField<F>,
+    M: Machine<EF = EF>,
+{
+    fn preprocessed(&self) -> Self::M {
+        self.preprocessed
     }
 }
 
