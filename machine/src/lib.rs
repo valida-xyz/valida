@@ -11,8 +11,7 @@ pub use chip::{BusArgument, Chip, Interaction, InteractionType, ValidaAirBuilder
 use crate::config::StarkConfig;
 use crate::proof::MachineProof;
 pub use p3_field::{
-    AbstractExtensionField, AbstractField, ExtensionField, Field, PrimeField, PrimeField32,
-    PrimeField64,
+    AbstractExtensionField, AbstractField, ExtensionField, Field, PrimeField, PrimeField64,
 };
 
 pub mod __internal;
@@ -40,7 +39,7 @@ pub struct InstructionWord<F> {
 }
 
 impl InstructionWord<i32> {
-    pub fn flatten<F: PrimeField32>(&self) -> [F; INSTRUCTION_ELEMENTS] {
+    pub fn flatten<F: PrimeField64>(&self) -> [F; INSTRUCTION_ELEMENTS] {
         let mut result = [F::default(); INSTRUCTION_ELEMENTS];
         result[0] = F::from_canonical_u32(self.opcode);
         result[1..].copy_from_slice(&Operands::<F>::from_i32_slice(&self.operands.0).0);
