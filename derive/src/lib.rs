@@ -44,86 +44,77 @@ fn impl_machine(machine: &syn::DeriveInput) -> TokenStream {
             Fields::Unnamed(unnamed) => unnamed.unnamed.iter().collect(),
             Fields::Unit => vec![],
         };
-        impl_machine_given_fields(machine, &fields)
+
+        let instructions = fields
+            .iter()
+            .filter(|f| f.attrs.iter().any(|a| a.path.is_ident("instruction")))
+            .copied()
+            .collect::<Vec<_>>();
+        let chips = fields
+            .iter()
+            .filter(|f| f.attrs.iter().any(|a| a.path.is_ident("chip")))
+            .copied()
+            .collect::<Vec<_>>();
+
+        let name = &machine.ident;
+        let run = run_method(machine, &instructions);
+        let prove = prove_method(&chips);
+        let verify = verify_method(&chips);
+
+        let (impl_generics, ty_generics, where_clause) = machine.generics.split_for_impl();
+
+        let machine_fields = machine
+            .attrs
+            .iter()
+            .filter(|a| a.path.segments.len() == 1 && a.path.segments[0].ident == "machine_fields")
+            .next()
+            .expect("machine_fields attribute required to derive Machine");
+        let machine_fields: MachineFields = syn::parse2(machine_fields.tokens.clone()).expect(
+            "Invalid machine_fields attribute, expected #[machine_fields(<BaseField>, <ExtField>)]",
+        );
+
+        let base_field = &machine_fields.base_field;
+        let ext_field = &machine_fields.ext_field;
+
+        let stream = quote! {
+            impl #impl_generics Machine for #name #ty_generics #where_clause {
+                type F = #base_field;
+                type EF = #ext_field;
+                #run
+                #prove
+                #verify
+            }
+        };
+
+        stream.into()
     } else {
         panic!("Machine derive only supports structs");
     }
 }
 
-fn impl_machine_given_fields(machine: &syn::DeriveInput, fields: &[&Field]) -> TokenStream {
-    let instructions = fields
-        .iter()
-        .filter(|f| f.attrs.iter().any(|a| a.path.is_ident("instruction")))
-        .copied()
-        .collect::<Vec<_>>();
-    let chips = fields
-        .iter()
-        .filter(|f| f.attrs.iter().any(|a| a.path.is_ident("chip")))
-        .copied()
-        .collect::<Vec<_>>();
-    impl_machine_given_instructions_and_chips(machine, &instructions, &chips).into()
-}
-
-//#[deprecated] // Planning manual impls for now.
-//#[allow(dead_code)]
-//fn impl_machine_chip_impl_given_chips(
-//    machine: &syn::DeriveInput,
-//    chips: &[&Field],
-//) -> TokenStream2 {
-//    let chip_impls = chips.iter().map(|chip| {
-//        let chip_ty = &chip.ty;
-//        let tokens = quote!(#chip_ty);
-//        let chip_impl_name = Ident::new(&format!("MachineWith{}", tokens.to_string()), chip.span());
-//        let chip_methods = chip_methods(chip);
-//
-//        let name = &machine.ident;
-//        let (impl_generics, ty_generics, where_clause) = machine.generics.split_for_impl();
-//
-//        quote! {
-//            impl #impl_generics #chip_impl_name for #name #ty_generics #where_clause {
-//                #chip_methods
-//            }
-//        }
-//    });
-//    quote! {
-//        #(#chip_impls)*
-//    }
-//}
-
-fn impl_machine_given_instructions_and_chips(
+#[deprecated] // Planning manual impls for now.
+#[allow(dead_code)]
+fn impl_machine_chip_impl_given_chips(
     machine: &syn::DeriveInput,
-    instructions: &[&Field],
     chips: &[&Field],
 ) -> TokenStream2 {
-    let run = run_method(machine, instructions);
-    let prove = prove_method(chips);
-    let verify = verify_method(chips);
+    let chip_impls = chips.iter().map(|chip| {
+        let chip_ty = &chip.ty;
+        let tokens = quote!(#chip_ty);
+        let chip_impl_name = Ident::new(&format!("MachineWith{}", tokens.to_string()), chip.span());
+        let chip_methods = chip_methods(chip);
 
-    let (impl_generics, ty_generics, where_clause) = machine.generics.split_for_impl();
+        let name = &machine.ident;
+        let (impl_generics, ty_generics, where_clause) = machine.generics.split_for_impl();
 
-    let machine_fields = machine
-        .attrs
-        .iter()
-        .filter(|a| a.path.segments.len() == 1 && a.path.segments[0].ident == "machine_fields")
-        .next()
-        .expect("machine_fields attribute required to derive Machine");
-    let machine_fields: MachineFields = syn::parse2(machine_fields.tokens.clone()).expect(
-        "Invalid machine_fields attribute, expected #[machine_fields(<BaseField>, <ExtField>)]",
-    );
-
-    let name = &machine.ident;
-
-    let base_field = &machine_fields.base_field;
-    let ext_field = &machine_fields.ext_field;
-
-    quote! {
-        impl #impl_generics Machine for #name #ty_generics #where_clause {
-            type F = #base_field;
-            type EF = #ext_field;
-            #run
-            #prove
-            #verify
+        quote! {
+            impl #impl_generics #chip_impl_name for #name #ty_generics #where_clause {
+                #chip_methods
+            }
         }
+    });
+    quote! {
+        #(#chip_impls)*
     }
 }
 
@@ -147,12 +138,15 @@ fn chip_methods(chip: &Field) -> TokenStream2 {
 }
 
 fn run_method(machine: &syn::DeriveInput, instructions: &[&Field]) -> TokenStream2 {
+    let name = &machine.ident;
+    let (impl_generics, ty_generics, where_clause) = machine.generics.split_for_impl();
+
     let opcode_arms = instructions
         .iter()
         .map(|inst| {
             let ty = &inst.ty;
             quote! {
-                <#ty as Instruction<#machine>>::OPCODE => {
+                <#ty as Instruction<#name #ty_generics>>::OPCODE => {
                     #ty::execute(self, ops);
                 }
             }
@@ -263,7 +257,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             //// TODO: Want to avoid cloning, but this leads to lifetime issues...
             //// let perm_trace_views = perm_traces.iter().map(|trace| trace.as_view()).collect();
 
-            let (perm_commit, perm_data) = config.pcs().commit_batches(perm_traces.clone());
+            //let (perm_commit, perm_data) = config.pcs().commit_batches(perm_traces.clone());
             //// TODO: Have challenger observe perm_commit.
 
             //let opening_points = &[vec![Self::EF::TWO], vec![Self::EF::TWO]]; // TODO
