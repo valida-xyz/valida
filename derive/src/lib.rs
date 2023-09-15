@@ -139,7 +139,7 @@ fn chip_methods(chip: &Field) -> TokenStream2 {
 
 fn run_method(machine: &syn::DeriveInput, instructions: &[&Field]) -> TokenStream2 {
     let name = &machine.ident;
-    let (impl_generics, ty_generics, where_clause) = machine.generics.split_for_impl();
+    let (_, ty_generics, _) = machine.generics.split_for_impl();
 
     let opcode_arms = instructions
         .iter()
