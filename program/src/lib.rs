@@ -6,7 +6,7 @@ use crate::columns::{COL_MAP, NUM_COLS, PREPROCESSED_COL_MAP};
 use alloc::vec;
 use alloc::vec::Vec;
 use valida_bus::MachineWithProgramBus;
-use valida_machine::{Chip, Interaction, Machine, PrimeField32, ProgramROM};
+use valida_machine::{Chip, Interaction, Machine, PrimeField64, ProgramROM};
 use valida_util::pad_to_power_of_two;
 
 use p3_air::VirtualPairCol;
@@ -31,7 +31,7 @@ impl ProgramChip {
 
 impl<F, M> Chip<M> for ProgramChip
 where
-    F: PrimeField32,
+    F: PrimeField64,
     M: MachineWithProgramBus<F = F>,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
