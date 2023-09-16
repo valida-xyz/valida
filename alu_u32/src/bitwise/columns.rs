@@ -9,15 +9,8 @@ pub struct Bitwise32Cols<T> {
     pub input_1: Word<T>,
     pub input_2: Word<T>,
 
-    /// Bit decomposition of input_1 bytes
-    pub bits_1: [[T; 8]; 4],
-
-    /// Bit decomposition of input_2 bytes
-    pub bits_2: [[T; 8]; 4],
-
     /// Aggregated output
     pub output: Word<T>,
-
     pub is_and: T,
     pub is_or: T,
     pub is_xor: T,

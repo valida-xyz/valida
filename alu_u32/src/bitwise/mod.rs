@@ -36,7 +36,7 @@ where
     M: MachineWithGeneralBus<F = F>,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
-        let rows = self
+        let mut rows = self
             .operations
             .par_iter()
             .map(|op| self.op_to_row(op))
@@ -59,6 +59,7 @@ where
             ],
             M::F::ZERO,
         );
+
         let input_1 = COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = COL_MAP.input_2.0.map(VirtualPairCol::single_main);
         let output = COL_MAP.output.0.map(VirtualPairCol::single_main);
@@ -112,15 +113,6 @@ impl Bitwise32Chip {
         cols.input_1 = b.transform(F::from_canonical_u8);
         cols.input_2 = c.transform(F::from_canonical_u8);
         cols.output = a.transform(F::from_canonical_u8);
-
-        let mut bits_1 = [[F::ZERO; 8]; 4];
-        let mut bits_2 = [[F::ZERO; 8]; 4];
-        for i in 0..4 {
-            for j in 0..8 {
-                bits_1[i][j] = F::from_canonical_u8(b[i] >> j & 1);
-                bits_2[i][j] = F::from_canonical_u8(c[i] >> j & 1);
-            }
-        }
     }
 }
 
@@ -140,6 +132,7 @@ where
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
         let mut imm: Option<Word<u8>> = None;
+
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
         let b = state.mem_mut().read(clk, read_addr_1, true);
