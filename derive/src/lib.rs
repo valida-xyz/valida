@@ -216,6 +216,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
         .collect::<TokenStream2>();
 
     quote! {
+        #[tracing::instrument(name = "prove machine execution", skip_all)]
         fn prove<SC>(&self, config: &SC) -> ::valida_machine::proof::MachineProof<SC>
         where
             SC: ::valida_machine::config::StarkConfig<Val = Self::F, Challenge = Self::EF>,
@@ -235,14 +236,20 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
 
             let mut challenger = config.challenger();
 
-            let main_traces = chips.par_iter().map(|chip| {
-                chip.generate_trace(self)
-            }).collect::<Vec<_>>();
+            let main_traces = tracing::info_span!("generate main traces")
+                .in_scope(||
+                    chips.par_iter().map(|chip| {
+                        chip.generate_trace(self)
+                    }).collect::<Vec<_>>()
+                );
 
             //// TODO: Want to avoid cloning, but this leads to lifetime issues...
             //// let main_trace_views = main_traces.iter().map(|trace| trace.as_view()).collect();
 
-            let (main_commit, main_data) = config.pcs().commit_batches(main_traces.clone());
+            let (main_commit, main_data) = tracing::info_span!("commit to main traces")
+                .in_scope(||
+                    config.pcs().commit_batches(main_traces.clone())
+                );
             //// TODO: Have challenger observe main_commit.
 
             let mut perm_challenges = Vec::new();
@@ -250,9 +257,12 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                 perm_challenges.push(challenger.sample_ext_element());
             }
 
-            let perm_traces = chips.into_par_iter().enumerate().map(|(i, chip)| {
-                generate_permutation_trace(self, *chip, &main_traces[i], perm_challenges.clone())
-            }).collect::<Vec<_>>();
+            let perm_traces = tracing::info_span!("generate permutation traces")
+                .in_scope(||
+                    chips.into_par_iter().enumerate().map(|(i, chip)| {
+                        generate_permutation_trace(self, *chip, &main_traces[i], perm_challenges.clone())
+                    }).collect::<Vec<_>>()
+                );
 
             //// TODO: Want to avoid cloning, but this leads to lifetime issues...
             //// let perm_trace_views = perm_traces.iter().map(|trace| trace.as_view()).collect();

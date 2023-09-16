@@ -22,9 +22,6 @@ use p3_symmetric::compression::CompressionFunctionFromHasher;
 use p3_symmetric::hasher::SerializingHasher32;
 use rand::thread_rng;
 
-type Val = BabyBear;
-type Challenge = BabyBear;
-
 #[test]
 fn prove_fibonacci() {
     let mut program = vec![];
@@ -192,14 +189,10 @@ fn prove_fibonacci() {
     type PackedChallenge = Challenge; // TODO
 
     type Mds16 = CosetMds<Val, 16>;
-    type Mds32 = CosetMds<Val, 32>;
     let mds16 = Mds16::default();
-    let mds32 = Mds32::default();
 
     type Perm16 = Poseidon<Val, Mds16, 16, 5>;
-    type Perm32 = Poseidon<Val, Mds32, 32, 5>;
     let perm16 = Perm16::new_from_rng(4, 22, mds16, &mut thread_rng()); // TODO: Use deterministic RNG
-    let perm32 = Perm32::new_from_rng(4, 22, mds32, &mut thread_rng()); // TODO: Use deterministic RNG
 
     type MyHash = SerializingHasher32<Val, Keccak256Hash>;
     let hash = MyHash::new(Keccak256Hash {});
