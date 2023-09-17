@@ -12,10 +12,14 @@ pub trait Chip<M: Machine>: for<'a> Air<ConstraintFolder<'a, M::F, M::EF, M>> {
     /// Generate the main trace for the chip given the provided machine.
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F>;
 
+    /// Creates a list of interactions that describe what values in the sent columns should be
+    /// looked up in the received columns.
     fn local_sends(&self) -> Vec<Interaction<M::F>> {
         vec![]
     }
 
+    /// Creates a list of interactions that describe what values we should receive from the
+    /// sent columns to the receive columns.
     fn local_receives(&self) -> Vec<Interaction<M::F>> {
         vec![]
     }

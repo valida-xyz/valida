@@ -6,17 +6,33 @@ use columns::{Bitwise32Cols, COL_MAP, NUM_COLS};
 use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
+use valida_machine::{
+    instructions, BusArgument, Chip, Instruction, Interaction, Operands, Word, MEMORY_CELL_BYTES,
+};
 use valida_opcodes::{AND32, OR32, XOR32};
 
 use p3_air::VirtualPairCol;
-use p3_field::PrimeField;
+use p3_field::{AbstractField, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
-use valida_util::pad_to_power_of_two;
 
 pub mod columns;
 pub mod stark;
+
+/// Commits the bitwise op (i1, i2, o1) with a base-256 encoding where i1, i2, o1 \in [0, 8).
+/// Assumes the field is large enough to encode the result (~2^25).
+#[inline]
+pub fn commit_bitwise_op<F: AbstractField>(i1: F, i2: F, o1: F) -> F {
+    let b1 = F::from_canonical_usize(1);
+    let b2 = F::from_canonical_usize(1 << 8);
+    let b3 = F::from_canonical_usize(1 << 16);
+    i1 * b1 + i2 * b2 + o1 * b3
+}
+
+/// Calculates which row contains the multiplicity for the given input byts.
+pub fn multiplicity_idx_from_bytes(i1: u8, i2: u8) -> usize {
+    (i1 as usize) + (i2 as usize) * 256
+}
 
 #[derive(Clone)]
 pub enum Operation {
@@ -42,12 +58,187 @@ where
             .map(|op| self.op_to_row(op))
             .collect::<Vec<_>>();
 
-        let mut trace =
-            RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_COLS);
+        // Calculate trace length after padding.
+        let bitwise_ops_table_size = 1 << 16;
+        let nb_rows = if rows.len() < bitwise_ops_table_size {
+            bitwise_ops_table_size
+        } else {
+            rows.len().next_power_of_two()
+        };
 
-        pad_to_power_of_two::<NUM_COLS, F>(&mut trace.values);
+        // Mutliplicity vectors to count how many times a certain bitwise operation among
+        // bytes was performed.
+        let mut byte_mult = vec![F::ZERO; 8];
+        let mut and_mult = vec![F::ZERO; bitwise_ops_table_size];
+        let mut or_mult = vec![F::ZERO; bitwise_ops_table_size];
+        let mut xor_mult = vec![F::ZERO; bitwise_ops_table_size];
 
+        // Count the multiplicity of each bitwise operation.
+        for op in self.operations.iter() {
+            match op {
+                Operation::And32(a, b, c) => {
+                    for i in 0..MEMORY_CELL_BYTES {
+                        let idx = multiplicity_idx_from_bytes(b.0[i], c.0[i]);
+                        and_mult[idx] += F::ONE;
+                        or_mult[0] += F::ONE;
+                        xor_mult[0] += F::ONE;
+                        byte_mult[a.0[i] as usize] += F::ONE;
+                        byte_mult[b.0[i] as usize] += F::ONE;
+                        byte_mult[c.0[i] as usize] += F::ONE;
+                    }
+                }
+                Operation::Or32(a, b, c) => {
+                    for i in 0..MEMORY_CELL_BYTES {
+                        let idx = multiplicity_idx_from_bytes(b.0[i], c.0[i]);
+                        and_mult[0] += F::ONE;
+                        or_mult[idx] += F::ONE;
+                        xor_mult[0] += F::ONE;
+                        byte_mult[a.0[i] as usize] += F::ONE;
+                        byte_mult[b.0[i] as usize] += F::ONE;
+                        byte_mult[c.0[i] as usize] += F::ONE;
+                    }
+                }
+                Operation::Xor32(a, b, c) => {
+                    for i in 0..MEMORY_CELL_BYTES {
+                        let idx = multiplicity_idx_from_bytes(b.0[i], c.0[i]);
+                        and_mult[0] += F::ONE;
+                        or_mult[0] += F::ONE;
+                        xor_mult[idx] += F::ONE;
+                        byte_mult[a.0[i] as usize] += F::ONE;
+                        byte_mult[b.0[i] as usize] += F::ONE;
+                        byte_mult[c.0[i] as usize] += F::ONE;
+                    }
+                }
+            }
+        }
+
+        // Pad the trace with zeros and setup the lookup arguments.
+        for i in 0..nb_rows {
+            if i >= rows.len() {
+                rows.push([F::ZERO; NUM_COLS]);
+            }
+
+            // Set the byte range lookup column.
+            rows[i][COL_MAP.byte_lookup] = if i < 8 {
+                F::from_canonical_usize(i)
+            } else {
+                F::from_canonical_usize(7)
+            };
+            rows[i][COL_MAP.byte_mult] = byte_mult[i];
+
+            // Compute the input bytes to the bitwise operation.
+            let i1: u8 = (i % 256) as u8;
+            let i2: u8 = (i / 256) as u8;
+
+            // Set the bitwise and column.
+            let and = i1 & i2;
+            let cand = commit_bitwise_op(
+                F::from_canonical_u8(i1),
+                F::from_canonical_u8(i2),
+                F::from_canonical_u8(and),
+            );
+            rows[i][COL_MAP.and_lookup] = cand;
+            rows[i][COL_MAP.and_mult] = and_mult[i];
+
+            // Set the bitwise or column.
+            let or = i1 | i2;
+            let cor = commit_bitwise_op(
+                F::from_canonical_u8(i1),
+                F::from_canonical_u8(i2),
+                F::from_canonical_u8(or),
+            );
+            rows[i][COL_MAP.or_lookup] = cor;
+            rows[i][COL_MAP.or_mult] = or_mult[i];
+
+            // Set the bitwise xor column.
+            let xor = i1 ^ i2;
+            let cxor = commit_bitwise_op(
+                F::from_canonical_u8(i1),
+                F::from_canonical_u8(i2),
+                F::from_canonical_u8(xor),
+            );
+            rows[i][COL_MAP.xor_lookup] = cxor;
+            rows[i][COL_MAP.xor_mult] = xor_mult[i];
+        }
+
+        let trace = RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_COLS);
         trace
+    }
+
+    fn local_sends(&self) -> Vec<Interaction<M::F>> {
+        let byte = Interaction {
+            fields: vec![
+                VirtualPairCol::single_main(COL_MAP.input_1[0]),
+                VirtualPairCol::single_main(COL_MAP.input_1[1]),
+                VirtualPairCol::single_main(COL_MAP.input_1[2]),
+                VirtualPairCol::single_main(COL_MAP.input_1[3]),
+                VirtualPairCol::single_main(COL_MAP.input_2[0]),
+                VirtualPairCol::single_main(COL_MAP.input_2[1]),
+                VirtualPairCol::single_main(COL_MAP.input_2[2]),
+                VirtualPairCol::single_main(COL_MAP.input_2[3]),
+                VirtualPairCol::single_main(COL_MAP.output[0]),
+                VirtualPairCol::single_main(COL_MAP.output[1]),
+                VirtualPairCol::single_main(COL_MAP.output[2]),
+                VirtualPairCol::single_main(COL_MAP.output[3]),
+            ],
+            count: VirtualPairCol::one(),
+            argument_index: BusArgument::Local(0),
+        };
+        let and = Interaction {
+            fields: vec![
+                VirtualPairCol::single_main(COL_MAP.and[0]),
+                VirtualPairCol::single_main(COL_MAP.and[1]),
+                VirtualPairCol::single_main(COL_MAP.and[2]),
+                VirtualPairCol::single_main(COL_MAP.and[3]),
+            ],
+            count: VirtualPairCol::one(),
+            argument_index: BusArgument::Local(1),
+        };
+        let or = Interaction {
+            fields: vec![
+                VirtualPairCol::single_main(COL_MAP.or[0]),
+                VirtualPairCol::single_main(COL_MAP.or[1]),
+                VirtualPairCol::single_main(COL_MAP.or[2]),
+                VirtualPairCol::single_main(COL_MAP.or[3]),
+            ],
+            count: VirtualPairCol::one(),
+            argument_index: BusArgument::Local(2),
+        };
+        let xor = Interaction {
+            fields: vec![
+                VirtualPairCol::single_main(COL_MAP.xor[0]),
+                VirtualPairCol::single_main(COL_MAP.xor[1]),
+                VirtualPairCol::single_main(COL_MAP.xor[2]),
+                VirtualPairCol::single_main(COL_MAP.xor[3]),
+            ],
+            count: VirtualPairCol::one(),
+            argument_index: BusArgument::Local(3),
+        };
+        vec![byte, and, or, xor]
+    }
+
+    fn local_receives(&self) -> Vec<Interaction<M::F>> {
+        let byte = Interaction {
+            fields: vec![VirtualPairCol::single_main(COL_MAP.byte_lookup)],
+            count: VirtualPairCol::single_main(COL_MAP.byte_mult),
+            argument_index: BusArgument::Local(0),
+        };
+        let and = Interaction {
+            fields: vec![VirtualPairCol::single_main(COL_MAP.and_lookup)],
+            count: VirtualPairCol::single_main(COL_MAP.and_mult),
+            argument_index: BusArgument::Local(1),
+        };
+        let or = Interaction {
+            fields: vec![VirtualPairCol::single_main(COL_MAP.and_lookup)],
+            count: VirtualPairCol::single_main(COL_MAP.and_mult),
+            argument_index: BusArgument::Local(2),
+        };
+        let xor = Interaction {
+            fields: vec![VirtualPairCol::single_main(COL_MAP.and_lookup)],
+            count: VirtualPairCol::single_main(COL_MAP.and_mult),
+            argument_index: BusArgument::Local(3),
+        };
+        vec![byte, and, or, xor]
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
@@ -110,9 +301,20 @@ impl Bitwise32Chip {
     where
         F: PrimeField,
     {
+        // Set inputs and outputs.
         cols.input_1 = b.transform(F::from_canonical_u8);
         cols.input_2 = c.transform(F::from_canonical_u8);
         cols.output = a.transform(F::from_canonical_u8);
+
+        // Set up columns that get looked up to check the result.
+        for i in 0..MEMORY_CELL_BYTES {
+            cols.and[i] =
+                cols.is_and * commit_bitwise_op(cols.input_1[i], cols.input_2[i], cols.output[i]);
+            cols.or[i] =
+                cols.is_or * commit_bitwise_op(cols.input_1[i], cols.input_2[i], cols.output[i]);
+            cols.xor[i] =
+                cols.is_xor * commit_bitwise_op(cols.input_1[i], cols.input_2[i], cols.output[i]);
+        }
     }
 }
 
