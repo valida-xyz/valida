@@ -1,5 +1,7 @@
 extern crate alloc;
 
+use crate::div::{MachineWithDiv32Chip, Operation as DivOperation};
+use crate::mul::{MachineWithMul32Chip, Operation as MulOperation};
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Shift32Cols, COL_MAP, NUM_COLS};
@@ -131,12 +133,21 @@ impl Shift32Chip {
     where
         F: PrimeField,
     {
+        // Set the input columns
         cols.input_1 = b.transform(F::from_canonical_u8);
         cols.input_2 = c.transform(F::from_canonical_u8);
         cols.output = a.transform(F::from_canonical_u8);
 
-        let temp_1 = (c[3] & 0b1) + 2 * ((c[3] >> 1) & 0b1) + 4 * ((c[3] >> 2) & 0b1);
-        cols.temp_1 = F::from_canonical_u8(temp_1);
+        // Set individual bits columns (using least significant byte of input_2)
+        for i in 0..8 {
+            cols.bits_2[i] = F::from_canonical_u8(c[3] >> i & 1);
+        }
+
+        // Compute the temporary value: 2^{bits_2[0] + 2*bits_2[1] + 4*bits_2[2]}
+        cols.temp_1 =
+            F::from_canonical_u8((c[3] & 0b1) + 2 * ((c[3] >> 1) & 0b1) + 4 * ((c[3] >> 2) & 0b1));
+
+        cols.power_of_two = (Word::from(1) << *c).transform(F::from_canonical_u8);
     }
 }
 
@@ -149,7 +160,7 @@ instructions!(Shl32Instruction, Shr32Instruction);
 
 impl<M> Instruction<M> for Shl32Instruction
 where
-    M: MachineWithShift32Chip,
+    M: MachineWithShift32Chip + MachineWithMul32Chip,
 {
     const OPCODE: u32 = SHL32;
 
@@ -168,11 +179,16 @@ where
             state.mem_mut().read(clk, read_addr_2, true)
         };
 
-        let b_u32: u32 = b.into();
-        let c_u32: u32 = c.into();
-        let a = Word::from(b_u32 << c_u32);
-
+        // Write the shifted value to memory
+        let a = Word::from(b << c);
         state.mem_mut().write(clk, write_addr, a, true);
+
+        // Add a "receive" multiplication operation to match the "send"
+        let d = Word::from(1) << c;
+        state
+            .mul_u32_mut()
+            .operations
+            .push(MulOperation::Mul32(a, b, d));
 
         state
             .shift_u32_mut()
@@ -186,7 +202,7 @@ where
 
 impl<M> Instruction<M> for Shr32Instruction
 where
-    M: MachineWithShift32Chip,
+    M: MachineWithShift32Chip + MachineWithDiv32Chip,
 {
     const OPCODE: u32 = SHR32;
 
@@ -205,11 +221,16 @@ where
             state.mem_mut().read(clk, read_addr_2, true)
         };
 
-        let b_u32: u32 = b.into();
-        let c_u32: u32 = c.into();
-        let a = Word::from(b_u32 >> c_u32);
-
+        // Write the shifted value to memory
+        let a = Word::from(b >> c);
         state.mem_mut().write(clk, write_addr, a, true);
+
+        // Add a "receive" division operation to match the "send"
+        let d = Word::from(1) << c;
+        state
+            .div_u32_mut()
+            .operations
+            .push(DivOperation::Div32(a, b, d));
 
         state
             .shift_u32_mut()
