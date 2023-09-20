@@ -1,6 +1,12 @@
 use super::{Field, PrimeField, MEMORY_CELL_BYTES};
+use alloc::vec::Vec;
 use core::cmp::Ordering;
+use core::iter::Cloned;
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Index, IndexMut, Mul, Shl, Shr, Sub};
+use core::slice;
+
+use p3_field::AbstractExtensionField;
+use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRowSlices, MatrixRows};
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Word<F>(pub [F; MEMORY_CELL_BYTES]);
@@ -193,5 +199,116 @@ impl<F> IntoIterator for Word<F> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
+    }
+}
+
+/// Custom matrix view for working with flattened extension field elements.
+pub struct FlattenedRowMajorMatrixView<'a, Val: Field, EF: AbstractExtensionField<Val>> {
+    pub inner: InnerMatrixView<'a, Val, EF>,
+    pub _marker: core::marker::PhantomData<Val>,
+}
+
+pub enum InnerMatrixView<'a, Val, EF> {
+    Base(&'a RowMajorMatrix<Val>),
+    Extension(&'a RowMajorMatrix<EF>),
+}
+
+impl<'a, Val: Field, EF: AbstractExtensionField<Val>> Matrix<Val>
+    for FlattenedRowMajorMatrixView<'a, Val, EF>
+{
+    fn width(&self) -> usize {
+        match self.inner {
+            InnerMatrixView::Base(m) => m.width(),
+            InnerMatrixView::Extension(m) => m.width(),
+        }
+    }
+
+    fn height(&self) -> usize {
+        match self.inner {
+            InnerMatrixView::Base(m) => m.height(),
+            InnerMatrixView::Extension(m) => m.height(),
+        }
+    }
+}
+
+pub struct CustomRowIter<'a, const D: usize, F: Field + 'a, EF: AbstractExtensionField<F>> {
+    current: usize,
+    inner: RowIter<'a, F, EF>,
+}
+
+impl<'a, const D: usize, F: Field, EF: AbstractExtensionField<F>> Iterator
+    for CustomRowIter<'a, D, F, EF>
+{
+    type Item = F;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.inner {
+            RowIter::Base(ref mut iter) => iter.next(),
+            RowIter::Extension(ref mut iter) => {
+                // Peek the next EF element, and call as_base_slice on it
+                let res = iter.peek();
+                if res.is_none() {
+                    return None;
+                }
+                let res = res.unwrap();
+                let res = res.as_base_slice();
+                let res = res[self.current];
+                self.current += 1;
+                if self.current == D {
+                    // Advance the iterator if we've reached the end of the current EF element
+                    self.current = 0;
+                    iter.next();
+                }
+                Some(res)
+            }
+        }
+    }
+}
+
+impl<'a, const D: usize, F: Field, EF: AbstractExtensionField<F>> CustomRowIter<'a, D, F, EF> {
+    fn new_base(m: &'a RowMajorMatrix<F>, r: usize) -> Self {
+        Self {
+            current: 0,
+            inner: RowIter::Base(m.row_slice(r).iter().cloned()),
+        }
+    }
+
+    fn new_extension(m: &'a RowMajorMatrix<EF>, r: usize) -> Self {
+        Self {
+            current: 0,
+            inner: RowIter::Extension(m.row_slice(r).iter().cloned().peekable()),
+        }
+    }
+}
+
+enum RowIter<'a, F: Field + 'a, EF: AbstractExtensionField<F>> {
+    Base(core::iter::Cloned<core::slice::Iter<'a, F>>),
+    Extension(core::iter::Peekable<core::iter::Cloned<core::slice::Iter<'a, EF>>>),
+}
+
+impl<'a, Val: Field, EF: AbstractExtensionField<Val>> MatrixRows<Val>
+    for FlattenedRowMajorMatrixView<'a, Val, EF>
+{
+    // TODO: Replace 1 below with the associated constant EF::D
+    type Row<'v> = CustomRowIter<'v, 1, Val, EF> where Self: 'v, Val: 'v;
+
+    fn row(&self, r: usize) -> Self::Row<'_> {
+        match self.inner {
+            InnerMatrixView::Base(m) => CustomRowIter::new_base(m, r),
+            InnerMatrixView::Extension(m) => CustomRowIter::new_extension(m, r),
+        }
+    }
+
+    fn to_row_major_matrix(self) -> RowMajorMatrix<Val> {
+        match self.inner {
+            InnerMatrixView::Base(m) => m.clone(),
+            InnerMatrixView::Extension(m) => RowMajorMatrix::new(
+                m.values
+                    .iter()
+                    .flat_map(|x| x.as_base_slice().to_vec())
+                    .collect::<Vec<_>>(),
+                m.width() * EF::D,
+            ),
+        }
     }
 }

@@ -1,3 +1,4 @@
+use crate::core::FlattenedRowMajorMatrixView;
 use core::marker::PhantomData;
 use p3_challenger::FieldChallenger;
 use p3_commit::UnivariatePcs;
@@ -23,7 +24,7 @@ pub trait StarkConfig {
         Self::Val,
         Self::Domain,
         Self::Challenge,
-        RowMajorMatrix<Self::Val>,
+        FlattenedRowMajorMatrixView<'a, Self::Val, Self::Challenge>,
         Self::Challenger,
     >;
 
@@ -72,7 +73,13 @@ where
     Domain: ExtensionField<Val> + TwoAdicField,
     Challenge: ExtensionField<Val> + ExtensionField<Domain> + TwoAdicField,
     Challenge::Packing: AbstractExtensionField<Domain::Packing>,
-    Pcs: UnivariatePcs<Val, Domain, Challenge, RowMajorMatrix<Val>, Challenger>,
+    Pcs: for<'v> UnivariatePcs<
+        Val,
+        Domain,
+        Challenge,
+        FlattenedRowMajorMatrixView<'v, Val, Challenge>,
+        Challenger,
+    >,
     Dft: TwoAdicSubgroupDft<Domain> + TwoAdicSubgroupDft<Challenge>,
     Challenger: FieldChallenger<Val> + Clone,
 {

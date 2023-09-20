@@ -227,6 +227,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             use ::valida_machine::__internal::p3_matrix::dense::RowMajorMatrix;
             use ::valida_machine::chip::generate_permutation_trace;
             use ::valida_machine::proof::MachineProof;
+            use ::valida_machine::core::{InnerMatrixView, FlattenedRowMajorMatrixView};
             use alloc::vec;
             use alloc::vec::Vec;
             use alloc::boxed::Box;
@@ -243,14 +244,17 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     }).collect::<Vec<_>>()
                 );
 
-            //// TODO: Want to avoid cloning, but this leads to lifetime issues...
-            //// let main_trace_views = main_traces.iter().map(|trace| trace.as_view()).collect();
-
+            let flattened_main_traces = main_traces.iter().map(|m| {
+                FlattenedRowMajorMatrixView::<Self::F, Self::EF> {
+                    inner: InnerMatrixView::Base(m),
+                    _marker: core::marker::PhantomData,
+                }
+            }).collect::<Vec<_>>();
             let (main_commit, main_data) = tracing::info_span!("commit to main traces")
                 .in_scope(||
-                    config.pcs().commit_batches(main_traces.clone())
+                    config.pcs().commit_batches(flattened_main_traces)
                 );
-            //// TODO: Have challenger observe main_commit.
+            // TODO: Have challenger observe main_commit.
 
             let mut perm_challenges = Vec::new();
             for _ in 0..3 {
@@ -264,11 +268,14 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     }).collect::<Vec<_>>()
                 );
 
-            //// TODO: Want to avoid cloning, but this leads to lifetime issues...
-            //// let perm_trace_views = perm_traces.iter().map(|trace| trace.as_view()).collect();
-
-            //let (perm_commit, perm_data) = config.pcs().commit_batches(perm_traces.clone());
-            //// TODO: Have challenger observe perm_commit.
+            let flattened_perm_traces = perm_traces.iter().map(|m| {
+                FlattenedRowMajorMatrixView {
+                    inner: InnerMatrixView::Extension(m),
+                    _marker: core::marker::PhantomData,
+                }
+            }).collect::<Vec<_>>();
+            let (perm_commit, perm_data) = config.pcs().commit_batches(flattened_perm_traces);
+            // TODO: Have challenger observe perm_commit.
 
             //let opening_points = &[vec![Self::EF::TWO], vec![Self::EF::TWO]]; // TODO
             //let (openings, opening_proof) = config.pcs().open_multi_batches::<Self::EF, SC::Chal>(
