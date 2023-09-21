@@ -1,0 +1,16 @@
+[book]
+title = "Valida Documentation"
+authors = ["Valida authors"]
+language = "en"
+
+[build]
+build-dir = "output"
+create-missing = false
+
+[output.html]
+theme = "theme"
+
+[output.latex]
+additional-latex = "header.tex"
+
+
