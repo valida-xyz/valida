@@ -9,6 +9,8 @@ pub struct Sub32Cols<T> {
     pub input_1: Word<T>,
     pub input_2: Word<T>,
 
+    pub borrow: [T; 3],
+
     /// Witnessed output
     pub output: Word<T>,
 

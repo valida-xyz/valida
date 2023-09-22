@@ -4,7 +4,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Sub32Cols, NUM_SUB_COLS, SUB_COL_MAP};
 use core::mem::transmute;
-use valida_bus::MachineWithGeneralBus;
+use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 use valida_opcodes::SUB32;
@@ -32,7 +32,7 @@ pub struct Sub32Chip {
 impl<F, M> Chip<M> for Sub32Chip
 where
     F: PrimeField,
-    M: MachineWithGeneralBus<F = F>,
+    M: MachineWithGeneralBus<F = F> + MachineWithRangeBus8,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
         let rows = self
@@ -47,6 +47,23 @@ where
         pad_to_power_of_two::<NUM_SUB_COLS, F>(&mut trace.values);
 
         trace
+    }
+
+    fn global_sends(&self, machine: &M) -> Vec<Interaction<M::F>> {
+        let sends = SUB_COL_MAP
+            .output
+            .0
+            .map(|field| {
+                let output = VirtualPairCol::single_main(field);
+                Interaction {
+                    fields: vec![output],
+                    count: VirtualPairCol::single_main(SUB_COL_MAP.is_real),
+                    argument_index: machine.range_bus(),
+                }
+            })
+            .into_iter()
+            .collect::<Vec<_>>();
+        sends
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
@@ -82,6 +99,17 @@ impl Sub32Chip {
                 cols.input_1 = b.transform(F::from_canonical_u8);
                 cols.input_2 = c.transform(F::from_canonical_u8);
                 cols.output = a.transform(F::from_canonical_u8);
+
+                if b[3] < c[3] {
+                    cols.borrow[0] = F::ONE;
+                }
+                if b[2] < c[2] {
+                    cols.borrow[1] = F::ONE;
+                }
+                if b[1] < c[1] {
+                    cols.borrow[2] = F::ONE;
+                }
+                cols.is_real = F::ONE;
             }
         }
         row
