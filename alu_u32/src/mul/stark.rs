@@ -1,8 +1,6 @@
 use super::columns::Mul32Cols;
-use super::Mul32Chip;
+use super::{pi_m, sigma_m, Mul32Chip};
 use core::borrow::Borrow;
-use itertools::iproduct;
-use valida_machine::Word;
 
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::{AbstractField, PrimeField};
@@ -21,23 +19,26 @@ where
         let next: &Mul32Cols<AB::Var> = main.row_slice(1).borrow();
 
         // Limb weights modulo 2^32
-        let base_m = [1, 1 << 8, 1 << 16, 1 << 24].map(AB::Expr::from_canonical_u32);
+        let base_m32 = [1, 1 << 8, 1 << 16, 1 << 24].map(AB::Expr::from_canonical_u32);
+
+        // Limb weights modulo 2^16
+        let base_m16 = [1, 1 << 8].map(AB::Expr::from_canonical_u32);
 
         // Partially reduced summation of input product limbs (mod 2^32)
-        let pi = pi_m::<4, AB>(&base_m, local.input_1, local.input_2);
+        let pi = pi_m::<4, AB::Var, AB::Expr>(&base_m32, local.input_1, local.input_2);
 
         // Partially reduced summation of output limbs (mod 2^32)
-        let sigma = sigma_m::<4, AB>(&base_m, local.output);
+        let sigma = sigma_m::<4, AB::Var, AB::Expr>(&base_m32, local.output);
 
         // Partially reduced summation of input product limbs (mod 2^16)
-        let pi_prime = pi_m::<2, AB>(&base_m[..2], local.input_1, local.input_2);
+        let pi_prime = pi_m::<2, AB::Var, AB::Expr>(&base_m16, local.input_1, local.input_2);
 
         // Partially reduced summation of output limbs (mod 2^16)
-        let sigma_prime = sigma_m::<2, AB>(&base_m[..2], local.output);
+        let sigma_prime = sigma_m::<2, AB::Var, AB::Expr>(&base_m16, local.output);
 
         // Congruence checks
-        builder.assert_eq(pi - sigma, local.r * AB::Expr::TWO);
-        builder.assert_eq(pi_prime - sigma_prime, local.s * base_m[2].clone());
+        builder.assert_eq(pi - sigma, local.r * AB::Expr::from_wrapped_u64(1 << 32));
+        builder.assert_eq(pi_prime - sigma_prime, local.s * base_m32[2].clone());
 
         // Range check counter
         builder
@@ -51,25 +52,4 @@ where
             .when_last_row()
             .assert_eq(local.counter, AB::Expr::from_canonical_u32(1 << 10));
     }
-}
-
-fn pi_m<const N: usize, AB: AirBuilder>(
-    base: &[AB::Expr],
-    input_1: Word<AB::Var>,
-    input_2: Word<AB::Var>,
-) -> AB::Expr {
-    iproduct!(0..N, 0..N)
-        .filter(|(i, j)| i + j < N)
-        .map(|(i, j)| base[i + j].clone() * input_1[3 - i] * input_2[3 - j])
-        .sum()
-}
-
-fn sigma_m<const N: usize, AB: AirBuilder>(base: &[AB::Expr], input: Word<AB::Var>) -> AB::Expr {
-    input
-        .into_iter()
-        .rev()
-        .take(N)
-        .enumerate()
-        .map(|(i, x)| base[i].clone() * x)
-        .sum()
 }
