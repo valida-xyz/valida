@@ -6,18 +6,8 @@ use std::io::Read;
 use std::process::{Command, Stdio};
 
 use byteorder::{LittleEndian, WriteBytesExt};
-use valida_alu_u32::{add::Add32Instruction, div::Div32Instruction};
-use valida_basic::BasicMachine;
-use valida_cpu::{
-    BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
-    ReadAdviceInstruction, StopInstruction, Store32Instruction,
-};
-use valida_machine::Instruction;
 use valida_machine::{InstructionWord, Operands, ProgramROM};
-use valida_output::WriteInstruction;
-
-type Val = BabyBear;
-type Challenge = BabyBear;
+use valida_opcodes::{ADD32, BEQ, BNE, DIV32, IMM32, JAL, JALV, READ_ADVICE, STOP, STORE32, WRITE};
 
 #[test]
 fn run_fibonacci() {
@@ -82,63 +72,63 @@ fn build_fibonacci_program_rom() -> ProgramROM<i32> {
     //...
     program.extend([
         InstructionWord {
-            opcode: <Imm32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: IMM32,
             operands: Operands([-4, 0, 0, 0, 0]),
         },
         InstructionWord {
-            opcode: <ReadAdviceInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: READ_ADVICE,
             operands: Operands([0, 1, -8, 0, 0]),
         },
         InstructionWord {
-            opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: STORE32,
             operands: Operands([0, -16, -8, 0, 0]),
         },
         InstructionWord {
-            opcode: <Imm32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: IMM32,
             operands: Operands([-20, 0, 0, 0, 28]),
         },
         InstructionWord {
-            opcode: <JalInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: JAL,
             operands: Operands([-28, fib_bb0, -28, 0, 0]),
         },
         InstructionWord {
-            opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: STORE32,
             operands: Operands([0, -12, -24, 0, 0]),
         },
         InstructionWord {
-            opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: STORE32,
             operands: Operands([0, 4, -12, 0, 0]),
         },
         InstructionWord {
-            opcode: <WriteInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: WRITE,
             operands: Operands([0, 4, 0, 0, 1]),
         },
         InstructionWord {
-            opcode: <Div32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: DIV32,
             operands: Operands([4, 4, 256, 0, 1]),
         },
         InstructionWord {
-            opcode: <WriteInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: WRITE,
             operands: Operands([0, 4, 0, 0, 1]),
         },
         InstructionWord {
-            opcode: <Div32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: DIV32,
             operands: Operands([4, 4, 256, 0, 1]),
         },
         InstructionWord {
-            opcode: <WriteInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: WRITE,
             operands: Operands([0, 4, 0, 0, 1]),
         },
         InstructionWord {
-            opcode: <Div32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: DIV32,
             operands: Operands([4, 4, 256, 0, 1]),
         },
         InstructionWord {
-            opcode: <WriteInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: WRITE,
             operands: Operands([0, 4, 0, 0, 1]),
         },
         InstructionWord {
-            opcode: <StopInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: STOP,
             operands: Operands::default(),
         },
     ]);
@@ -152,23 +142,23 @@ fn build_fibonacci_program_rom() -> ProgramROM<i32> {
     //	beq	.LBB0_1, 0(fp), 0(fp)
     program.extend([
         InstructionWord {
-            opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: STORE32,
             operands: Operands([0, -4, 12, 0, 0]),
         },
         InstructionWord {
-            opcode: <Imm32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: IMM32,
             operands: Operands([-8, 0, 0, 0, 0]),
         },
         InstructionWord {
-            opcode: <Imm32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: IMM32,
             operands: Operands([-12, 0, 0, 0, 1]),
         },
         InstructionWord {
-            opcode: <Imm32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: IMM32,
             operands: Operands([-16, 0, 0, 0, 0]),
         },
         InstructionWord {
-            opcode: <BeqInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: BEQ,
             operands: Operands([fib_bb0_1, 0, 0, 0, 0]),
         },
     ]);
@@ -178,11 +168,11 @@ fn build_fibonacci_program_rom() -> ProgramROM<i32> {
     //	beq	.LBB0_4, 0(fp), 0(fp)
     program.extend([
         InstructionWord {
-            opcode: <BneInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: BNE,
             operands: Operands([fib_bb0_2, -16, -4, 0, 0]),
         },
         InstructionWord {
-            opcode: <BeqInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: BEQ,
             operands: Operands([fib_bb0_4, 0, 0, 0, 0]),
         },
     ]);
@@ -194,19 +184,19 @@ fn build_fibonacci_program_rom() -> ProgramROM<i32> {
     //	beq	.LBB0_3, 0(fp), 0(fp)
     program.extend([
         InstructionWord {
-            opcode: <Add32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: ADD32,
             operands: Operands([-20, -8, -12, 0, 0]),
         },
         InstructionWord {
-            opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: STORE32,
             operands: Operands([0, -8, -12, 0, 0]),
         },
         InstructionWord {
-            opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: STORE32,
             operands: Operands([0, -12, -20, 0, 0]),
         },
         InstructionWord {
-            opcode: <BeqInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: BEQ,
             operands: Operands([fib_bb0_3, 0, 0, 0, 0]),
         },
     ]);
@@ -216,11 +206,11 @@ fn build_fibonacci_program_rom() -> ProgramROM<i32> {
     //	beq	.LBB0_1, 0(fp), 0(fp)
     program.extend([
         InstructionWord {
-            opcode: <Add32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: ADD32,
             operands: Operands([-16, -16, 1, 0, 1]),
         },
         InstructionWord {
-            opcode: <BeqInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: BEQ,
             operands: Operands([fib_bb0_1, 0, 0, 0, 0]),
         },
     ]);
@@ -230,11 +220,11 @@ fn build_fibonacci_program_rom() -> ProgramROM<i32> {
     //	jalv	-4(fp), 0(fp), 8(fp)
     program.extend([
         InstructionWord {
-            opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: STORE32,
             operands: Operands([0, 4, -8, 0, 0]),
         },
         InstructionWord {
-            opcode: <JalvInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            opcode: JALV,
             operands: Operands([-4, 0, 8, 0, 0]),
         },
     ]);
