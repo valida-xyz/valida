@@ -9,6 +9,9 @@ name = "valida"
 path = "src/bin/valida.rs"
 
 [dependencies]
+byteorder = "1.4.3"
+clap = { version = "4.3.19", features = ["derive"] }
+tracing = "0.1.37"
 valida-alu-u32 = { path = "../alu_u32" }
 valida-bus = { path = "../bus" }
 valida-cpu = { path = "../cpu" }
@@ -20,9 +23,6 @@ valida-program = { path = "../program" }
 valida-range = { path = "../range" }
 p3-maybe-rayon = { path = "../../Plonky3/maybe-rayon" }
 p3-baby-bear = { path = "../../Plonky3/baby-bear" }
-byteorder = "1.4.3"
-clap = { version = "4.3.19", features = ["derive"] }
-tracing = "0.1.37"
 
 [dev-dependencies]
 p3-challenger = { path = "../../Plonky3/challenger" }

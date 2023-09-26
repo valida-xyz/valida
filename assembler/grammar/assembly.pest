@@ -1,0 +1,16 @@
+assembly = _{ SOI ~ (comment | label | instruction)* }
+comment = { ";" ~ (!"\n" ~ ANY)* ~ "\n" }
+label = { (!":" ~ !"\n" ~ ANY)+ ~ ":" ~ "\n" }
+instruction = { mnemonic ~ (operand ~ ", "?)+? ~ "\n"? }
+mnemonic = { 
+    "lw" | "sw" | "jalv" | "jal" | "beq" | "bne" | "imm32" | "stop" |
+    "advread" | "advwrite" | 
+    "addi" | "add" | "subi" | "sub" | "muli" | "mul" | "divi" | "div" | 
+    "lti" | "lt" | "shli" | "shl" | "shri" | "shr" | "and" | "or" | "xor" |
+    "feadd" | "fesub" | "femul" |
+    "write"
+}
+operand = { (constant ~ "(fp)") | constant | jump_label }
+jump_label = { (ASCII_ALPHANUMERIC | "_" | ".")+ }
+constant = { "-"? ~ ASCII_DIGIT+ }
+WHITESPACE = { " " | "\t" }

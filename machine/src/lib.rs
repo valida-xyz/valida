@@ -32,7 +32,7 @@ pub trait Instruction<M: Machine> {
     fn execute(state: &mut M, ops: Operands<i32>);
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Debug)]
 pub struct InstructionWord<F> {
     pub opcode: u32,
     pub operands: Operands<F>,
@@ -47,7 +47,7 @@ impl InstructionWord<i32> {
     }
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Debug)]
 pub struct Operands<F>(pub [F; OPERAND_ELEMENTS]);
 
 impl<F: Copy> Operands<F> {

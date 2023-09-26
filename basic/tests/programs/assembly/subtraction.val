@@ -1,0 +1,7 @@
+main:
+	; TODO: Test different classes of input
+	imm32	0(fp), 0, 0, 0, 12
+	imm32	-4(fp), 0, 0, 0, 5
+	sub	4(fp), 0(fp), -4(fp)
+	write	0, 4(fp), 0, 0, 1
+	stop
