@@ -18,8 +18,8 @@ use p3_ldt::QuotientMmcs;
 use p3_mds::coset_mds::CosetMds;
 use p3_merkle_tree::FieldMerkleTreeMmcs;
 use p3_poseidon::Poseidon;
-use p3_symmetric::compression::CompressionFunctionFromHasher;
-use p3_symmetric::hasher::SerializingHasher32;
+use p3_symmetric::CompressionFunctionFromHasher;
+use p3_symmetric::SerializingHasher32;
 use rand::thread_rng;
 
 #[test]
