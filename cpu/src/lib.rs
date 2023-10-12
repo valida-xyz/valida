@@ -503,7 +503,7 @@ where
         // Set fp to [c]
         let read_addr = (state.cpu().fp as i32 + ops.c()) as u32;
         let cell: u32 = state.mem_mut().read(clk, read_addr, true).into();
-        state.cpu_mut().fp += cell;
+        state.cpu_mut().fp = cell;
         state
             .cpu_mut()
             .push_op(Operation::Jalv, <Self as Instruction<M>>::OPCODE, ops);
