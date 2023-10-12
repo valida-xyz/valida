@@ -74,7 +74,7 @@ impl Mul for Word<u8> {
     fn mul(self, other: Self) -> Self {
         let b: u32 = self.into();
         let c: u32 = other.into();
-        let res = b * c;
+        let res = b.overflowing_mul(c).0;
         res.into()
     }
 }

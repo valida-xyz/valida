@@ -19,6 +19,7 @@ pub struct Mul32Cols<T> {
     pub is_real: T,
 
     pub counter: T,
+    pub counter_mult: T,
 }
 
 pub const NUM_MUL_COLS: usize = size_of::<Mul32Cols<u8>>();

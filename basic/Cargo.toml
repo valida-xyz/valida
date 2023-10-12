@@ -18,6 +18,7 @@ valida-memory = { path = "../memory" }
 valida-output = { path = "../output" }
 valida-program = { path = "../program" }
 valida-range = { path = "../range" }
+valida-opcodes = { path = "../opcodes" }
 p3-maybe-rayon = { path = "../../Plonky3/maybe-rayon" }
 p3-baby-bear = { path = "../../Plonky3/baby-bear" }
 byteorder = "1.4.3"
