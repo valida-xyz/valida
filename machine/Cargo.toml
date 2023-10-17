@@ -5,6 +5,9 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
+byteorder = "1.4.3"
+itertools = "0.10.3"
+
 p3-air = { path = "../../Plonky3/air" }
 p3-baby-bear = { path = "../../Plonky3/baby-bear" }
 p3-commit = { path = "../../Plonky3/commit" }
@@ -16,4 +19,3 @@ p3-maybe-rayon = { path = "../../Plonky3/maybe-rayon" }
 
 valida-util = { path = "../util" }
 
-itertools = "0.10.3"
