@@ -1,10 +1,6 @@
-extern crate pest;
-#[macro_use]
-extern crate pest_derive;
-extern crate clap;
-
 use byteorder::{LittleEndian, WriteBytesExt};
 use pest::Parser;
+use pest_derive::*;
 use std::collections::HashMap;
 use valida_opcodes::*;
 

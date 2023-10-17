@@ -1,8 +1,3 @@
-extern crate pest;
-#[macro_use]
-extern crate pest_derive;
-extern crate clap;
-
 use clap::{arg, command};
 use std::fs::File;
 use std::io::{self, Read, Write};
