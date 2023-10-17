@@ -3,10 +3,11 @@ comment = { ";" ~ (!"\n" ~ ANY)* ~ "\n" }
 label = { (!":" ~ !"\n" ~ ANY)+ ~ ":" ~ "\n" }
 instruction = { mnemonic ~ (operand ~ ", "?)+? ~ "\n"? }
 mnemonic = { 
-    "lw" | "sw" | "jalv" | "jal" | "beq" | "bne" | "imm32" | "stop" |
+    "lw" | "sw" | "jalv" | "jal" | "beqi" | "beq" | "bnei" | "bne" | "imm32" | "stop" |
     "advread" | "advwrite" | 
     "addi" | "add" | "subi" | "sub" | "muli" | "mul" | "divi" | "div" | 
-    "lti" | "lt" | "shli" | "shl" | "shri" | "shr" | "and" | "or" | "xor" |
+    "lti" | "lt" | "shli" | "shl" | "shri" | "shr" | 
+    "andi" | "and" | "ori" | "or" | "xori" | "xor" |
     "feadd" | "fesub" | "femul" |
     "write"
 }

@@ -65,8 +65,8 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
                     "sw" => STORE32,
                     "jal" => JAL,
                     "jalv" => JALV,
-                    "beq" => BEQ,
-                    "bne" => BNE,
+                    "beq" | "beqi" => BEQ,
+                    "bne" | "bnei" => BNE,
                     "imm32" => IMM32,
                     "stop" => STOP,
 
@@ -82,9 +82,9 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
                     "lt" | "lti" => LT32,
                     "shl" | "shli" => SHL32,
                     "shr" | "shri" => SHR32,
-                    "and" => AND32,
-                    "or" => OR32,
-                    "xor" => XOR32,
+                    "and" | "andi" => AND32,
+                    "or" | "ori" => OR32,
+                    "xor" | "xori" => XOR32,
 
                     // Native field
                     "feadd" => ADD,
@@ -116,7 +116,8 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
                         // (0, 0, 0, 0, 0)
                         operands.extend(vec![0; 5]);
                     }
-                    "addi" | "subi" | "muli" | "divi" | "lti" | "shli" | "shri" => {
+                    "addi" | "subi" | "muli" | "divi" | "lti" | "shli" | "shri" | "beqi"
+                    | "bnei" | "andi" | "ori" | "xori" => {
                         // (a, b, c, 0, 1)
                         operands.extend(vec![0, 1]);
                     }
@@ -125,8 +126,6 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
                         operands.extend(vec![0; 2]);
                     }
                 };
-
-                println!("{} {:?}", mnemonic, operands);
 
                 // Write opcode and operands
                 vec.write_u32::<LittleEndian>(opcode).unwrap();
