@@ -1,0 +1,38 @@
+main:
+	imm32	-4(fp), 0, 0, 0, 0
+        ; Read the fibonacci number count from input
+	advread	0, 1, -8
+	sw	-16(fp), -8(fp)
+	imm32	-20(fp), 0, 0, 0, 28
+	jal	-28(fp), fib, -28
+	sw	-12(fp), -24(fp)
+	sw	4(fp), -12(fp)
+        ; Write the result to output
+	write	0, 4, 0, 0, 1
+	divi	4, 4, 256
+	write	0, 4, 0, 0, 1
+	divi	4, 4, 256
+	write	0, 4, 0, 0, 1
+	divi	4, 4, 256
+	write	0, 4, 0, 0, 1
+	stop
+fib:
+	sw	-4(fp), 12(fp)
+	imm32	-8(fp), 0, 0, 0, 0
+	imm32	-12(fp), 0, 0, 0, 1
+	imm32	-16(fp), 0, 0, 0, 0
+	beq	.LBB0_1, 0(fp), 0(fp)
+.LBB0_1:
+	bne	.LBB0_2, -16(fp), -4(fp)
+	beq	.LBB0_4, 0(fp), 0(fp)
+.LBB0_2:
+	add	-20(fp), -8(fp), -12(fp)
+	sw	-8(fp), -12(fp)
+	sw	-12(fp), -20(fp)
+	beq	.LBB0_3, 0(fp), 0(fp)
+.LBB0_3:
+	addi	-16(fp), -16(fp), 1
+	beq	.LBB0_1, 0(fp), 0(fp)
+.LBB0_4:
+	sw	4(fp), -8(fp)
+	jalv	-4(fp), 0(fp), 8(fp)

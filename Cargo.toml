@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "assembler",
     "alu_u32",
     "basic",
     "bus",

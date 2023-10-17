@@ -16,10 +16,10 @@ use p3_fri::{FriBasedPcs, FriConfigImpl, FriLdt};
 use p3_keccak::Keccak256Hash;
 use p3_ldt::QuotientMmcs;
 use p3_mds::coset_mds::CosetMds;
-use p3_merkle_tree::MerkleTreeMmcs;
+use p3_merkle_tree::FieldMerkleTreeMmcs;
 use p3_poseidon::Poseidon;
-use p3_symmetric::compression::CompressionFunctionFromHasher;
-use p3_symmetric::hasher::SerializingHasher32;
+use p3_symmetric::CompressionFunctionFromHasher;
+use p3_symmetric::SerializingHasher32;
 use rand::thread_rng;
 
 #[test]
@@ -200,7 +200,7 @@ fn prove_fibonacci() {
     type MyCompress = CompressionFunctionFromHasher<Val, MyHash, 2, 8>;
     let compress = MyCompress::new(hash);
 
-    type MyMmcs = MerkleTreeMmcs<Val, [Val; 8], MyHash, MyCompress>;
+    type MyMmcs = FieldMerkleTreeMmcs<Val, MyHash, MyCompress, 8>;
     let mmcs = MyMmcs::new(hash, compress);
 
     type MyDft = Radix2Bowers;

@@ -9,6 +9,7 @@ use valida_machine::{
     InstructionWord, Machine, Operands, ProgramROM, Word, MEMORY_CELL_BYTES, OPERAND_ELEMENTS,
 };
 use valida_output::MachineWithOutputChip;
+use valida_program::MachineWithProgramChip;
 
 use p3_baby_bear::BabyBear;
 
@@ -28,6 +29,7 @@ fn main() {
 
     let mut machine = BasicMachine::<BabyBear, BabyBear>::default();
     let rom = load_program_rom(&args.program).unwrap();
+    machine.program_mut().set_program_rom(&rom);
     machine.cpu_mut().fp = args.stack_height;
     machine.cpu_mut().save_register_state();
 

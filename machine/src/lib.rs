@@ -5,6 +5,8 @@ extern crate self as valida_machine;
 
 use alloc::vec::Vec;
 
+use byteorder::{ByteOrder, LittleEndian};
+
 pub use crate::core::Word;
 pub use chip::{BusArgument, Chip, Interaction, InteractionType, ValidaAirBuilder};
 
@@ -32,7 +34,7 @@ pub trait Instruction<M: Machine> {
     fn execute(state: &mut M, ops: Operands<i32>);
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Debug)]
 pub struct InstructionWord<F> {
     pub opcode: u32,
     pub operands: Operands<F>,
@@ -47,7 +49,7 @@ impl InstructionWord<i32> {
     }
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Debug)]
 pub struct Operands<F>(pub [F; OPERAND_ELEMENTS]);
 
 impl<F: Copy> Operands<F> {
@@ -95,6 +97,25 @@ impl<F> ProgramROM<F> {
 
     pub fn get_instruction(&self, pc: u32) -> &InstructionWord<F> {
         &self.0[pc as usize]
+    }
+}
+
+impl ProgramROM<i32> {
+    pub fn from_machine_code(mc: &[u8]) -> Self {
+        let mut instructions = Vec::new();
+        for chunk in mc.chunks_exact(INSTRUCTION_ELEMENTS * 4) {
+            instructions.push(InstructionWord {
+                opcode: LittleEndian::read_u32(&chunk[0..4]),
+                operands: Operands([
+                    LittleEndian::read_i32(&chunk[4..8]),
+                    LittleEndian::read_i32(&chunk[8..12]),
+                    LittleEndian::read_i32(&chunk[12..16]),
+                    LittleEndian::read_i32(&chunk[16..20]),
+                    LittleEndian::read_i32(&chunk[20..24]),
+                ]),
+            });
+        }
+        Self(instructions)
     }
 }
 
