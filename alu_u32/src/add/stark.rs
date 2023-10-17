@@ -43,5 +43,8 @@ where
             overflow_1.clone() * (carry_2 - one) + (overflow_1 - base.clone()) * carry_2,
         );
         builder.assert_zero(overflow_2.clone() * (carry_3 - one) + (overflow_2 - base) * carry_3);
+        builder.assert_bool(carry_1);
+        builder.assert_bool(carry_2);
+        builder.assert_bool(carry_3);
     }
 }
