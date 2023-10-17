@@ -268,13 +268,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             // let perm_trace_views = perm_traces.iter().map(|trace| trace.as_view()).collect();
 
             let flattened_perm_traces = perm_traces.iter().map(|trace| {
-                RowMajorMatrix::new(
-                    trace.values
-                        .iter()
-                        .flat_map(|x| x.as_base_slice().iter().copied())
-                        .collect::<Vec<_>>(),
-                    trace.width() * Self::EF::D,
-                )
+                trace.flatten_to_base()
             }).collect::<Vec<_>>();
             let (perm_commit, perm_data) = config.pcs().commit_batches(flattened_perm_traces);
             // TODO: Have challenger observe perm_commit.
