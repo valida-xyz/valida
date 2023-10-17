@@ -267,10 +267,13 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             // TODO: Want to avoid cloning, but this leads to lifetime issues...
             // let perm_trace_views = perm_traces.iter().map(|trace| trace.as_view()).collect();
 
-            let flattened_perm_traces = perm_traces.iter().map(|trace| {
-                trace.flatten_to_base()
-            }).collect::<Vec<_>>();
-            let (perm_commit, perm_data) = config.pcs().commit_batches(flattened_perm_traces);
+            let (perm_commit, perm_data) = tracing::info_span!("commit to permutation traces")
+                .in_scope(|| {
+                    let flattened_perm_traces = perm_traces.iter().map(|trace| {
+                        trace.flatten_to_base()
+                    }).collect::<Vec<_>>();
+                    config.pcs().commit_batches(flattened_perm_traces)
+                });
             // TODO: Have challenger observe perm_commit.
 
             //let opening_points = &[vec![Self::EF::TWO], vec![Self::EF::TWO]]; // TODO
