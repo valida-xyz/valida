@@ -25,7 +25,7 @@ where
             .assert_eq(local.diff, next.clk - local.clk);
         builder
             .when_transition()
-            .assert_eq(next.counter, local.counter + AB::Expr::from(AB::F::ONE));
+            .assert_eq(next.counter, local.counter + AB::Expr::from(AB::F::one()));
 
         // Bus opcode constraint
         builder.when(local.is_real).assert_eq(

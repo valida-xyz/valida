@@ -36,17 +36,17 @@ where
         let sigma_prime = sigma_m::<2, AB>(&base_m[..2], local.output);
 
         // Congruence checks
-        builder.assert_eq(pi - sigma, local.r * AB::Expr::TWO);
+        builder.assert_eq(pi - sigma, local.r * AB::Expr::two());
         builder.assert_eq(pi_prime - sigma_prime, local.s * base_m[2].clone());
 
         // Range check counter
         builder
             .when_first_row()
-            .assert_eq(local.counter, AB::Expr::ONE);
+            .assert_eq(local.counter, AB::Expr::one());
         let counter_diff = next.counter - local.counter;
         builder
             .when_transition()
-            .assert_zero(counter_diff.clone() * (counter_diff - AB::Expr::ONE));
+            .assert_zero(counter_diff.clone() * (counter_diff - AB::Expr::one()));
         builder
             .when_last_row()
             .assert_eq(local.counter, AB::Expr::from_canonical_u32(1 << 10));

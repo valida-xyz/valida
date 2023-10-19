@@ -37,7 +37,7 @@ impl MemoryChip {
             .assert_eq(local.diff, next.addr - local.addr);
         builder
             .when_transition()
-            .when_ne(local.addr_not_equal, AB::Expr::ONE)
+            .when_ne(local.addr_not_equal, AB::Expr::one())
             .assert_eq(local.diff, next.clk - local.clk);
 
         // Read/write
@@ -47,7 +47,7 @@ impl MemoryChip {
                 .when_transition()
                 .when(next.is_read)
                 .when(next.is_real) // FIXME: Degree constraint 4, need to remove
-                .when_ne(local.addr_not_equal, AB::Expr::ONE)
+                .when_ne(local.addr_not_equal, AB::Expr::one())
                 .assert_eq(value_next, value);
         }
         builder
@@ -59,6 +59,6 @@ impl MemoryChip {
         builder.when_first_row().assert_zero(local.counter);
         builder
             .when_transition()
-            .assert_eq(next.counter, local.counter + AB::Expr::ONE);
+            .assert_eq(next.counter, local.counter + AB::Expr::one());
     }
 }

@@ -91,7 +91,7 @@ impl Add32Chip {
     where
         F: PrimeField,
     {
-        let mut row = [F::ZERO; NUM_ADD_COLS];
+        let mut row = [F::zero(); NUM_ADD_COLS];
         let cols: &mut Add32Cols<F> = unsafe { transmute(&mut row) };
 
         match op {
@@ -104,16 +104,16 @@ impl Add32Chip {
                 let mut carry_2 = 0;
                 if b[3] as u32 + c[3] as u32 > 255 {
                     carry_1 = 1;
-                    cols.carry[0] = F::ONE;
+                    cols.carry[0] = F::one();
                 }
                 if b[2] as u32 + c[2] as u32 + carry_1 > 255 {
                     carry_2 = 1;
-                    cols.carry[1] = F::ONE;
+                    cols.carry[1] = F::one();
                 }
                 if b[1] as u32 + c[1] as u32 + carry_2 > 255 {
-                    cols.carry[2] = F::ONE;
+                    cols.carry[2] = F::one();
                 }
-                cols.is_real = F::ONE;
+                cols.is_real = F::one();
             }
         }
         row

@@ -79,7 +79,7 @@ where
                 (COL_MAP.is_sub, M::F::from_canonical_u32(SUB)),
                 (COL_MAP.is_mul, M::F::from_canonical_u32(MUL)),
             ],
-            M::F::ZERO,
+            M::F::zero(),
         );
         let input_1 = COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = COL_MAP.input_2.0.map(VirtualPairCol::single_main);
@@ -107,24 +107,24 @@ impl NativeFieldChip {
     where
         F: Field,
     {
-        let mut row = [F::ZERO; NUM_COLS];
+        let mut row = [F::zero(); NUM_COLS];
         let cols: &mut NativeFieldCols<F> = unsafe { transmute(&mut row) };
 
         match op {
             Operation::Add(a, b, c) => {
-                cols.is_add = F::ONE;
+                cols.is_add = F::one();
                 cols.input_1 = b.transform(F::from_canonical_u8);
                 cols.input_2 = c.transform(F::from_canonical_u8);
                 cols.output = a.transform(F::from_canonical_u8);
             }
             Operation::Sub(a, b, c) => {
-                cols.is_sub = F::ONE;
+                cols.is_sub = F::one();
                 cols.input_1 = b.transform(F::from_canonical_u8);
                 cols.input_2 = c.transform(F::from_canonical_u8);
                 cols.output = a.transform(F::from_canonical_u8);
             }
             Operation::Mul(a, b, c) => {
-                cols.is_mul = F::ONE;
+                cols.is_mul = F::one();
                 cols.input_1 = b.transform(F::from_canonical_u8);
                 cols.input_2 = c.transform(F::from_canonical_u8);
                 cols.output = a.transform(F::from_canonical_u8);

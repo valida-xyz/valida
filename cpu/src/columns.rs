@@ -121,12 +121,12 @@ mod tests {
         use super::*;
         use p3_field::AbstractField;
 
-        let mut row = [F::ZERO; NUM_CPU_COLS];
+        let mut row = [F::zero(); NUM_CPU_COLS];
         let cols: &mut CpuCols<F> = unsafe { transmute(&mut row) };
 
-        cols.mem_channels[0].is_read = F::ONE;
+        cols.mem_channels[0].is_read = F::one();
 
         let local: &CpuCols<F> = row[..].borrow();
-        assert_eq!(local.mem_channels[0].is_read, F::ONE);
+        assert_eq!(local.mem_channels[0].is_read, F::one());
     }
 }

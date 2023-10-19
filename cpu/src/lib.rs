@@ -189,7 +189,7 @@ impl CpuChip {
     where
         M: MachineWithMemoryChip,
     {
-        let mut row = [F::ZERO; NUM_CPU_COLS];
+        let mut row = [F::zero(); NUM_CPU_COLS];
         let cols: &mut CpuCols<F> = unsafe { transmute(&mut row) };
 
         cols.pc = F::from_canonical_u32(self.registers[clk].pc);
@@ -201,42 +201,42 @@ impl CpuChip {
 
         match op {
             Operation::Store32 => {
-                cols.opcode_flags.is_store = F::ONE;
+                cols.opcode_flags.is_store = F::one();
             }
             Operation::Load32 => {
-                cols.opcode_flags.is_load = F::ONE;
+                cols.opcode_flags.is_load = F::one();
             }
             Operation::Jal => {
-                cols.opcode_flags.is_jal = F::ONE;
+                cols.opcode_flags.is_jal = F::one();
             }
             Operation::Jalv => {
-                cols.opcode_flags.is_jalv = F::ONE;
+                cols.opcode_flags.is_jalv = F::one();
             }
             Operation::Beq(imm) => {
-                cols.opcode_flags.is_beq = F::ONE;
+                cols.opcode_flags.is_beq = F::one();
                 self.set_imm_value(cols, *imm);
             }
             Operation::Bne(imm) => {
-                cols.opcode_flags.is_bne = F::ONE;
+                cols.opcode_flags.is_bne = F::one();
                 self.set_imm_value(cols, *imm);
             }
             Operation::Imm32 => {
-                cols.opcode_flags.is_imm32 = F::ONE;
+                cols.opcode_flags.is_imm32 = F::one();
             }
             Operation::Bus(imm) => {
-                cols.opcode_flags.is_bus_op = F::ONE;
+                cols.opcode_flags.is_bus_op = F::one();
                 self.set_imm_value(cols, *imm);
             }
             Operation::BusWithMemory(imm) => {
-                cols.opcode_flags.is_bus_op = F::ONE;
-                cols.opcode_flags.is_bus_op_with_mem = F::ONE;
+                cols.opcode_flags.is_bus_op = F::one();
+                cols.opcode_flags.is_bus_op_with_mem = F::one();
                 self.set_imm_value(cols, *imm);
             }
             Operation::ReadAdvice | Operation::WriteAdvice => {
-                cols.opcode_flags.is_advice = F::ONE;
+                cols.opcode_flags.is_advice = F::one();
             }
             Operation::Stop => {
-                cols.opcode_flags.is_stop = F::ONE;
+                cols.opcode_flags.is_stop = F::one();
             }
         }
 
@@ -255,9 +255,9 @@ impl CpuChip {
         cols: &mut CpuCols<F>,
         machine: &M,
     ) {
-        cols.mem_channels[0].is_read = F::ONE;
-        cols.mem_channels[1].is_read = F::ONE;
-        cols.mem_channels[2].is_read = F::ZERO;
+        cols.mem_channels[0].is_read = F::one();
+        cols.mem_channels[1].is_read = F::one();
+        cols.mem_channels[2].is_read = F::zero();
 
         let memory = machine.mem();
         for ops in memory.operations.get(&(clk as u32)).iter() {
@@ -266,18 +266,18 @@ impl CpuChip {
                 match op {
                     MemoryOperation::Read(addr, value) => {
                         if is_first_read {
-                            cols.mem_channels[0].used = F::ONE;
+                            cols.mem_channels[0].used = F::one();
                             cols.mem_channels[0].addr = F::from_canonical_u32(*addr);
                             cols.mem_channels[0].value = value.transform(F::from_canonical_u8);
                             is_first_read = false;
                         } else {
-                            cols.mem_channels[1].used = F::ONE;
+                            cols.mem_channels[1].used = F::one();
                             cols.mem_channels[1].addr = F::from_canonical_u32(*addr);
                             cols.mem_channels[1].value = value.transform(F::from_canonical_u8);
                         }
                     }
                     MemoryOperation::Write(addr, value) => {
-                        cols.mem_channels[2].used = F::ONE;
+                        cols.mem_channels[2].used = F::one();
                         cols.mem_channels[2].addr = F::from_canonical_u32(*addr);
                         cols.mem_channels[2].value = value.transform(F::from_canonical_u8);
                     }
@@ -289,7 +289,7 @@ impl CpuChip {
 
     fn compute_word_diffs<F: PrimeField>(rows: &mut Vec<[F; NUM_CPU_COLS]>) {
         // Compute `diff`
-        let mut diff = vec![F::ZERO; rows.len()];
+        let mut diff = vec![F::zero(); rows.len()];
         for n in 0..rows.len() {
             let word_1 = CPU_COL_MAP.mem_channels[0]
                 .value
@@ -313,8 +313,8 @@ impl CpuChip {
         for n in 0..rows.len() {
             rows[n][CPU_COL_MAP.diff] = diff[n];
             rows[n][CPU_COL_MAP.diff_inv] = diff_inv[n];
-            if diff[n] != F::ZERO {
-                rows[n][CPU_COL_MAP.not_equal] = F::ONE;
+            if diff[n] != F::zero() {
+                rows[n][CPU_COL_MAP.not_equal] = F::one();
             }
         }
     }
@@ -328,7 +328,7 @@ impl CpuChip {
         let fp = last_row[CPU_COL_MAP.fp];
         let clk = last_row[CPU_COL_MAP.clk];
 
-        values.resize(n_real_rows.next_power_of_two() * NUM_CPU_COLS, F::ZERO);
+        values.resize(n_real_rows.next_power_of_two() * NUM_CPU_COLS, F::zero());
 
         // Interpret values as a slice of arrays of length `NUM_CPU_COLS`
         let rows = unsafe {
@@ -347,19 +347,19 @@ impl CpuChip {
                 padded_row[CPU_COL_MAP.clk] = clk + F::from_canonical_u32(n as u32 + 1);
 
                 // STOP instructions
-                padded_row[CPU_COL_MAP.opcode_flags.is_stop] = F::ONE;
+                padded_row[CPU_COL_MAP.opcode_flags.is_stop] = F::one();
                 padded_row[CPU_COL_MAP.instruction.opcode] = F::from_canonical_u32(STOP);
 
                 // Memory columns
-                padded_row[CPU_COL_MAP.mem_channels[0].is_read] = F::ONE;
-                padded_row[CPU_COL_MAP.mem_channels[1].is_read] = F::ONE;
-                padded_row[CPU_COL_MAP.mem_channels[2].is_read] = F::ZERO;
+                padded_row[CPU_COL_MAP.mem_channels[0].is_read] = F::one();
+                padded_row[CPU_COL_MAP.mem_channels[1].is_read] = F::one();
+                padded_row[CPU_COL_MAP.mem_channels[2].is_read] = F::zero();
             });
     }
 
     fn set_imm_value<F: PrimeField>(&self, cols: &mut CpuCols<F>, imm: Option<Word<u8>>) {
         if let Some(imm) = imm {
-            cols.opcode_flags.is_imm_op = F::ONE;
+            cols.opcode_flags.is_imm_op = F::one();
             cols.mem_channels[1].value = imm.transform(F::from_canonical_u8);
         }
     }

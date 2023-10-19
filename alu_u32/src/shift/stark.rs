@@ -17,7 +17,7 @@ where
         let main = builder.main();
         let local: &Shift32Cols<AB::Var> = main.row_slice(0).borrow();
 
-        let one = AB::Expr::ONE;
+        let one = AB::Expr::one();
 
         let bit_base = [1, 2, 4, 8, 16, 32, 64, 128].map(AB::Expr::from_canonical_u32);
         let pow_base = [1 << 1, 1 << 2, 1 << 4].map(AB::Expr::from_canonical_u32);

@@ -56,7 +56,7 @@ where
         let input_1 = LT_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = LT_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
         let output = (0..MEMORY_CELL_BYTES - 1)
-            .map(|_| VirtualPairCol::constant(M::F::ZERO))
+            .map(|_| VirtualPairCol::constant(M::F::zero()))
             .chain(iter::once(VirtualPairCol::single_main(LT_COL_MAP.output)));
 
         let mut fields = vec![opcode];
@@ -78,7 +78,7 @@ impl Lt32Chip {
     where
         F: PrimeField,
     {
-        let mut row = [F::ZERO; NUM_LT_COLS];
+        let mut row = [F::zero(); NUM_LT_COLS];
         let cols: &mut Lt32Cols<F> = unsafe { transmute(&mut row) };
 
         match op {
@@ -94,13 +94,13 @@ impl Lt32Chip {
                         cols.bits[i] = F::from_canonical_u16(z >> i & 1);
                     }
                     if n < 3 {
-                        cols.byte_flag[n] = F::ONE;
+                        cols.byte_flag[n] = F::one();
                     }
                 }
                 cols.input_1 = src1.transform(F::from_canonical_u8);
                 cols.input_2 = src2.transform(F::from_canonical_u8);
                 cols.output = F::from_canonical_u8(dst[3]);
-                cols.multiplicity = F::ONE;
+                cols.multiplicity = F::one();
             }
         }
         row

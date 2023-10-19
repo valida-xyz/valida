@@ -87,6 +87,6 @@ where
     }
 
     fn assert_zero<I: Into<Self::Expr>>(&mut self, x: I) {
-        assert_eq!(x.into(), F::ZERO, "constraints must evaluate to zero");
+        assert_eq!(x.into(), F::zero(), "constraints must evaluate to zero");
     }
 }
