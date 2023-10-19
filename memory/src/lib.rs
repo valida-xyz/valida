@@ -162,7 +162,7 @@ where
 
 impl MemoryChip {
     fn op_to_row<F: PrimeField>(&self, n: usize, clk: usize, op: Operation) -> [F; NUM_MEM_COLS] {
-        let mut row = [F::ZERO; NUM_MEM_COLS];
+        let mut row = [F::zero(); NUM_MEM_COLS];
         let cols: &mut MemoryCols<F> = unsafe { transmute(&mut row) };
 
         cols.clk = F::from_canonical_usize(clk);
@@ -172,18 +172,18 @@ impl MemoryChip {
             Operation::Read(addr, value) => {
                 cols.addr = F::from_canonical_u32(addr);
                 cols.value = value.transform(F::from_canonical_u8);
-                cols.is_read = F::ONE;
-                cols.is_real = F::ONE;
+                cols.is_read = F::one();
+                cols.is_real = F::one();
             }
             Operation::Write(addr, value) => {
                 cols.addr = F::from_canonical_u32(addr);
                 cols.value = value.transform(F::from_canonical_u8);
-                cols.is_real = F::ONE;
+                cols.is_real = F::one();
             }
             Operation::DummyRead(addr, value) => {
                 cols.addr = F::from_canonical_u32(addr);
                 cols.value = value.transform(F::from_canonical_u8);
-                cols.is_read = F::ONE;
+                cols.is_read = F::one();
             }
         }
 
@@ -277,8 +277,8 @@ impl MemoryChip {
         }
 
         // Compute `diff` and `counter_mult`
-        let mut diff = vec![F::ZERO; rows.len()];
-        let mut mult = vec![F::ZERO; rows.len()];
+        let mut diff = vec![F::zero(); rows.len()];
+        let mut mult = vec![F::zero(); rows.len()];
         for n in 0..(rows.len() - 1) {
             let addr = ops[n].1.get_address();
             let addr_next = ops[n + 1].1.get_address();
@@ -290,7 +290,7 @@ impl MemoryChip {
                 clk_next - clk
             };
             diff[n] = F::from_canonical_u32(value);
-            mult[value as usize] += F::ONE;
+            mult[value as usize] += F::one();
         }
 
         // Compute `diff_inv`
@@ -305,12 +305,12 @@ impl MemoryChip {
             let addr = ops[n].1.get_address();
             let addr_next = ops[n + 1].1.get_address();
             if addr_next - addr != 0 {
-                rows[n][MEM_COL_MAP.addr_not_equal] = F::ONE;
+                rows[n][MEM_COL_MAP.addr_not_equal] = F::one();
             }
         }
 
         // The first row should have a zero-valued diff, which is "sent" to the local
         // range check bus. We need to account for that value on the receiving end here.
-        rows[0][MEM_COL_MAP.counter_mult] += F::ONE;
+        rows[0][MEM_COL_MAP.counter_mult] += F::one();
     }
 }

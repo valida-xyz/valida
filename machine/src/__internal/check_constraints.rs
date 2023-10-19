@@ -63,16 +63,16 @@ pub fn check_constraints<M, A>(
                 next: &perm_next,
             },
             perm_challenges,
-            is_first_row: M::F::ZERO,
-            is_last_row: M::F::ZERO,
-            is_transition: M::F::ONE,
+            is_first_row: M::F::zero(),
+            is_last_row: M::F::zero(),
+            is_transition: M::F::one(),
         };
         if i == 0 {
-            builder.is_first_row = M::F::ONE;
+            builder.is_first_row = M::F::one();
         }
         if i == height - 1 {
-            builder.is_last_row = M::F::ONE;
-            builder.is_transition = M::F::ZERO;
+            builder.is_last_row = M::F::one();
+            builder.is_transition = M::F::zero();
         }
 
         air.eval(&mut builder);
@@ -89,5 +89,5 @@ where
         .iter()
         .map(|perm| *perm.row_slice(perm.height() - 1).last().unwrap())
         .sum();
-    assert_eq!(sum, M::EF::ZERO);
+    assert_eq!(sum, M::EF::zero());
 }

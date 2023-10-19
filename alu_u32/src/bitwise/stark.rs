@@ -43,7 +43,7 @@ where
                 .map(|((bit_1, bit_2), base)| bit_1 * bit_2 * base)
                 .sum();
             let bitwise_or: AB::Expr = byte_1.clone() + byte_2.clone() - bitwise_and.clone();
-            let bitwise_xor: AB::Expr = byte_1 + byte_2 - AB::Expr::TWO * bitwise_and.clone();
+            let bitwise_xor: AB::Expr = byte_1 + byte_2 - AB::Expr::two() * bitwise_and.clone();
 
             // Check the resulting output byte
             builder

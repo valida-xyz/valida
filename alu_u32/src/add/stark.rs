@@ -17,7 +17,7 @@ where
         let main = builder.main();
         let local: &Add32Cols<AB::Var> = main.row_slice(0).borrow();
 
-        let one = AB::F::ONE;
+        let one = AB::F::one();
         let base = AB::F::from_canonical_u32(1 << 8);
 
         let carry_1 = local.carry[0];

@@ -26,7 +26,7 @@ impl<F: PrimeField64> BaseAir<F> for ProgramChip {
             .into_iter()
             .enumerate()
             .flat_map(|(n, word)| {
-                let mut row = vec![F::ZERO; NUM_PREPROCESSED_COLS];
+                let mut row = vec![F::zero(); NUM_PREPROCESSED_COLS];
                 row[0] = F::from_canonical_usize(n);
                 row[1..].copy_from_slice(&word.flatten());
                 row

@@ -28,7 +28,7 @@ where
     M: MachineWithRangeBus8<F = F>,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
-        let mut rows = vec![[F::ZERO; NUM_RANGE_COLS]; MAX as usize];
+        let mut rows = vec![[F::zero(); NUM_RANGE_COLS]; MAX as usize];
         for (n, row) in rows.iter_mut().enumerate() {
             let cols: &mut RangeCols<F> = unsafe { transmute(row) };
             // FIXME: This is very inefficient when the range is large.

@@ -52,7 +52,7 @@ impl Div32Chip {
     where
         F: PrimeField,
     {
-        [F::ZERO; NUM_DIV_COLS]
+        [F::zero(); NUM_DIV_COLS]
     }
 }
 

@@ -57,7 +57,7 @@ where
                 (COL_MAP.is_shl, M::F::from_canonical_u32(MUL32)),
                 (COL_MAP.is_shr, M::F::from_canonical_u32(DIV32)),
             ],
-            M::F::ZERO,
+            M::F::zero(),
         );
         let input_1 = COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = COL_MAP.power_of_two.0.map(VirtualPairCol::single_main);
@@ -85,7 +85,7 @@ where
                 (COL_MAP.is_shl, M::F::from_canonical_u32(SHL32)),
                 (COL_MAP.is_shr, M::F::from_canonical_u32(SHR32)),
             ],
-            M::F::ZERO,
+            M::F::zero(),
         );
         let input_1 = COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = COL_MAP.input_2.0.map(VirtualPairCol::single_main);
@@ -112,16 +112,16 @@ impl Shift32Chip {
     where
         F: PrimeField,
     {
-        let mut row = [F::ZERO; NUM_COLS];
+        let mut row = [F::zero(); NUM_COLS];
         let cols: &mut Shift32Cols<F> = unsafe { transmute(&mut row) };
 
         match op {
             Operation::Shr32(a, b, c) => {
-                cols.is_shl = F::ONE;
+                cols.is_shl = F::one();
                 self.set_cols(cols, a, b, c);
             }
             Operation::Shl32(a, b, c) => {
-                cols.is_shr = F::ONE;
+                cols.is_shr = F::one();
                 self.set_cols(cols, a, b, c);
             }
         }

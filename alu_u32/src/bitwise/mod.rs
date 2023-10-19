@@ -57,7 +57,7 @@ where
                 (COL_MAP.is_or, M::F::from_canonical_u32(OR32)),
                 (COL_MAP.is_xor, M::F::from_canonical_u32(XOR32)),
             ],
-            M::F::ZERO,
+            M::F::zero(),
         );
         let input_1 = COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = COL_MAP.input_2.0.map(VirtualPairCol::single_main);
@@ -84,20 +84,20 @@ impl Bitwise32Chip {
     where
         F: PrimeField,
     {
-        let mut row = [F::ZERO; NUM_COLS];
+        let mut row = [F::zero(); NUM_COLS];
         let cols: &mut Bitwise32Cols<F> = unsafe { transmute(&mut row) };
 
         match op {
             Operation::Xor32(a, b, c) => {
-                cols.is_xor = F::ONE;
+                cols.is_xor = F::one();
                 self.set_cols(a, b, c, cols);
             }
             Operation::And32(a, b, c) => {
-                cols.is_and = F::ONE;
+                cols.is_and = F::one();
                 self.set_cols(a, b, c, cols);
             }
             Operation::Or32(a, b, c) => {
-                cols.is_or = F::ONE;
+                cols.is_or = F::one();
                 self.set_cols(a, b, c, cols);
             }
         }
@@ -113,8 +113,8 @@ impl Bitwise32Chip {
         cols.input_2 = c.transform(F::from_canonical_u8);
         cols.output = a.transform(F::from_canonical_u8);
 
-        let mut bits_1 = [[F::ZERO; 8]; 4];
-        let mut bits_2 = [[F::ZERO; 8]; 4];
+        let mut bits_1 = [[F::zero(); 8]; 4];
+        let mut bits_2 = [[F::zero(); 8]; 4];
         for i in 0..4 {
             for j in 0..8 {
                 bits_1[i][j] = F::from_canonical_u8(b[i] >> j & 1);

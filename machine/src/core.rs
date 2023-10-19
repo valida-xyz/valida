@@ -21,7 +21,7 @@ impl<F: Copy> Word<F> {
 
 impl<F: PrimeField> Word<F> {
     pub fn reduce(self) -> F {
-        let mut result = F::ZERO;
+        let mut result = F::zero();
         for (n, item) in self.0.into_iter().rev().enumerate() {
             result = result + item * F::from_canonical_u32(1 << 8 * n);
         }
@@ -144,7 +144,7 @@ impl BitOr for Word<u8> {
 
 impl<F: Field> From<F> for Word<F> {
     fn from(bytes: F) -> Self {
-        Self([F::ZERO, F::ZERO, F::ZERO, bytes])
+        Self([F::zero(), F::zero(), F::zero(), bytes])
     }
 }
 
