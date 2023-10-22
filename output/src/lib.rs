@@ -143,9 +143,11 @@ where
     const OPCODE: u32 = WRITE;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
+        let opcode = <Self as Instruction<M>>::OPCODE;
         let clk = state.cpu().clock;
+        let pc = state.cpu().pc;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
-        let b = state.mem_mut().read(clk, read_addr_1, true);
+        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
         state
             .output_mut()
             .values
@@ -153,7 +155,7 @@ where
 
         state
             .cpu_mut()
-            .push_bus_op(None, <Self as Instruction<M>>::OPCODE, ops);
+            .push_bus_op(None, opcode, ops);
 
         // The immediate value flag should be set, and the immediate operand value should
         // equal zero. We only write one byte of one word at a time to output.

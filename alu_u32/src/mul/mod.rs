@@ -116,18 +116,20 @@ where
     const OPCODE: u32 = MUL32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
+        let opcode = <Self as Instruction<M>>::OPCODE;
         let clk = state.cpu().clock;
+        let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let b = state.mem_mut().read(clk, read_addr_1, true);
+        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
         let c: Word<u8> = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true).into()
+            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "").into()
         };
 
         let a = b * c;
@@ -139,7 +141,7 @@ where
             .push(Operation::Mul32(a, b, c));
         state
             .cpu_mut()
-            .push_bus_op(imm, <Self as Instruction<M>>::OPCODE, ops);
+            .push_bus_op(imm, opcode, ops);
 
         state.range_check(a);
     }
