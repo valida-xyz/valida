@@ -91,7 +91,7 @@ impl Sub32Chip {
     where
         F: PrimeField,
     {
-        let mut row = [F::ZERO; NUM_SUB_COLS];
+        let mut row = [F::zero(); NUM_SUB_COLS];
         let cols: &mut Sub32Cols<F> = unsafe { transmute(&mut row) };
 
         match op {
@@ -101,15 +101,15 @@ impl Sub32Chip {
                 cols.output = a.transform(F::from_canonical_u8);
 
                 if b[3] < c[3] {
-                    cols.borrow[0] = F::ONE;
+                    cols.borrow[0] = F::one();
                 }
                 if b[2] < c[2] {
-                    cols.borrow[1] = F::ONE;
+                    cols.borrow[1] = F::one();
                 }
                 if b[1] < c[1] {
-                    cols.borrow[2] = F::ONE;
+                    cols.borrow[2] = F::one();
                 }
-                cols.is_real = F::ONE;
+                cols.is_real = F::one();
             }
         }
         row

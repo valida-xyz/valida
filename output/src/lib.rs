@@ -41,10 +41,10 @@ where
                 let num_rows = (clk_diff / table_len) as usize + 1;
                 let mut rows = Vec::with_capacity(num_rows);
                 for n in 0..num_rows {
-                    let mut row = [M::F::ZERO; NUM_OUTPUT_COLS];
+                    let mut row = [M::F::zero(); NUM_OUTPUT_COLS];
                     let cols: &mut OutputCols<M::F> = unsafe { transmute(&mut row) };
                     if n == 0 {
-                        cols.is_real = M::F::ONE;
+                        cols.is_real = M::F::one();
                         cols.clk = M::F::from_canonical_u32(clk_1);
                         cols.value = M::F::from_canonical_u8(val_1);
                     } else {
@@ -73,9 +73,9 @@ where
 
         // Add final row
         if let Some(last_row) = self.values.last() {
-            let mut row = [M::F::ZERO; NUM_OUTPUT_COLS];
+            let mut row = [M::F::zero(); NUM_OUTPUT_COLS];
             let cols: &mut OutputCols<M::F> = unsafe { transmute(&mut row) };
-            cols.is_real = M::F::ONE;
+            cols.is_real = M::F::one();
             cols.clk = M::F::from_canonical_u32(last_row.0);
             cols.value = M::F::from_canonical_u8(last_row.1);
             rows.push(row);
@@ -112,7 +112,7 @@ where
         let clk = VirtualPairCol::single_main(OUTPUT_COL_MAP.clk);
 
         let mut values = (0..CPU_MEMORY_CHANNELS * MEMORY_CELL_BYTES)
-            .map(|_| VirtualPairCol::constant(M::F::ZERO))
+            .map(|_| VirtualPairCol::constant(M::F::zero()))
             .collect::<Vec<_>>();
         values[MEMORY_CELL_BYTES - 1] = VirtualPairCol::single_main(OUTPUT_COL_MAP.value);
 

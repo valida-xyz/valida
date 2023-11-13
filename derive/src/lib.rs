@@ -276,7 +276,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                 });
             // TODO: Have challenger observe perm_commit.
 
-            //let opening_points = &[vec![Self::EF::TWO], vec![Self::EF::TWO]]; // TODO
+            //let opening_points = &[vec![Self::EF::two()], vec![Self::EF::two()]]; // TODO
             //let (openings, opening_proof) = config.pcs().open_multi_batches::<Self::EF, SC::Chal>(
             //    &[&main_data, &perm_data], opening_points, &mut challenger);
 

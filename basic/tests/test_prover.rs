@@ -12,6 +12,8 @@ use valida_program::MachineWithProgramChip;
 
 use p3_challenger::DuplexChallenger;
 use p3_dft::Radix2Bowers;
+use p3_field::extension::BinomialExtensionField;
+use p3_field::Field;
 use p3_fri::{FriBasedPcs, FriConfigImpl, FriLdt};
 use p3_keccak::Keccak256Hash;
 use p3_ldt::QuotientMmcs;
@@ -21,6 +23,7 @@ use p3_poseidon::Poseidon;
 use p3_symmetric::CompressionFunctionFromHasher;
 use p3_symmetric::SerializingHasher32;
 use rand::thread_rng;
+use valida_machine::__internal::p3_commit::ExtensionMmcs;
 
 #[test]
 fn prove_fibonacci() {
@@ -184,9 +187,9 @@ fn prove_fibonacci() {
     machine.run(&rom);
 
     type Val = BabyBear;
-    type Dom = BabyBear;
-    type Challenge = Val; // TODO
-    type PackedChallenge = Challenge; // TODO
+    type Domain = Val;
+    type Challenge = BinomialExtensionField<Val, 5>;
+    type PackedChallenge = BinomialExtensionField<<Domain as Field>::Packing, 5>;
 
     type Mds16 = CosetMds<Val, 16>;
     let mds16 = Mds16::default();
@@ -194,30 +197,34 @@ fn prove_fibonacci() {
     type Perm16 = Poseidon<Val, Mds16, 16, 5>;
     let perm16 = Perm16::new_from_rng(4, 22, mds16, &mut thread_rng()); // TODO: Use deterministic RNG
 
-    type MyHash = SerializingHasher32<Val, Keccak256Hash>;
+    type MyHash = SerializingHasher32<Keccak256Hash>;
     let hash = MyHash::new(Keccak256Hash {});
 
     type MyCompress = CompressionFunctionFromHasher<Val, MyHash, 2, 8>;
     let compress = MyCompress::new(hash);
 
-    type MyMmcs = FieldMerkleTreeMmcs<Val, MyHash, MyCompress, 8>;
-    let mmcs = MyMmcs::new(hash, compress);
+    type ValMmcs = FieldMerkleTreeMmcs<Val, MyHash, MyCompress, 8>;
+    let val_mmcs = ValMmcs::new(hash, compress);
 
-    type MyDft = Radix2Bowers;
-    let dft = MyDft::default();
+    type ChallengeMmcs = ExtensionMmcs<Val, Challenge, ValMmcs>;
+    let challenge_mmcs = ChallengeMmcs::new(val_mmcs.clone());
 
-    type Chal = DuplexChallenger<Val, Perm16, 16>;
-    type Quotient = QuotientMmcs<Dom, Challenge, MyMmcs>;
-    type MyFriConfig = FriConfigImpl<Val, Dom, Challenge, Quotient, MyMmcs, Chal>;
-    let fri_config = MyFriConfig::new(40, mmcs.clone());
+    type Dft = Radix2Bowers;
+    let dft = Dft::default();
+
+    type Challenger = DuplexChallenger<Val, Perm16, 16>;
+
+    type Quotient = QuotientMmcs<Domain, Challenge, ValMmcs>;
+    type MyFriConfig = FriConfigImpl<Val, Domain, Challenge, Quotient, ChallengeMmcs, Challenger>;
+    let fri_config = MyFriConfig::new(40, challenge_mmcs);
     let ldt = FriLdt { config: fri_config };
 
-    type PCS = FriBasedPcs<MyFriConfig, MyMmcs, MyDft, Chal>;
-    type MyConfig = StarkConfigImpl<Val, Challenge, PackedChallenge, PCS, MyDft, Chal>;
+    type Pcs = FriBasedPcs<MyFriConfig, ValMmcs, Dft, Challenger>;
+    type MyConfig = StarkConfigImpl<Val, Domain, Challenge, PackedChallenge, Pcs, Challenger>;
 
-    let pcs = PCS::new(dft.clone(), 1, mmcs, ldt);
+    let pcs = Pcs::new(dft, 1, val_mmcs, ldt);
     let challenger = DuplexChallenger::new(perm16);
-    let config = MyConfig::new(pcs, dft, challenger);
+    let config = MyConfig::new(pcs, challenger);
     machine.prove(&config);
 
     assert_eq!(machine.cpu().clock, 192);

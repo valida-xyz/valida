@@ -26,6 +26,7 @@ p3-baby-bear = { path = "../../Plonky3/baby-bear" }
 
 [dev-dependencies]
 p3-challenger = { path = "../../Plonky3/challenger" }
+p3-commit = { path = "../../Plonky3/commit" }
 p3-dft = { path = "../../Plonky3/dft" }
 p3-field = { path = "../../Plonky3/field" }
 p3-fri = { path = "../../Plonky3/fri" }

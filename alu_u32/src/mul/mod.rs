@@ -37,7 +37,7 @@ where
 
         let num_ops = self.operations.len();
         let num_padded_ops = num_ops.next_power_of_two().max(MIN_LENGTH);
-        let mut values = vec![F::ZERO; num_padded_ops * NUM_MUL_COLS];
+        let mut values = vec![F::zero(); num_padded_ops * NUM_MUL_COLS];
 
         // Encode the real operations.
         for (i, op) in self.operations.iter().enumerate() {

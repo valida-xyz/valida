@@ -134,7 +134,7 @@ where
     let mut perm_values = Vec::with_capacity(main.height() * perm_width);
 
     for (n, main_row) in main.rows().enumerate() {
-        let mut row = vec![M::EF::ZERO; perm_width];
+        let mut row = vec![M::EF::zero(); perm_width];
         for (m, (interaction, _)) in all_interactions.iter().enumerate() {
             let alpha_m = if interaction.is_local() {
                 alphas_local[interaction.argument_index()]
@@ -160,7 +160,7 @@ where
     let mut perm = RowMajorMatrix::new(perm_values, perm_width);
 
     // Compute the running sum column
-    let mut phi = vec![M::EF::ZERO; perm.height()];
+    let mut phi = vec![M::EF::zero(); perm.height()];
     for (n, (main_row, perm_row)) in main.rows().zip(perm.rows()).enumerate() {
         if n > 0 {
             phi[n] = phi[n - 1];
@@ -223,11 +223,11 @@ where
     let betas = rand_elems[2].powers();
 
     let lhs = phi_next - phi_local.clone();
-    let mut rhs = AB::ExprEF::from_base(AB::Expr::ZERO);
-    let mut phi_0 = AB::ExprEF::from_base(AB::Expr::ZERO);
+    let mut rhs = AB::ExprEF::from_base(AB::Expr::zero());
+    let mut phi_0 = AB::ExprEF::from_base(AB::Expr::zero());
     for (m, (interaction, interaction_type)) in all_interactions.iter().enumerate() {
         // Reciprocal constraints
-        let mut rlc = AB::ExprEF::from_base(AB::Expr::ZERO);
+        let mut rlc = AB::ExprEF::from_base(AB::Expr::zero());
         for (field, beta) in interaction.fields.iter().zip(betas.clone()) {
             let elem = field.apply::<AB::Expr, AB::Var>(preprocessed_local, main_local);
             rlc += AB::ExprEF::from(beta) * elem;
@@ -328,7 +328,7 @@ where
     F: Field,
     EF: ExtensionField<F>,
 {
-    let mut rlc = EF::ZERO;
+    let mut rlc = EF::zero();
     for (columns, beta) in fields.iter().zip(betas) {
         rlc += beta * columns.apply::<F, F>(preprocessed_row, main_row)
     }
