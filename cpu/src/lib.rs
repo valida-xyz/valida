@@ -484,9 +484,10 @@ where
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
         let read_addr = (state.cpu().fp as i32 + ops.c()) as u32;
-        let write_addr = (state.cpu().fp as i32 + ops.b()) as u32;
+        let write_addr_loc = (state.cpu().fp as i32 + ops.b()) as u32;
+        let write_addr = state.mem_mut().read(clk, write_addr_loc.into(), true);
         let cell = state.mem_mut().read(clk, read_addr, true);
-        state.mem_mut().write(clk, write_addr, cell, true);
+        state.mem_mut().write(clk, write_addr.into(), cell, true);
         state.cpu_mut().pc += 1;
         state
             .cpu_mut()
