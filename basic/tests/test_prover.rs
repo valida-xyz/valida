@@ -3,7 +3,7 @@ use valida_alu_u32::add::{Add32Instruction, MachineWithAdd32Chip};
 use valida_basic::BasicMachine;
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
-    MachineWithCpuChip, StopInstruction, Store32Instruction,
+    MachineWithCpuChip, StopInstruction,
 };
 use valida_machine::config::StarkConfigImpl;
 use valida_machine::{Instruction, InstructionWord, Machine, Operands, ProgramROM, Word};
@@ -40,11 +40,11 @@ fn prove_fibonacci() {
     //; %bb.0:
     //	imm32	-4(fp), 0, 0, 0, 0
     //	imm32	-8(fp), 0, 0, 0, 10
-    //	sw	-16(fp), -8(fp)
+    //	addi	-16(fp), -8(fp), 0
     //	imm32	-20(fp), 0, 0, 0, 28
     //	jal	-28(fp), fib, -28
-    //	sw	-12(fp), -24(fp)
-    //	sw	4(fp), -12(fp)
+    //	addi	-12(fp), -24(fp), 0
+    //	addi	4(fp), -12(fp), 0
     //	exit
     //...
     program.extend([
@@ -57,8 +57,8 @@ fn prove_fibonacci() {
             operands: Operands([-8, 0, 0, 0, 25]),
         },
         InstructionWord {
-            opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
-            operands: Operands([0, -16, -8, 0, 0]),
+            opcode: <Add32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            operands: Operands([-16, -8, 0, 0, 1]),
         },
         InstructionWord {
             opcode: <Imm32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
@@ -69,12 +69,12 @@ fn prove_fibonacci() {
             operands: Operands([-28, fib_bb0, -28, 0, 0]),
         },
         InstructionWord {
-            opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
-            operands: Operands([0, -12, -24, 0, 0]),
+            opcode: <Add32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            operands: Operands([-12, -24, 0, 0, 1]),
         },
         InstructionWord {
-            opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
-            operands: Operands([0, 4, -12, 0, 0]),
+            opcode: <Add32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            operands: Operands([4, -12, 0, 0, 1]),
         },
         InstructionWord {
             opcode: <StopInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
@@ -84,15 +84,15 @@ fn prove_fibonacci() {
 
     //fib:                                    ; @fib
     //; %bb.0:
-    //	sw	-4(fp), 12(fp)
+    //	addi	-4(fp), 12(fp), 0
     //	imm32	-8(fp), 0, 0, 0, 0
     //	imm32	-12(fp), 0, 0, 0, 1
     //	imm32	-16(fp), 0, 0, 0, 0
     //	beq	.LBB0_1, 0(fp), 0(fp)
     program.extend([
         InstructionWord {
-            opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
-            operands: Operands([0, -4, 12, 0, 0]),
+            opcode: <Add32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            operands: Operands([-4, 12, 0, 0, 1]),
         },
         InstructionWord {
             opcode: <Imm32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
@@ -128,8 +128,8 @@ fn prove_fibonacci() {
 
     //; %bb.2:
     //	add	-20(fp), -8(fp), -12(fp)
-    //	sw	-8(fp), -12(fp)
-    //	sw	-12(fp), -20(fp)
+    //	addi	-8(fp), -12(fp), 0
+    //	addi	-12(fp), -20(fp), 0
     //	beq	.LBB0_3, 0(fp), 0(fp)
     program.extend([
         InstructionWord {
@@ -137,12 +137,12 @@ fn prove_fibonacci() {
             operands: Operands([-20, -8, -12, 0, 0]),
         },
         InstructionWord {
-            opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
-            operands: Operands([0, -8, -12, 0, 0]),
+            opcode: <Add32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            operands: Operands([-8, -12, 0, 0, 1]),
         },
         InstructionWord {
-            opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
-            operands: Operands([0, -12, -20, 0, 0]),
+            opcode: <Add32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            operands: Operands([-12, -20, 0, 0, 1]),
         },
         InstructionWord {
             opcode: <BeqInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
@@ -165,12 +165,12 @@ fn prove_fibonacci() {
     ]);
 
     //.LBB0_4:
-    //	sw	4(fp), -8(fp)
+    //	addi	4(fp), -8(fp), 0
     //	jalv	-4(fp), 0(fp), 8(fp)
     program.extend([
         InstructionWord {
-            opcode: <Store32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
-            operands: Operands([0, 4, -8, 0, 0]),
+            opcode: <Add32Instruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
+            operands: Operands([4, -8, 0, 0, 1]),
         },
         InstructionWord {
             opcode: <JalvInstruction as Instruction<BasicMachine<Val, Challenge>>>::OPCODE,
@@ -222,7 +222,7 @@ fn prove_fibonacci() {
     type Pcs = FriBasedPcs<MyFriConfig, ValMmcs, Dft, Challenger>;
     type MyConfig = StarkConfigImpl<Val, Domain, Challenge, PackedChallenge, Pcs, Challenger>;
 
-    let pcs = Pcs::new(dft, 1, val_mmcs, ldt);
+    let pcs = Pcs::new(dft, val_mmcs, ldt);
     let challenger = DuplexChallenger::new(perm16);
     let config = MyConfig::new(pcs, challenger);
     machine.prove(&config);
@@ -230,7 +230,7 @@ fn prove_fibonacci() {
     assert_eq!(machine.cpu().clock, 192);
     assert_eq!(machine.cpu().operations.len(), 192);
     assert_eq!(machine.mem().operations.values().flatten().count(), 401);
-    assert_eq!(machine.add_u32().operations.len(), 50);
+    assert_eq!(machine.add_u32().operations.len(), 105);
 
     assert_eq!(
         *machine.mem().cells.get(&(0x1000 + 4)).unwrap(), // Return value

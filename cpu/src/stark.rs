@@ -103,21 +103,25 @@ impl CpuChip {
             local.read_addr_2(),
             reduce::<AB>(base, local.read_value_1()),
         );
+        builder.when(is_store).assert_eq(local.read_addr_2(), addr_b);
         builder
             .when(is_jalv + (AB::Expr::one() - is_imm_op) * (is_beq + is_bne + is_bus_op))
             .assert_eq(local.read_addr_2(), addr_c);
         builder
-            .when(is_load + is_jalv + (AB::Expr::one() - is_imm_op) * (is_beq + is_bne + is_bus_op))
+            .when(is_load + is_store + is_jalv + (AB::Expr::one() - is_imm_op) * (is_beq + is_bne + is_bus_op))
             .assert_one(local.read_2_used());
         builder
-            .when(is_store + is_jal + is_imm_op * (is_beq + is_bne + is_bus_op))
+            .when(is_jal + is_imm_op * (is_beq + is_bne + is_bus_op))
             .assert_zero(local.read_2_used());
 
         // Write
         builder
             .when(is_load + is_jal + is_jalv + is_imm32 + is_bus_op)
             .assert_eq(local.write_addr(), addr_a);
-        builder.when(is_store).assert_eq(local.write_addr(), addr_b);
+        builder.when(is_store).assert_eq(
+            local.write_addr(),
+            reduce::<AB>(base, local.read_value_2())
+        );
         builder.when(is_store).assert_zero(
             local
                 .read_value_1()
