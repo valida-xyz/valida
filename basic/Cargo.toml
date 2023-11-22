@@ -21,8 +21,10 @@ valida-memory = { path = "../memory" }
 valida-output = { path = "../output" }
 valida-program = { path = "../program" }
 valida-range = { path = "../range" }
-p3-maybe-rayon = { path = "../../Plonky3/maybe-rayon" }
 p3-baby-bear = { path = "../../Plonky3/baby-bear" }
+p3-field = { path = "../../Plonky3/field" }
+p3-maybe-rayon = { path = "../../Plonky3/maybe-rayon" }
+p3-util = { path = "../../Plonky3/util" }
 
 [dev-dependencies]
 p3-challenger = { path = "../../Plonky3/challenger" }
