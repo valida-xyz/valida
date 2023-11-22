@@ -187,9 +187,8 @@ fn prove_fibonacci() {
     machine.run(&rom);
 
     type Val = BabyBear;
-    type Domain = Val;
     type Challenge = BinomialExtensionField<Val, 5>;
-    type PackedChallenge = BinomialExtensionField<<Domain as Field>::Packing, 5>;
+    type PackedChallenge = BinomialExtensionField<<Val as Field>::Packing, 5>;
 
     type Mds16 = CosetMds<Val, 16>;
     let mds16 = Mds16::default();
@@ -214,15 +213,15 @@ fn prove_fibonacci() {
 
     type Challenger = DuplexChallenger<Val, Perm16, 16>;
 
-    type Quotient = QuotientMmcs<Domain, Challenge, ValMmcs>;
-    type MyFriConfig = FriConfigImpl<Val, Domain, Challenge, Quotient, ChallengeMmcs, Challenger>;
+    type Quotient = QuotientMmcs<Val, Challenge, ValMmcs>;
+    type MyFriConfig = FriConfigImpl<Val, Challenge, Quotient, ChallengeMmcs, Challenger>;
     let fri_config = MyFriConfig::new(40, challenge_mmcs);
     let ldt = FriLdt { config: fri_config };
 
     type Pcs = FriBasedPcs<MyFriConfig, ValMmcs, Dft, Challenger>;
-    type MyConfig = StarkConfigImpl<Val, Domain, Challenge, PackedChallenge, Pcs, Challenger>;
+    type MyConfig = StarkConfigImpl<Val, Challenge, PackedChallenge, Pcs, Challenger>;
 
-    let pcs = Pcs::new(dft, 1, val_mmcs, ldt);
+    let pcs = Pcs::new(dft, val_mmcs, ldt);
     let challenger = DuplexChallenger::new(perm16);
     let config = MyConfig::new(pcs, challenger);
     machine.prove(&config);
