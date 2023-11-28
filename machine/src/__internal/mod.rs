@@ -18,3 +18,4 @@ pub use prove::*;
 pub use p3_challenger;
 pub use p3_commit;
 pub use p3_matrix;
+pub use p3_util;

@@ -3,6 +3,7 @@
 
 extern crate alloc;
 
+use p3_field::TwoAdicField;
 use valida_alu_u32::{
     add::{Add32Chip, Add32Instruction, MachineWithAdd32Chip},
     bitwise::{
@@ -37,7 +38,7 @@ use p3_maybe_rayon::*;
 
 #[derive(Machine, Default)]
 #[machine_fields(F, EF)]
-pub struct BasicMachine<F: PrimeField64, EF: ExtensionField<F>> {
+pub struct BasicMachine<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> {
     // Core instructions
     #[instruction]
     load32: Load32Instruction,
@@ -113,31 +114,41 @@ pub struct BasicMachine<F: PrimeField64, EF: ExtensionField<F>> {
     _phantom_extension: core::marker::PhantomData<EF>,
 }
 
-impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithGeneralBus for BasicMachine<F, EF> {
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithGeneralBus
+    for BasicMachine<F, EF>
+{
     fn general_bus(&self) -> BusArgument {
         BusArgument::Global(0)
     }
 }
 
-impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithProgramBus for BasicMachine<F, EF> {
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithProgramBus
+    for BasicMachine<F, EF>
+{
     fn program_bus(&self) -> BusArgument {
         BusArgument::Global(1)
     }
 }
 
-impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithMemBus for BasicMachine<F, EF> {
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithMemBus
+    for BasicMachine<F, EF>
+{
     fn mem_bus(&self) -> BusArgument {
         BusArgument::Global(2)
     }
 }
 
-impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithRangeBus8 for BasicMachine<F, EF> {
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithRangeBus8
+    for BasicMachine<F, EF>
+{
     fn range_bus(&self) -> BusArgument {
         BusArgument::Global(3)
     }
 }
 
-impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithCpuChip for BasicMachine<F, EF> {
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithCpuChip
+    for BasicMachine<F, EF>
+{
     fn cpu(&self) -> &CpuChip {
         &self.cpu
     }
@@ -147,7 +158,9 @@ impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithCpuChip for BasicMachine
     }
 }
 
-impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithProgramChip for BasicMachine<F, EF> {
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithProgramChip
+    for BasicMachine<F, EF>
+{
     fn program(&self) -> &ProgramChip {
         &self.program
     }
@@ -157,7 +170,9 @@ impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithProgramChip for BasicMac
     }
 }
 
-impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithMemoryChip for BasicMachine<F, EF> {
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithMemoryChip
+    for BasicMachine<F, EF>
+{
     fn mem(&self) -> &MemoryChip {
         &self.mem
     }
@@ -167,7 +182,9 @@ impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithMemoryChip for BasicMach
     }
 }
 
-impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithAdd32Chip for BasicMachine<F, EF> {
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithAdd32Chip
+    for BasicMachine<F, EF>
+{
     fn add_u32(&self) -> &Add32Chip {
         &self.add_u32
     }
@@ -177,7 +194,9 @@ impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithAdd32Chip for BasicMachi
     }
 }
 
-impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithSub32Chip for BasicMachine<F, EF> {
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithSub32Chip
+    for BasicMachine<F, EF>
+{
     fn sub_u32(&self) -> &Sub32Chip {
         &self.sub_u32
     }
@@ -187,7 +206,9 @@ impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithSub32Chip for BasicMachi
     }
 }
 
-impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithMul32Chip for BasicMachine<F, EF> {
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithMul32Chip
+    for BasicMachine<F, EF>
+{
     fn mul_u32(&self) -> &Mul32Chip {
         &self.mul_u32
     }
@@ -197,7 +218,9 @@ impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithMul32Chip for BasicMachi
     }
 }
 
-impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithDiv32Chip for BasicMachine<F, EF> {
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithDiv32Chip
+    for BasicMachine<F, EF>
+{
     fn div_u32(&self) -> &Div32Chip {
         &self.div_u32
     }
@@ -207,7 +230,9 @@ impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithDiv32Chip for BasicMachi
     }
 }
 
-impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithBitwise32Chip for BasicMachine<F, EF> {
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithBitwise32Chip
+    for BasicMachine<F, EF>
+{
     fn bitwise_u32(&self) -> &Bitwise32Chip {
         &self.bitwise_u32
     }
@@ -217,7 +242,9 @@ impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithBitwise32Chip for BasicM
     }
 }
 
-impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithLt32Chip for BasicMachine<F, EF> {
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithLt32Chip
+    for BasicMachine<F, EF>
+{
     fn lt_u32(&self) -> &Lt32Chip {
         &self.lt_u32
     }
@@ -227,7 +254,9 @@ impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithLt32Chip for BasicMachin
     }
 }
 
-impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithShift32Chip for BasicMachine<F, EF> {
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithShift32Chip
+    for BasicMachine<F, EF>
+{
     fn shift_u32(&self) -> &Shift32Chip {
         &self.shift_u32
     }
@@ -237,7 +266,9 @@ impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithShift32Chip for BasicMac
     }
 }
 
-impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithOutputChip for BasicMachine<F, EF> {
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithOutputChip
+    for BasicMachine<F, EF>
+{
     fn output(&self) -> &OutputChip {
         &self.output
     }
@@ -247,7 +278,9 @@ impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithOutputChip for BasicMach
     }
 }
 
-impl<F: PrimeField64, EF: ExtensionField<F>> MachineWithRangeChip<256> for BasicMachine<F, EF> {
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithRangeChip<256>
+    for BasicMachine<F, EF>
+{
     fn range(&self) -> &RangeCheckerChip<256> {
         &self.range
     }

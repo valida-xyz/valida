@@ -185,12 +185,13 @@ fn run_method(machine: &syn::DeriveInput, instructions: &[&Field]) -> TokenStrea
 }
 
 fn prove_method(chips: &[&Field]) -> TokenStream2 {
-    let push_chips = chips
+    let num_chips = chips.len();
+    let chip_list = chips
         .iter()
         .map(|chip| {
             let chip_name = chip.ident.as_ref().unwrap();
             quote! {
-                chips.push(alloc::boxed::Box::new(self.#chip_name()));
+                alloc::boxed::Box::new(self.#chip_name()),
             }
         })
         .collect::<TokenStream2>();
@@ -222,35 +223,39 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             SC: ::valida_machine::config::StarkConfig<Val = Self::F, Challenge = Self::EF>,
         {
             use ::valida_machine::__internal::*;
-            use ::valida_machine::__internal::p3_challenger::FieldChallenger;
-            use ::valida_machine::__internal::p3_commit::{Pcs, MultivariatePcs};
+            use ::valida_machine::__internal::p3_challenger::{CanObserve, FieldChallenger};
+            use ::valida_machine::__internal::p3_commit::{Pcs, UnivariatePcs};
             use ::valida_machine::__internal::p3_matrix::{Matrix, dense::RowMajorMatrix};
+            use ::valida_machine::__internal::p3_util::log2_strict_usize;
             use ::valida_machine::chip::generate_permutation_trace;
             use ::valida_machine::proof::MachineProof;
             use alloc::vec;
             use alloc::vec::Vec;
             use alloc::boxed::Box;
 
-            let mut chips: Vec<Box<&dyn Chip<Self>>> = Vec::new();
-            #push_chips
+            let mut chips: [Box<&dyn Chip<Self>>; #num_chips] = [ #chip_list ];
 
             let mut challenger = config.challenger();
 
-            let main_traces = tracing::info_span!("generate main traces")
+            let main_traces: [RowMajorMatrix<SC::Val>; #num_chips] = tracing::info_span!("generate main traces")
                 .in_scope(||
                     chips.par_iter().map(|chip| {
                         chip.generate_trace(self)
-                    }).collect::<Vec<_>>()
+                    }).collect::<Vec<_>>().try_into().unwrap()
                 );
 
-            // TODO: Want to avoid cloning, but this leads to lifetime issues...
-            // let main_trace_views = main_traces.iter().map(|trace| trace.as_view()).collect();
+            let degrees: [usize; #num_chips] = main_traces.iter()
+                .map(|trace| trace.height())
+                .collect::<Vec<_>>()
+                .try_into().unwrap();
+            let log_degrees = degrees.map(|d| log2_strict_usize(d));
+            let g_subgroups = log_degrees.map(|log_deg| SC::Val::two_adic_generator(log_deg));
 
             let (main_commit, main_data) = tracing::info_span!("commit to main traces")
                 .in_scope(||
-                    config.pcs().commit_batches(main_traces.clone())
+                    config.pcs().commit_batches(main_traces.to_vec())
                 );
-            // TODO: Have challenger observe main_commit.
+            challenger.observe(main_commit.clone());
 
             let mut perm_challenges = Vec::new();
             for _ in 0..3 {
@@ -264,9 +269,6 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     }).collect::<Vec<_>>()
                 );
 
-            // TODO: Want to avoid cloning, but this leads to lifetime issues...
-            // let perm_trace_views = perm_traces.iter().map(|trace| trace.as_view()).collect();
-
             let (perm_commit, perm_data) = tracing::info_span!("commit to permutation traces")
                 .in_scope(|| {
                     let flattened_perm_traces = perm_traces.iter().map(|trace| {
@@ -274,11 +276,20 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     }).collect::<Vec<_>>();
                     config.pcs().commit_batches(flattened_perm_traces)
                 });
-            // TODO: Have challenger observe perm_commit.
+            challenger.observe(perm_commit.clone());
 
-            //let opening_points = &[vec![Self::EF::two()], vec![Self::EF::two()]]; // TODO
-            //let (openings, opening_proof) = config.pcs().open_multi_batches::<Self::EF, SC::Chal>(
-            //    &[&main_data, &perm_data], opening_points, &mut challenger);
+            let zeta: SC::Challenge = challenger.sample_ext_element();
+            // TODO: Should be g_subgroups[i] for the i'th trace, but open_multi_batches doesn't
+            // currently support separate opening points for each matrix. Need to revise that API.
+            let zeta_and_next = [zeta, zeta * g_subgroups[0]];
+            let prover_data_and_points = [
+                (&main_data, zeta_and_next.as_slice()),
+                (&perm_data, zeta_and_next.as_slice()),
+                // TODO: Enable when we have quotient computation
+                // (&quotient_data, &[zeta.exp_power_of_2(log_quotient_degree)]),
+            ];
+            let (openings, opening_proof) = config.pcs().open_multi_batches(
+               &prover_data_and_points, &mut challenger);
 
             let mut chip_proofs = vec![];
             #prove_starks
