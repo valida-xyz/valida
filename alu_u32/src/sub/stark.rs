@@ -2,11 +2,16 @@ use super::columns::Sub32Cols;
 use super::Sub32Chip;
 use core::borrow::Borrow;
 
+use crate::sub::columns::NUM_SUB_COLS;
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRowSlices;
 
-impl<F> BaseAir<F> for Sub32Chip {}
+impl<F> BaseAir<F> for Sub32Chip {
+    fn width(&self) -> usize {
+        NUM_SUB_COLS
+    }
+}
 
 impl<F, AB> Air<AB> for Sub32Chip
 where

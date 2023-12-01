@@ -4,7 +4,7 @@ extern crate alloc;
 
 use alloc::vec;
 use alloc::vec::Vec;
-use columns::{NativeFieldCols, COL_MAP, NUM_COLS};
+use columns::{NativeFieldCols, COL_MAP, NUM_NATIVE_FIELD_COLS};
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
@@ -44,10 +44,12 @@ where
             .map(|op| self.op_to_row(op))
             .collect::<Vec<_>>();
 
-        let mut trace =
-            RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_COLS);
+        let mut trace = RowMajorMatrix::new(
+            rows.into_iter().flatten().collect::<Vec<_>>(),
+            NUM_NATIVE_FIELD_COLS,
+        );
 
-        pad_to_power_of_two::<NUM_COLS, M::F>(&mut trace.values);
+        pad_to_power_of_two::<NUM_NATIVE_FIELD_COLS, M::F>(&mut trace.values);
 
         trace
     }
@@ -103,11 +105,11 @@ where
 }
 
 impl NativeFieldChip {
-    fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_COLS]
+    fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_NATIVE_FIELD_COLS]
     where
         F: Field,
     {
-        let mut row = [F::zero(); NUM_COLS];
+        let mut row = [F::zero(); NUM_NATIVE_FIELD_COLS];
         let cols: &mut NativeFieldCols<F> = unsafe { transmute(&mut row) };
 
         match op {

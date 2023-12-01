@@ -2,7 +2,7 @@
 
 extern crate alloc;
 
-use crate::columns::{COL_MAP, NUM_COLS, PREPROCESSED_COL_MAP};
+use crate::columns::{COL_MAP, NUM_PROGRAM_COLS, PREPROCESSED_COL_MAP};
 use alloc::vec;
 use alloc::vec::Vec;
 use valida_bus::MachineWithProgramBus;
@@ -41,9 +41,9 @@ where
             .map(|c| F::from_canonical_u32(*c))
             .collect();
 
-        pad_to_power_of_two::<NUM_COLS, F>(&mut values);
+        pad_to_power_of_two::<NUM_PROGRAM_COLS, F>(&mut values);
 
-        RowMajorMatrix::new(values, NUM_COLS)
+        RowMajorMatrix::new(values, NUM_PROGRAM_COLS)
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<F>> {

@@ -1,4 +1,4 @@
-use crate::columns::MemoryCols;
+use crate::columns::{MemoryCols, NUM_MEM_COLS};
 use crate::MemoryChip;
 use core::borrow::Borrow;
 
@@ -6,7 +6,11 @@ use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::AbstractField;
 use p3_matrix::MatrixRowSlices;
 
-impl<F> BaseAir<F> for MemoryChip {}
+impl<F> BaseAir<F> for MemoryChip {
+    fn width(&self) -> usize {
+        NUM_MEM_COLS
+    }
+}
 
 impl<AB> Air<AB> for MemoryChip
 where

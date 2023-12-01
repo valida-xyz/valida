@@ -4,7 +4,7 @@ use crate::div::{MachineWithDiv32Chip, Operation as DivOperation};
 use crate::mul::{MachineWithMul32Chip, Operation as MulOperation};
 use alloc::vec;
 use alloc::vec::Vec;
-use columns::{Shift32Cols, COL_MAP, NUM_COLS};
+use columns::{Shift32Cols, COL_MAP, NUM_SHIFT_COLS};
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
@@ -43,10 +43,12 @@ where
             .map(|op| self.op_to_row(op))
             .collect::<Vec<_>>();
 
-        let mut trace =
-            RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_COLS);
+        let mut trace = RowMajorMatrix::new(
+            rows.into_iter().flatten().collect::<Vec<_>>(),
+            NUM_SHIFT_COLS,
+        );
 
-        pad_to_power_of_two::<NUM_COLS, F>(&mut trace.values);
+        pad_to_power_of_two::<NUM_SHIFT_COLS, F>(&mut trace.values);
 
         trace
     }
@@ -108,11 +110,11 @@ where
 }
 
 impl Shift32Chip {
-    fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_COLS]
+    fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_SHIFT_COLS]
     where
         F: PrimeField,
     {
-        let mut row = [F::zero(); NUM_COLS];
+        let mut row = [F::zero(); NUM_SHIFT_COLS];
         let cols: &mut Shift32Cols<F> = unsafe { transmute(&mut row) };
 
         match op {

@@ -2,11 +2,16 @@ use super::columns::Shift32Cols;
 use super::Shift32Chip;
 use core::borrow::Borrow;
 
+use crate::shift::columns::NUM_SHIFT_COLS;
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::AbstractField;
 use p3_matrix::MatrixRowSlices;
 
-impl<F> BaseAir<F> for Shift32Chip {}
+impl<F> BaseAir<F> for Shift32Chip {
+    fn width(&self) -> usize {
+        NUM_SHIFT_COLS
+    }
+}
 
 impl<F, AB> Air<AB> for Shift32Chip
 where
