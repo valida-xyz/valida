@@ -23,10 +23,10 @@ pub struct Shift32Cols<T> {
     pub is_shr: T,
 }
 
-pub const NUM_COLS: usize = size_of::<Shift32Cols<u8>>();
+pub const NUM_SHIFT_COLS: usize = size_of::<Shift32Cols<u8>>();
 pub const COL_MAP: Shift32Cols<usize> = make_col_map();
 
 const fn make_col_map() -> Shift32Cols<usize> {
-    let indices_arr = indices_arr::<NUM_COLS>();
-    unsafe { transmute::<[usize; NUM_COLS], Shift32Cols<usize>>(indices_arr) }
+    let indices_arr = indices_arr::<NUM_SHIFT_COLS>();
+    unsafe { transmute::<[usize; NUM_SHIFT_COLS], Shift32Cols<usize>>(indices_arr) }
 }

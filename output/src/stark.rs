@@ -1,4 +1,4 @@
-use crate::columns::OutputCols;
+use crate::columns::{OutputCols, NUM_OUTPUT_COLS};
 use crate::OutputChip;
 use core::borrow::Borrow;
 use valida_opcodes::WRITE;
@@ -7,7 +7,11 @@ use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::PrimeField;
 use p3_matrix::MatrixRowSlices;
 
-impl<F> BaseAir<F> for OutputChip {}
+impl<F> BaseAir<F> for OutputChip {
+    fn width(&self) -> usize {
+        NUM_OUTPUT_COLS
+    }
+}
 
 impl<F, AB> Air<AB> for OutputChip
 where

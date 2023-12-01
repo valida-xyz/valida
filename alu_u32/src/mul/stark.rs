@@ -4,11 +4,16 @@ use core::borrow::Borrow;
 use itertools::iproduct;
 use valida_machine::Word;
 
+use crate::mul::columns::NUM_MUL_COLS;
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRowSlices;
 
-impl<F> BaseAir<F> for Mul32Chip {}
+impl<F> BaseAir<F> for Mul32Chip {
+    fn width(&self) -> usize {
+        NUM_MUL_COLS
+    }
+}
 
 impl<F, AB> Air<AB> for Mul32Chip
 where
