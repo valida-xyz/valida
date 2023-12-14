@@ -7,13 +7,19 @@ use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::PrimeField;
 use p3_matrix::MatrixRowSlices;
 
-impl<F> BaseAir<F> for OutputChip {}
+impl<F> BaseAir<F> for OutputChip {
+    fn width(&self)->usize{
+	//TODO
+	0
+    }        
+}
 
 impl<F, AB> Air<AB> for OutputChip
 where
     F: PrimeField,
     AB: AirBuilder<F = F>,
 {
+
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
         let local: &OutputCols<AB::Var> = main.row_slice(0).borrow();

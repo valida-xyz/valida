@@ -6,13 +6,20 @@ use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::AbstractField;
 use p3_matrix::MatrixRowSlices;
 
-impl<F> BaseAir<F> for Lt32Chip {}
+impl<F> BaseAir<F> for Lt32Chip {
+
+    fn width(&self)->usize{
+	//TODO
+	0
+    }        
+}
 
 impl<F, AB> Air<AB> for Lt32Chip
 where
     F: AbstractField,
     AB: AirBuilder<F = F>,
 {
+
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
         let local: &Lt32Cols<AB::Var> = main.row_slice(0).borrow();

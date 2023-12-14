@@ -6,13 +6,20 @@ use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRowSlices;
 
-impl<F> BaseAir<F> for NativeFieldChip {}
+impl<F> BaseAir<F> for NativeFieldChip {
+    fn width(&self)->usize{
+	//TODO
+	0
+    }    
+}
 
 impl<F, AB> Air<AB> for NativeFieldChip
 where
     F: PrimeField,
     AB: AirBuilder<F = F>,
 {
+
+    
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
         let local: &NativeFieldCols<AB::Var> = main.row_slice(0).borrow();

@@ -19,7 +19,6 @@ pub trait StarkConfig {
     /// The PCS used to commit to trace polynomials.
     type Pcs: UnivariatePcsWithLde<
         Self::Val,
-        Self::Domain,
         Self::Challenge,
         RowMajorMatrix<Self::Val>,
         Self::Challenger,
@@ -59,7 +58,7 @@ where
     Domain: ExtensionField<Val> + TwoAdicField,
     Challenge: ExtensionField<Val> + ExtensionField<Domain> + TwoAdicField,
     PackedChallenge: AbstractExtensionField<Domain::Packing, F = Challenge>,
-    Pcs: UnivariatePcsWithLde<Val, Domain, Challenge, RowMajorMatrix<Val>, Challenger>,
+    Pcs: UnivariatePcsWithLde<Val, Challenge, RowMajorMatrix<Val>, Challenger>,
     Challenger: FieldChallenger<Val>
         + Clone
         + CanObserve<<Pcs as p3_commit::Pcs<Val, RowMajorMatrix<Val>>>::Commitment>,

@@ -6,18 +6,28 @@ use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::AbstractField;
 use p3_matrix::MatrixRowSlices;
 
-impl<F> BaseAir<F> for MemoryChip {}
+impl<F> BaseAir<F> for MemoryChip {
+
+    fn width(&self)->usize{
+	//TODO
+	0
+    }    
+
+}
 
 impl<AB> Air<AB> for MemoryChip
 where
     AB: AirBuilder,
 {
+
     fn eval(&self, builder: &mut AB) {
         self.eval_main(builder);
     }
 }
 
 impl MemoryChip {
+
+        
     fn eval_main<AB: AirBuilder>(&self, builder: &mut AB) {
         let main = builder.main();
         let local: &MemoryCols<AB::Var> = main.row_slice(0).borrow();

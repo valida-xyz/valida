@@ -7,7 +7,14 @@ use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRowSlices;
 
-impl<F> BaseAir<F> for CpuChip {}
+impl<F> BaseAir<F> for CpuChip {
+
+    fn width(&self)->usize{
+	//TODO
+	0
+    }    
+
+}
 
 impl<F, AB> Air<AB> for CpuChip
 where
