@@ -1,4 +1,4 @@
-use super::columns::Add32Cols;
+use super::columns::{Add32Cols,NUM_ADD_COLS};
 use super::Add32Chip;
 use core::borrow::Borrow;
 

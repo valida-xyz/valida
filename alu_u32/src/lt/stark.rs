@@ -1,7 +1,6 @@
-use super::columns::Lt32Cols;
+use super::columns::{Lt32Cols,NUM_LT_COLS};
 use super::Lt32Chip;
 use core::borrow::Borrow;
-
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::AbstractField;
 use p3_matrix::MatrixRowSlices;
@@ -9,8 +8,7 @@ use p3_matrix::MatrixRowSlices;
 impl<F> BaseAir<F> for Lt32Chip {
 
     fn width(&self)->usize{
-	//TODO
-	0
+	NUM_LT_COLS
     }        
 }
 

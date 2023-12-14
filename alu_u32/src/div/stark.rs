@@ -1,13 +1,12 @@
 use super::Div32Chip;
-
+use super::columns::NUM_DIV_COLS;
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::PrimeField;
 
 impl<F> BaseAir<F> for Div32Chip {
 
     fn width(&self)->usize{
-	//TODO
-	0
+	NUM_DIV_COLS
     }        
 }
 

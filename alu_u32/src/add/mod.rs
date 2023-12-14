@@ -118,6 +118,10 @@ impl Add32Chip {
         }
         row
     }
+
+
+
+	
 }
 
 pub trait MachineWithAdd32Chip: MachineWithCpuChip {

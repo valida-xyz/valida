@@ -2,7 +2,7 @@ use crate::columns::CpuCols;
 use crate::CpuChip;
 use core::borrow::Borrow;
 use valida_machine::Word;
-
+use crate::NUM_CPU_COLS;
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRowSlices;

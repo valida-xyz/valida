@@ -1,8 +1,7 @@
-use super::columns::Bitwise32Cols;
+use super::columns::{Bitwise32Cols,NUM_COLS};
 use super::Bitwise32Chip;
 use core::borrow::Borrow;
 use valida_machine::MEMORY_CELL_BYTES;
-
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::AbstractField;
 use p3_matrix::MatrixRowSlices;
@@ -10,8 +9,7 @@ use p3_matrix::MatrixRowSlices;
 impl<F> BaseAir<F> for Bitwise32Chip {
 
     fn width(&self)->usize{
-	//TODO
-	0
+	NUM_COLS
     }        
 }
 

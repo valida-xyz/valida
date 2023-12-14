@@ -1,7 +1,7 @@
 use crate::columns::MemoryCols;
 use crate::MemoryChip;
 use core::borrow::Borrow;
-
+use crate::NUM_MEM_COLS;
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::AbstractField;
 use p3_matrix::MatrixRowSlices;

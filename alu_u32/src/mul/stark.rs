@@ -1,9 +1,8 @@
-use super::columns::Mul32Cols;
+use super::columns::{Mul32Cols,NUM_MUL_COLS};
 use super::Mul32Chip;
 use core::borrow::Borrow;
 use itertools::iproduct;
 use valida_machine::Word;
-
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRowSlices;
@@ -11,8 +10,7 @@ use p3_matrix::MatrixRowSlices;
 impl<F> BaseAir<F> for Mul32Chip {
 
     fn width(&self)->usize{
-	//TODO
-	0
+	NUM_MUL_COLS
     }        
 
 }

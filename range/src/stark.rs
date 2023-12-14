@@ -1,5 +1,5 @@
 use crate::RangeCheckerChip;
-
+use crate::NUM_RANGE_COLS;
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::Field;
 use p3_matrix::dense::RowMajorMatrix;

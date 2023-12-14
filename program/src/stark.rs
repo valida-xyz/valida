@@ -2,7 +2,7 @@ use crate::columns::NUM_PREPROCESSED_COLS;
 use crate::ProgramChip;
 use alloc::vec;
 use valida_machine::InstructionWord;
-
+use crate::NUM_COLS;
 use p3_air::{Air, BaseAir, PairBuilder};
 use p3_field::PrimeField64;
 use p3_matrix::dense::RowMajorMatrix;

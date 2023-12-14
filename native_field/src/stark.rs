@@ -1,15 +1,14 @@
 use super::columns::NativeFieldCols;
 use super::NativeFieldChip;
 use core::borrow::Borrow;
-
+use crate::NUM_COLS;
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRowSlices;
 
 impl<F> BaseAir<F> for NativeFieldChip {
     fn width(&self)->usize{
-	//TODO
-	0
+	NUM_COLS
     }    
 }
 

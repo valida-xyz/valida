@@ -1,7 +1,6 @@
-use super::columns::Shift32Cols;
+use super::columns::{Shift32Cols,NUM_COLS};
 use super::Shift32Chip;
 use core::borrow::Borrow;
-
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::AbstractField;
 use p3_matrix::MatrixRowSlices;
@@ -9,8 +8,7 @@ use p3_matrix::MatrixRowSlices;
 impl<F> BaseAir<F> for Shift32Chip {
 
     fn width(&self)->usize{
-	//TODO
-	0
+	NUM_COLS
     }        
 }
 
