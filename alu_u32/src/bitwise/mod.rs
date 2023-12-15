@@ -2,7 +2,7 @@ extern crate alloc;
 
 use alloc::vec;
 use alloc::vec::Vec;
-use columns::{Bitwise32Cols, COL_MAP, NUM_COLS};
+use columns::{Bitwise32Cols, COL_MAP, NUM_BITWISE_COLS};
 use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
@@ -42,10 +42,12 @@ where
             .map(|op| self.op_to_row(op))
             .collect::<Vec<_>>();
 
-        let mut trace =
-            RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_COLS);
+        let mut trace = RowMajorMatrix::new(
+            rows.into_iter().flatten().collect::<Vec<_>>(),
+            NUM_BITWISE_COLS,
+        );
 
-        pad_to_power_of_two::<NUM_COLS, F>(&mut trace.values);
+        pad_to_power_of_two::<NUM_BITWISE_COLS, F>(&mut trace.values);
 
         trace
     }
@@ -80,11 +82,11 @@ where
 }
 
 impl Bitwise32Chip {
-    fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_COLS]
+    fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_BITWISE_COLS]
     where
         F: PrimeField,
     {
-        let mut row = [F::zero(); NUM_COLS];
+        let mut row = [F::zero(); NUM_BITWISE_COLS];
         let cols: &mut Bitwise32Cols<F> = unsafe { transmute(&mut row) };
 
         match op {

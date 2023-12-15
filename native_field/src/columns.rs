@@ -17,10 +17,10 @@ pub struct NativeFieldCols<T> {
     pub is_mul: T,
 }
 
-pub const NUM_COLS: usize = size_of::<NativeFieldCols<u8>>();
+pub const NUM_NATIVE_FIELD_COLS: usize = size_of::<NativeFieldCols<u8>>();
 pub const COL_MAP: NativeFieldCols<usize> = make_col_map();
 
 const fn make_col_map() -> NativeFieldCols<usize> {
-    let indices_arr = indices_arr::<NUM_COLS>();
-    unsafe { transmute::<[usize; NUM_COLS], NativeFieldCols<usize>>(indices_arr) }
+    let indices_arr = indices_arr::<NUM_NATIVE_FIELD_COLS>();
+    unsafe { transmute::<[usize; NUM_NATIVE_FIELD_COLS], NativeFieldCols<usize>>(indices_arr) }
 }

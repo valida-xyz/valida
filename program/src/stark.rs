@@ -1,4 +1,4 @@
-use crate::columns::NUM_PREPROCESSED_COLS;
+use crate::columns::{NUM_PREPROCESSED_COLS, NUM_PROGRAM_COLS};
 use crate::ProgramChip;
 use alloc::vec;
 use valida_machine::InstructionWord;
@@ -16,6 +16,10 @@ where
 }
 
 impl<F: PrimeField64> BaseAir<F> for ProgramChip {
+    fn width(&self) -> usize {
+        NUM_PROGRAM_COLS
+    }
+
     fn preprocessed_trace(&self) -> Option<RowMajorMatrix<F>> {
         // Pad the ROM to a power of two.
         let mut rom = self.program_rom.0.clone();

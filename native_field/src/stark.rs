@@ -2,11 +2,16 @@ use super::columns::NativeFieldCols;
 use super::NativeFieldChip;
 use core::borrow::Borrow;
 
+use crate::columns::NUM_NATIVE_FIELD_COLS;
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRowSlices;
 
-impl<F> BaseAir<F> for NativeFieldChip {}
+impl<F> BaseAir<F> for NativeFieldChip {
+    fn width(&self) -> usize {
+        NUM_NATIVE_FIELD_COLS
+    }
+}
 
 impl<F, AB> Air<AB> for NativeFieldChip
 where

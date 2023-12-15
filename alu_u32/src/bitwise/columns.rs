@@ -23,10 +23,10 @@ pub struct Bitwise32Cols<T> {
     pub is_xor: T,
 }
 
-pub const NUM_COLS: usize = size_of::<Bitwise32Cols<u8>>();
+pub const NUM_BITWISE_COLS: usize = size_of::<Bitwise32Cols<u8>>();
 pub const COL_MAP: Bitwise32Cols<usize> = make_col_map();
 
 const fn make_col_map() -> Bitwise32Cols<usize> {
-    let indices_arr = indices_arr::<NUM_COLS>();
-    unsafe { transmute::<[usize; NUM_COLS], Bitwise32Cols<usize>>(indices_arr) }
+    let indices_arr = indices_arr::<NUM_BITWISE_COLS>();
+    unsafe { transmute::<[usize; NUM_BITWISE_COLS], Bitwise32Cols<usize>>(indices_arr) }
 }
