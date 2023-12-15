@@ -15,8 +15,7 @@ use valida_machine::{
 };
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 use valida_opcodes::{
-    BEQ, BNE, IMM32, JAL, JALV, LOAD32, READ_ADVICE, STOP, STORE32, WRITE_ADVICE,
-};
+    BEQ, BNE, IMM32, JAL, JALV, LOAD32, READ_ADVICE, STOP, STORE32};
 use valida_util::batch_multiplicative_inverse;
 
 use p3_air::VirtualPairCol;
@@ -39,7 +38,6 @@ pub enum Operation {
     Bus(Option<Word<u8>> /*imm*/),
     BusWithMemory(Option<Word<u8>> /*imm*/),
     ReadAdvice,
-    WriteAdvice,
     Stop,
 }
 
@@ -233,7 +231,7 @@ impl CpuChip {
                 cols.opcode_flags.is_bus_op_with_mem = F::one();
                 self.set_imm_value(cols, *imm);
             }
-            Operation::ReadAdvice | Operation::WriteAdvice => {
+            Operation::ReadAdvice => {
                 cols.opcode_flags.is_advice = F::one();
             }
             Operation::Stop => {
@@ -380,7 +378,6 @@ instructions!(
     BneInstruction,
     Imm32Instruction,
     ReadAdviceInstruction,
-    WriteAdviceInstruction,
     StopInstruction
 );
 
@@ -414,43 +411,6 @@ where
         state
             .cpu_mut()
             .push_op(Operation::ReadAdvice, <Self as Instruction<M>>::OPCODE, ops);
-    }
-}
-
-impl<M> Instruction<M> for WriteAdviceInstruction
-where
-    M: MachineWithCpuChip,
-{
-    const OPCODE: u32 = WRITE_ADVICE;
-
-    fn execute(state: &mut M, ops: Operands<i32>) {
-        // Advice tape location
-        let addr = ops.a();
-
-        // Memory location
-        let mem_addr = ops.b() as u32;
-        let mem_buf_len = ops.c() as u32;
-
-        // Write a memory segment to the advice tape
-        let fp = state.cpu().fp as u32;
-        let segment = ((fp + mem_addr)..(fp + mem_addr) + mem_buf_len)
-            .map(|n| {
-                state
-                    .mem()
-                    .cells
-                    .get(&(n as u32))
-                    .unwrap_or(&Word::default())
-                    .clone()
-            })
-            .collect::<Vec<_>>();
-        state.cpu_mut().advice_tape.write(addr as u32, &segment);
-
-        state.cpu_mut().pc += 1;
-        state.cpu_mut().push_op(
-            Operation::WriteAdvice,
-            <Self as Instruction<M>>::OPCODE,
-            ops,
-        );
     }
 }
 

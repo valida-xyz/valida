@@ -68,7 +68,6 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
 
                     // Nondeterministic input
                     "advread" => READ_ADVICE,
-                    "advwrite" => WRITE_ADVICE,
 
                     // U32 ALU
                     "add" | "addi" => ADD32,
