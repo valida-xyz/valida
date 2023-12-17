@@ -17,7 +17,7 @@ where
 {
     let trace = air.generate_trace(&machine);
     let proof = stark_prove(config,air,challenger,trace);
-    // TODO: Sumcheck
+
     ChipProof{
 	proof
     }
