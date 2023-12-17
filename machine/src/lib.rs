@@ -10,7 +10,7 @@ use byteorder::{ByteOrder, LittleEndian};
 pub use crate::core::Word;
 pub use chip::{BusArgument, Chip, Interaction, InteractionType, ValidaAirBuilder};
 
-use crate::config::StarkConfig;
+use p3_uni_stark::{StarkConfig};
 use crate::proof::MachineProof;
 pub use p3_field::{
     AbstractExtensionField, AbstractField, ExtensionField, Field, PrimeField, PrimeField64,

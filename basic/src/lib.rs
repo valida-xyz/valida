@@ -27,8 +27,9 @@ use valida_cpu::{
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
+use p3_uni_stark::StarkConfig;
 use valida_machine::{
-    config::StarkConfig, proof::MachineProof, AbstractExtensionField, AbstractField, BusArgument,
+    proof::MachineProof, AbstractExtensionField, AbstractField, BusArgument,
     Chip, ExtensionField, Instruction, Machine, PrimeField64, ProgramROM, ValidaAirBuilder,
 };
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
@@ -373,6 +374,8 @@ impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> Machine for BasicMac
     where
         SC: StarkConfig<Val = Self::F, Challenge = Self::EF>,
     {
+
+	
         MachineProof {
             chip_proofs: Vec::new(),
             phantom: PhantomData::default(),

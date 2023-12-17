@@ -5,7 +5,7 @@ use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
     MachineWithCpuChip, StopInstruction,
 };
-use valida_machine::config::StarkConfigImpl;
+use p3_uni_stark::{StarkConfigImpl};
 use valida_machine::{Instruction, InstructionWord, Machine, Operands, ProgramROM, Word};
 use valida_memory::MachineWithMemoryChip;
 use valida_program::MachineWithProgramChip;
@@ -222,9 +222,10 @@ fn prove_fibonacci() {
     type MyConfig = StarkConfigImpl<Val, Challenge, PackedChallenge, Pcs, Challenger>;
 
     let pcs = Pcs::new(dft, val_mmcs, ldt);
-    let challenger = DuplexChallenger::new(perm16);
-    let config = MyConfig::new(pcs, challenger);
-    machine.prove(&config);
+
+    let config = MyConfig::new(pcs);
+    let out = machine.prove(&config);
+
 
     assert_eq!(machine.cpu().clock, 192);
     assert_eq!(machine.cpu().operations.len(), 192);
