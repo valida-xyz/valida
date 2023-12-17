@@ -2,8 +2,10 @@
 #![allow(unused)]
 
 extern crate alloc;
-
-use p3_field::TwoAdicField;
+use alloc::vec::Vec;
+use core::marker::PhantomData;
+use p3_field::{extension::BinomialExtensionField, TwoAdicField};
+use p3_goldilocks::Goldilocks;
 use valida_alu_u32::{
     add::{Add32Chip, Add32Instruction, MachineWithAdd32Chip},
     bitwise::{
@@ -26,8 +28,8 @@ use valida_cpu::{
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
 use valida_machine::{
-    AbstractExtensionField, AbstractField, BusArgument, Chip, ExtensionField, Instruction, Machine,
-    PrimeField64, ProgramROM, ValidaAirBuilder,
+    config::StarkConfig, proof::MachineProof, AbstractExtensionField, AbstractField, BusArgument,
+    Chip, ExtensionField, Instruction, Machine, PrimeField64, ProgramROM, ValidaAirBuilder,
 };
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_output::{MachineWithOutputChip, OutputChip, WriteInstruction};
@@ -36,78 +38,73 @@ use valida_range::{MachineWithRangeChip, RangeCheckerChip};
 
 use p3_maybe_rayon::*;
 
-#[derive(Machine, Default)]
-#[machine_fields(F, EF)]
+#[derive(Default)]
 pub struct BasicMachine<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> {
     // Core instructions
-    #[instruction]
     load32: Load32Instruction,
-    #[instruction]
+
     store32: Store32Instruction,
-    #[instruction]
+
     jal: JalInstruction,
-    #[instruction]
+
     jalv: JalvInstruction,
-    #[instruction]
+
     beq: BeqInstruction,
-    #[instruction]
+
     bne: BneInstruction,
-    #[instruction]
+
     imm32: Imm32Instruction,
-    #[instruction]
+
     stop: StopInstruction,
 
     // ALU instructions
-    #[instruction(add_u32)]
     add32: Add32Instruction,
-    #[instruction(add_u32)]
+
     sub32: Sub32Instruction,
-    #[instruction(mul_u32)]
+
     mul32: Mul32Instruction,
-    #[instruction(div_u32)]
+
     div32: Div32Instruction,
-    #[instruction(shift_u32)]
+
     shl32: Shl32Instruction,
-    #[instruction(shift_u32)]
+
     shr32: Shr32Instruction,
-    #[instruction(lt_u32)]
+
     lt32: Lt32Instruction,
-    #[instruction(bitwise_u32)]
+
     and32: And32Instruction,
-    #[instruction(bitwise_u32)]
+
     or32: Or32Instruction,
-    #[instruction(bitwise_u32)]
+
     xor32: Xor32Instruction,
 
     // Input/output instructions
-    #[instruction]
     read: ReadAdviceInstruction,
-    #[instruction(output)]
+
     write: WriteInstruction,
 
-    #[chip]
     cpu: CpuChip,
-    #[chip]
+
     program: ProgramChip,
-    #[chip]
+
     mem: MemoryChip,
-    #[chip]
+
     add_u32: Add32Chip,
-    #[chip]
+
     sub_u32: Sub32Chip,
-    #[chip]
+
     mul_u32: Mul32Chip,
-    #[chip]
+
     div_u32: Div32Chip,
-    #[chip]
+
     shift_u32: Shift32Chip,
-    #[chip]
+
     lt_u32: Lt32Chip,
-    #[chip]
+
     bitwise_u32: Bitwise32Chip,
-    #[chip]
+
     output: OutputChip,
-    #[chip]
+
     range: RangeCheckerChip<256>,
 
     _phantom_base: core::marker::PhantomData<F>,
@@ -287,5 +284,105 @@ impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithRangeChip
 
     fn range_mut(&mut self) -> &mut RangeCheckerChip<256> {
         &mut self.range
+    }
+}
+
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> Machine for BasicMachine<F, EF> {
+    type F = F;
+    type EF = EF;
+    fn run(&mut self, program: &ProgramROM<i32>) {
+        loop {
+            let pc = self.cpu().pc;
+            let instruction = program.get_instruction(pc);
+            let opcode = instruction.opcode;
+            let ops = instruction.operands;
+            match opcode {
+                <Load32Instruction as Instruction<Self>>::OPCODE => {
+                    Load32Instruction::execute(self, ops);
+                }
+                <JalInstruction as Instruction<Self>>::OPCODE => {
+                    JalInstruction::execute(self, ops);
+                }
+                <JalvInstruction as Instruction<Self>>::OPCODE => {
+                    JalvInstruction::execute(self, ops);
+                }
+                <BeqInstruction as Instruction<Self>>::OPCODE => {
+                    BeqInstruction::execute(self, ops);
+                }
+                <BneInstruction as Instruction<Self>>::OPCODE => {
+                    BneInstruction::execute(self, ops);
+                }
+                <Imm32Instruction as Instruction<Self>>::OPCODE => {
+                    Imm32Instruction::execute(self, ops);
+                }
+                <Add32Instruction as Instruction<Self>>::OPCODE => {
+                    Add32Instruction::execute(self, ops);
+                }
+                <Sub32Instruction as Instruction<Self>>::OPCODE => {
+                    Sub32Instruction::execute(self, ops);
+                }
+                <Mul32Instruction as Instruction<Self>>::OPCODE => {
+                    Mul32Instruction::execute(self, ops);
+                }
+                <Div32Instruction as Instruction<Self>>::OPCODE => {
+                    Div32Instruction::execute(self, ops);
+                }
+                <Shl32Instruction as Instruction<Self>>::OPCODE => {
+                    Shl32Instruction::execute(self, ops);
+                }
+                <Shr32Instruction as Instruction<Self>>::OPCODE => {
+                    Shr32Instruction::execute(self, ops);
+                }
+                <Lt32Instruction as Instruction<Self>>::OPCODE => {
+                    Lt32Instruction::execute(self, ops);
+                }
+                <And32Instruction as Instruction<Self>>::OPCODE => {
+                    And32Instruction::execute(self, ops);
+                }
+                <Or32Instruction as Instruction<Self>>::OPCODE => {
+                    Or32Instruction::execute(self, ops);
+                }
+                <Xor32Instruction as Instruction<Self>>::OPCODE => {
+                    Xor32Instruction::execute(self, ops);
+                }
+                <ReadAdviceInstruction as Instruction<Self>>::OPCODE => {
+                    ReadAdviceInstruction::execute(self, ops);
+                }
+                <WriteInstruction as Instruction<Self>>::OPCODE => {
+                    WriteInstruction::execute(self, ops);
+                }
+                <StopInstruction as Instruction<Self>>::OPCODE => {
+                    StopInstruction::execute(self, ops);
+                }
+                _ => {}
+            }
+
+            self.read_word(pc as usize);
+
+            if opcode == <StopInstruction as Instruction<Self>>::OPCODE {
+                break;
+            }
+        }
+        let n = self.cpu().clock.next_power_of_two() - self.cpu().clock;
+        for _ in 0..n {
+            self.read_word(self.cpu().pc as usize);
+        }
+    }
+
+    fn prove<SC>(&self, config: &SC) -> MachineProof<SC>
+    where
+        SC: StarkConfig<Val = Self::F, Challenge = Self::EF>,
+    {
+        MachineProof {
+            chip_proofs: Vec::new(),
+            phantom: PhantomData::default(),
+        }
+    }
+
+    fn verify<SC>(proof: &MachineProof<SC>) -> Result<(), ()>
+    where
+        SC: StarkConfig<Val = Self::F, Challenge = Self::EF>,
+    {
+        Ok(())
     }
 }
