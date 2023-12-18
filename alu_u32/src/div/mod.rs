@@ -5,7 +5,8 @@ use columns::NUM_DIV_COLS;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Operands, Word};
-use valida_opcodes::DIV32;
+use valida_machine::core::SDiv;
+use valida_opcodes::{DIV32, SDIV32};
 use valida_range::MachineWithRangeChip;
 
 use p3_field::PrimeField;
@@ -19,6 +20,7 @@ pub mod stark;
 #[derive(Clone)]
 pub enum Operation {
     Div32(Word<u8>, Word<u8>, Word<u8>), // (quotient, dividend, divisor)
+    SDiv32(Word<u8>, Word<u8>, Word<u8>), //signed
 }
 
 #[derive(Default)]
@@ -93,6 +95,46 @@ where
             .div_u32_mut()
             .operations
             .push(Operation::Div32(a, b, c));
+        state
+            .cpu_mut()
+            .push_bus_op(imm, opcode, ops);
+
+        state.range_check(a);
+    }
+}
+
+instructions!(SDiv32Instruction);
+
+impl<M> Instruction<M> for SDiv32Instruction
+where
+    M: MachineWithDiv32Chip + MachineWithRangeChip<256>,
+{
+    const OPCODE: u32 = SDIV32;
+
+    fn execute(state: &mut M, ops: Operands<i32>) {
+        let opcode = <Self as Instruction<M>>::OPCODE;
+        let clk = state.cpu().clock;
+        let pc = state.cpu().pc;
+        let mut imm: Option<Word<u8>> = None;
+        let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
+        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
+        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let c = if ops.is_imm() == 1 {
+            let c = (ops.c() as u32).into();
+            imm = Some(c);
+            c
+        } else {
+            let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
+            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
+        };
+
+        let a = b.sdiv(c);
+        state.mem_mut().write(clk, write_addr, a, true);
+
+        state
+            .div_u32_mut()
+            .operations
+            .push(Operation::SDiv32(a, b, c));
         state
             .cpu_mut()
             .push_bus_op(imm, opcode, ops);

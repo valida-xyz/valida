@@ -89,6 +89,26 @@ impl Div for Word<u8> {
     }
 }
 
+pub trait SDiv<Rhs = Self> {
+    /// The resulting type after applying the `/` operator.
+    type Output;
+
+    fn sdiv(self, rhs: Rhs) -> Self::Output;
+}
+
+impl SDiv for Word<u8> {
+    type Output = Self;
+    fn sdiv(self, other: Self) -> Self {
+        let bu: u32 = self.into();
+        let b = bu as i32;
+        let cu: u32 = other.into();
+        let c = cu as i32;
+        // perform the division in i32 first, then convert it to u32
+        let res = (b / c) as u32;
+        res.into()
+    }
+}
+
 impl Shl for Word<u8> {
     type Output = Self;
     fn shl(self, other: Self) -> Self {
