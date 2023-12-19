@@ -75,6 +75,7 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
                     "sub" | "subi" => SUB32,
                     "mul" | "muli" => MUL32,
                     "div" | "divi" => DIV32,
+                    "sdiv"| "sdivi"=> SDIV32,
                     "lt" | "lti" => LT32,
                     "shl" | "shli" => SHL32,
                     "shr" | "shri" => SHR32,
