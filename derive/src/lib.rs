@@ -146,15 +146,14 @@ fn run_method(machine: &syn::DeriveInput, instructions: &[&Field]) -> TokenStrea
         .map(|inst| {
             let ty = &inst.ty;
             quote! {
-                <#ty as Instruction<#name #ty_generics>>::OPCODE => {
-                    #ty::execute(self, ops);
-                }
+                <#ty as Instruction<#name #ty_generics>>::OPCODE =>
+                    #ty::execute_with_advice::<Adv>(self, ops, advice),
             }
         })
         .collect::<TokenStream2>();
 
     quote! {
-        fn run(&mut self, program: &ProgramROM<i32>) {
+        fn run<Adv: ::valida_machine::AdviceProvider>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv) {
             loop {
                 // Fetch
                 let pc = self.cpu().pc;
@@ -163,6 +162,7 @@ fn run_method(machine: &syn::DeriveInput, instructions: &[&Field]) -> TokenStrea
                 let ops = instruction.operands;
 
                 // Execute
+                println!("Executing instruction: {:?}", instruction);
                 match opcode {
                     #opcode_arms
                     _ => panic!("Unrecognized opcode: {}", opcode),

@@ -5,6 +5,14 @@ use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Index, IndexMut, Mul, Shl, Shr,
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Word<F>(pub [F; MEMORY_CELL_BYTES]);
 
+impl Word<u8> {
+    pub fn from_u8(byte: u8) -> Self {
+        let mut result = [0; MEMORY_CELL_BYTES];
+        result[MEMORY_CELL_BYTES - 1] = byte;
+        Self(result)
+    }
+}
+
 impl<F: Copy> Word<F> {
     pub fn transform<T, G>(self, mut f: G) -> Word<T>
     where

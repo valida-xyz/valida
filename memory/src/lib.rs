@@ -63,7 +63,11 @@ impl MemoryChip {
     }
 
     pub fn read(&mut self, clk: u32, address: u32, log: bool) -> Word<u8> {
-        let value = self.cells.get(&address.into()).copied().unwrap();
+        let value = self
+            .cells
+            .get(&address.into())
+            .copied()
+            .unwrap_or_else(|| panic!("Read from uninitialized address {}", address));
         if log {
             self.operations
                 .entry(clk)

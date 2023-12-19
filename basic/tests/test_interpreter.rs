@@ -1,7 +1,7 @@
 use p3_baby_bear::BabyBear;
 use valida_basic::BasicMachine;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{Machine, ProgramROM, Word};
+use valida_machine::{FixedAdviceProvider, Machine, ProgramROM};
 use valida_output::MachineWithOutputChip;
 use valida_program::MachineWithProgramChip;
 
@@ -16,14 +16,10 @@ fn run_fibonacci() {
 
     let fib_number = 25;
     // Put the desired fib number in the advice tape.
-    machine
-        .cpu_mut()
-        .advice_tape
-        .data
-        .push(Word::from(fib_number));
+    let mut advice = FixedAdviceProvider::new(vec![fib_number]);
 
     // Run the program
-    machine.run(&rom);
+    machine.run(&rom, &mut advice);
     let output = machine.output().bytes();
     assert_eq!(output.len(), 4);
     let actual_result = u32::from_le_bytes(output.try_into().unwrap());
@@ -32,7 +28,7 @@ fn run_fibonacci() {
     assert_eq!(actual_result, expected_result);
 }
 
-fn fibonacci(n: u32) -> u32 {
+fn fibonacci(n: u8) -> u32 {
     let mut a = 0u32;
     let mut b = 1u32;
     for _ in 0..n {
