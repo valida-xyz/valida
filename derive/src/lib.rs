@@ -327,20 +327,20 @@ pub fn aligned_borrow_derive(input: TokenStream) -> TokenStream {
     let methods = quote! {
         impl<T> Borrow<#name<T>> for [T] {
             fn borrow(&self) -> &#name<T> {
-                // TODO: Double check if this is correct & consider making asserts debug-only.
+                debug_assert_eq!(self.len(), size_of::<#name<u8>>());
                 let (prefix, shorts, _suffix) = unsafe { self.align_to::<#name<T>>() };
-                assert!(prefix.is_empty(), "Data was not aligned");
-                assert_eq!(shorts.len(), 1);
+                debug_assert!(prefix.is_empty(), "Alignment should match");
+                debug_assert_eq!(shorts.len(), 1);
                 &shorts[0]
             }
         }
 
         impl<T> BorrowMut<#name<T>> for [T] {
             fn borrow_mut(&mut self) -> &mut #name<T> {
-                // TODO: Double check if this is correct & consider making asserts debug-only.
+                debug_assert_eq!(self.len(), size_of::<#name<u8>>());
                 let (prefix, shorts, _suffix) = unsafe { self.align_to_mut::<#name<T>>() };
-                assert!(prefix.is_empty(), "Data was not aligned");
-                assert_eq!(shorts.len(), 1);
+                debug_assert!(prefix.is_empty(), "Alignment should match");
+                debug_assert_eq!(shorts.len(), 1);
                 &mut shorts[0]
             }
         }
