@@ -279,9 +279,8 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             challenger.observe(perm_commit.clone());
 
             let zeta: SC::Challenge = challenger.sample_ext_element();
-            // TODO: Should be g_subgroups[i] for the i'th trace, but open_multi_batches doesn't
-            // currently support separate opening points for each matrix. Need to revise that API.
-            let zeta_and_next = [zeta, zeta * g_subgroups[0]];
+            let zeta_and_next: [Vec<SC::Challenge>; #num_chips] =
+                core::array::from_fn(|i| vec![zeta, zeta * g_subgroups[i]]);
             let prover_data_and_points = [
                 (&main_data, zeta_and_next.as_slice()),
                 (&perm_data, zeta_and_next.as_slice()),
