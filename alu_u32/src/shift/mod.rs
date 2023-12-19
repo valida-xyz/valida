@@ -9,7 +9,7 @@ use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
-use valida_opcodes::{DIV32, MUL32, SHL32, SHR32};
+use valida_opcodes::{DIV32, SDIV32, MUL32, SHL32, SHR32};
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
