@@ -66,7 +66,7 @@ pub struct BasicMachine<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> {
     mul32: Mul32Instruction,
     #[instruction(div_u32)]
     div32: Div32Instruction,
-    #[instruction(sdiv_u32)]
+    #[instruction(div_u32)]
     sdiv32: SDiv32Instruction,
     #[instruction(shift_u32)]
     shl32: Shl32Instruction,

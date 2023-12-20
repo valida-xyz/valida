@@ -113,7 +113,7 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
                         // (0, 0, 0, 0, 0)
                         operands.extend(vec![0; 5]);
                     }
-                    "addi" | "subi" | "muli" | "divi" | "lti" | "shli" | "shri" | "beqi"
+                    "addi" | "subi" | "muli" | "divi" | "sdivi"| "lti" | "shli" | "shri" | "beqi"
                     | "bnei" | "andi" | "ori" | "xori" => {
                         // (a, b, c, 0, 1)
                         operands.extend(vec![0, 1]);

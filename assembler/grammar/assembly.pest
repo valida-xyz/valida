@@ -5,7 +5,7 @@ instruction = { mnemonic ~ (operand ~ ", "?)+? ~ "\n"? }
 mnemonic = { 
     "lw" | "sw" | "jalv" | "jal" | "beqi" | "beq" | "bnei" | "bne" | "imm32" | "stop" |
     "advread" | "advwrite" | 
-    "addi" | "add" | "subi" | "sub" | "muli" | "mul" | "divi" | "div" | 
+    "addi" | "add" | "subi" | "sub" | "muli" | "mul" | "divi" | "div" | "sdiv" | "sdivi" |
     "lti" | "lt" | "shli" | "shl" | "shri" | "shr" | 
     "andi" | "and" | "ori" | "or" | "xori" | "xor" |
     "feadd" | "fesub" | "femul" |
