@@ -125,7 +125,7 @@ pub trait Machine {
 
     fn run(&mut self, program: &ProgramROM<i32>);
 
-    fn prove<SC>(&self, config: &SC) -> MachineProof<SC>
+    fn prove<SC>(&self, config: &SC, challenger: &mut SC::Challenger) -> MachineProof<SC>
     where
         SC: StarkConfig<Val = Self::F, Challenge = Self::EF>;
 

@@ -1,4 +1,4 @@
-#![no_std]
+//#![no_std]
 #![allow(unused)]
 
 extern crate alloc;
@@ -6,6 +6,8 @@ use alloc::vec::Vec;
 use core::marker::PhantomData;
 use p3_field::{extension::BinomialExtensionField, TwoAdicField};
 use p3_goldilocks::Goldilocks;
+use p3_maybe_rayon::*;
+use p3_uni_stark::StarkConfig;
 use valida_alu_u32::{
     add::{Add32Chip, Add32Instruction, MachineWithAdd32Chip},
     bitwise::{
@@ -27,17 +29,14 @@ use valida_cpu::{
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
-use p3_uni_stark::StarkConfig;
 use valida_machine::{
-    proof::MachineProof, AbstractExtensionField, AbstractField, BusArgument,
-    Chip, ExtensionField, Instruction, Machine, PrimeField64, ProgramROM, ValidaAirBuilder,
+    proof::MachineProof, AbstractExtensionField, AbstractField, BusArgument, Chip, ExtensionField,
+    Instruction, Machine, PrimeField64, ProgramROM, ValidaAirBuilder,
 };
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_output::{MachineWithOutputChip, OutputChip, WriteInstruction};
 use valida_program::{MachineWithProgramChip, ProgramChip};
 use valida_range::{MachineWithRangeChip, RangeCheckerChip};
-
-use p3_maybe_rayon::*;
 
 #[derive(Default)]
 pub struct BasicMachine<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> {
@@ -370,14 +369,40 @@ impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> Machine for BasicMac
         }
     }
 
-    fn prove<SC>(&self, config: &SC) -> MachineProof<SC>
+    fn prove<SC>(&self, config: &SC, challenger: &mut SC::Challenger) -> MachineProof<SC>
     where
         SC: StarkConfig<Val = Self::F, Challenge = Self::EF>,
     {
+        use valida_machine::__internal::prove;
+        let mut chip_proofs = Vec::new();
 
-	
+        if self.cpu.operations.len() > 0 {
+            chip_proofs.push(prove(self, config, &self.cpu, challenger));
+	}
+        if self.add_u32.operations.len() > 0 {
+            chip_proofs.push(prove(self, config, &self.add_u32, challenger));
+        }
+        if self.sub_u32.operations.len() > 0 {
+            chip_proofs.push(prove(self, config, &self.sub_u32, challenger));
+        }
+        if self.mul_u32.operations.len() > 0 {
+            chip_proofs.push(prove(self, config, &self.mul_u32, challenger));
+        }
+        if self.div_u32.operations.len() > 0 {
+            chip_proofs.push(prove(self, config, &self.div_u32, challenger));
+        }
+        if self.shift_u32.operations.len() > 0 {
+            chip_proofs.push(prove(self, config, &self.shift_u32, challenger));
+        }
+        if self.lt_u32.operations.len() > 0 {
+            chip_proofs.push(prove(self, config, &self.lt_u32, challenger));
+        }
+        if self.bitwise_u32.operations.len() > 0 {
+            chip_proofs.push(prove(self, config, &self.bitwise_u32, challenger));
+        }
+
         MachineProof {
-            chip_proofs: Vec::new(),
+            chip_proofs: chip_proofs,
             phantom: PhantomData::default(),
         }
     }

@@ -20,8 +20,7 @@ use p3_ldt::QuotientMmcs;
 use p3_mds::coset_mds::CosetMds;
 use p3_merkle_tree::FieldMerkleTreeMmcs;
 use p3_poseidon::Poseidon;
-use p3_symmetric::CompressionFunctionFromHasher;
-use p3_symmetric::SerializingHasher32;
+use p3_symmetric::{CompressionFunctionFromHasher,CryptographicPermutation, SerializingHasher32};
 use rand::thread_rng;
 use valida_machine::__internal::p3_commit::ExtensionMmcs;
 
@@ -224,7 +223,9 @@ fn prove_fibonacci() {
     let pcs = Pcs::new(dft, val_mmcs, ldt);
 
     let config = MyConfig::new(pcs);
-    let out = machine.prove(&config);
+
+    let mut challenger = Challenger::new(perm16);
+    let out = machine.prove(&config,&mut challenger);
 
 
     assert_eq!(machine.cpu().clock, 192);
