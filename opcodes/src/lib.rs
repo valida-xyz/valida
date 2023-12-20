@@ -24,6 +24,8 @@ pub const SHR32: u32 = 106;
 pub const AND32: u32 = 107;
 pub const OR32: u32 = 108;
 pub const XOR32: u32 = 109;
+pub const NE32: u32 = 111; //TODO
+pub const MULHU32 : u32 = 112; //TODO
 
 /// NATIVE FIELD
 pub const ADD: u32 = 200;
