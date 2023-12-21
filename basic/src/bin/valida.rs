@@ -1,5 +1,5 @@
 use clap::Parser;
-use std::io::{Read, Write};
+use std::io::{stdin, stdout, Read, Write};
 
 use valida_basic::BasicMachine;
 use valida_cpu::MachineWithCpuChip;
@@ -31,7 +31,7 @@ fn main() {
 
     // Read standard input into the advice tape
     let mut input_bytes = Vec::new();
-    std::io::stdin().read_to_end(&mut input_bytes).unwrap();
+    stdin().read_to_end(&mut input_bytes).unwrap();
     let input_words = input_bytes
         .chunks(MEMORY_CELL_BYTES)
         .map(|chunk| {
@@ -51,14 +51,5 @@ fn main() {
     machine.run(&rom);
 
     // Write output chip values to standard output
-    std::io::stdout()
-        .write_all(
-            &machine
-                .output()
-                .values
-                .iter()
-                .map(|(_, b)| *b)
-                .collect::<Vec<_>>(),
-        )
-        .unwrap();
+    stdout().write_all(&machine.output().bytes()).unwrap();
 }

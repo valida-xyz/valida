@@ -24,12 +24,7 @@ fn run_fibonacci() {
 
     // Run the program
     machine.run(&rom);
-    let output = machine
-        .output()
-        .values
-        .iter()
-        .map(|(_, b)| *b)
-        .collect::<Vec<_>>();
+    let output = machine.output().bytes();
     assert_eq!(output.len(), 4);
     let actual_result = u32::from_le_bytes(output.try_into().unwrap());
 
