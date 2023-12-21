@@ -2,6 +2,7 @@ use super::{Field, PrimeField, MEMORY_CELL_BYTES};
 use core::cmp::Ordering;
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Index, IndexMut, Mul, Shl, Shr, Sub};
 
+// Currently stored in big-endian form.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Word<F>(pub [F; MEMORY_CELL_BYTES]);
 

@@ -162,7 +162,6 @@ fn run_method(machine: &syn::DeriveInput, instructions: &[&Field]) -> TokenStrea
                 let ops = instruction.operands;
 
                 // Execute
-                println!("Executing instruction: {:?}", instruction);
                 match opcode {
                     #opcode_arms
                     _ => panic!("Unrecognized opcode: {}", opcode),

@@ -8,7 +8,9 @@ use valida_cpu::{
     MachineWithCpuChip, StopInstruction, Store32Instruction,
 };
 use valida_machine::config::StarkConfigImpl;
-use valida_machine::{FixedAdviceProvider, Instruction, InstructionWord, Machine, Operands, ProgramROM, Word};
+use valida_machine::{
+    FixedAdviceProvider, Instruction, InstructionWord, Machine, Operands, ProgramROM, Word,
+};
 use valida_memory::MachineWithMemoryChip;
 use valida_program::MachineWithProgramChip;
 

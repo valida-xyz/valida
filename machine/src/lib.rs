@@ -21,9 +21,9 @@ pub mod config;
 pub mod core;
 pub mod proof;
 
+pub use advice::*;
 pub use chip::*;
 pub use core::*;
-pub use advice::*;
 
 pub const OPERAND_ELEMENTS: usize = 5;
 pub const INSTRUCTION_ELEMENTS: usize = OPERAND_ELEMENTS + 1;
@@ -36,7 +36,11 @@ pub trait Instruction<M: Machine> {
 
     fn execute(state: &mut M, ops: Operands<i32>);
 
-    fn execute_with_advice<Adv: AdviceProvider>(state: &mut M, ops: Operands<i32>, _advice: &mut Adv) {
+    fn execute_with_advice<Adv: AdviceProvider>(
+        state: &mut M,
+        ops: Operands<i32>,
+        _advice: &mut Adv,
+    ) {
         Self::execute(state, ops)
     }
 }
