@@ -22,6 +22,12 @@ pub struct OutputChip {
     pub values: Vec<(u32, u8)>, // (clk, byte)
 }
 
+impl OutputChip {
+    pub fn bytes(&self) -> Vec<u8> {
+        self.values.iter().map(|(_, b)| *b).collect()
+    }
+}
+
 impl<F, M> Chip<M> for OutputChip
 where
     F: PrimeField,

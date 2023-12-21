@@ -1,31 +1,35 @@
-use std::io::Cursor;
-use std::io::Read;
-use std::process::{Command, Stdio};
-
-use byteorder::{LittleEndian, WriteBytesExt};
+use p3_baby_bear::BabyBear;
+use valida_basic::BasicMachine;
+use valida_cpu::MachineWithCpuChip;
+use valida_machine::{Machine, ProgramROM, Word};
+use valida_output::MachineWithOutputChip;
+use valida_program::MachineWithProgramChip;
 
 #[test]
 fn run_fibonacci() {
-    // Execute the fibonacci binary
+    let mut machine = BasicMachine::<BabyBear, BabyBear>::default();
     let filepath = "tests/programs/binary/fibonacci.bin";
-    let fib_number = 25;
-    let mut child = Command::new("cargo")
-        .args(&["run", "--bin", "valida", filepath])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-        .expect("failed to execute process");
-    let stdin = child.stdin.as_mut().expect("failed to get stdin");
-    stdin.write_u32::<LittleEndian>(fib_number).unwrap();
+    let rom = ProgramROM::from_file(filepath).unwrap();
+    machine.program_mut().set_program_rom(&rom);
+    machine.cpu_mut().fp = 16777216; // default stack height
+    machine.cpu_mut().save_register_state();
 
-    // Compare stdout with the expected value in the Fibonacci sequence
-    let value = fibonacci(fib_number);
-    let output = child.wait_with_output().expect("failed to wait on child");
-    let mut cursor = Cursor::new(output.stdout);
-    let mut buf = [0; 4];
-    cursor.read_exact(&mut buf).unwrap();
-    let result = u32::from_le_bytes(buf);
-    assert_eq!(result, value);
+    let fib_number = 25;
+    // Put the desired fib number in the advice tape.
+    machine
+        .cpu_mut()
+        .advice_tape
+        .data
+        .push(Word::from(fib_number));
+
+    // Run the program
+    machine.run(&rom);
+    let output = machine.output().bytes();
+    assert_eq!(output.len(), 4);
+    let actual_result = u32::from_le_bytes(output.try_into().unwrap());
+
+    let expected_result = fibonacci(fib_number);
+    assert_eq!(actual_result, expected_result);
 }
 
 fn fibonacci(n: u32) -> u32 {

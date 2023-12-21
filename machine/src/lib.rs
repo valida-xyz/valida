@@ -1,4 +1,4 @@
-#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(any(test, feature = "std")), no_std)]
 
 extern crate alloc;
 extern crate self as valida_machine;
@@ -116,6 +116,28 @@ impl ProgramROM<i32> {
             });
         }
         Self(instructions)
+    }
+
+    #[cfg(feature = "std")]
+    pub fn from_file(filename: &str) -> std::io::Result<Self> {
+        use byteorder::ReadBytesExt;
+        use std::fs::File;
+        use std::io::BufReader;
+
+        let file = File::open(filename)?;
+        let mut reader = BufReader::new(file);
+        let mut instructions = Vec::new();
+
+        while let Ok(opcode) = reader.read_u32::<LittleEndian>() {
+            let mut operands_arr = [0i32; OPERAND_ELEMENTS];
+            for i in 0..OPERAND_ELEMENTS {
+                operands_arr[i] = reader.read_i32::<LittleEndian>()?;
+            }
+            let operands = Operands(operands_arr);
+            instructions.push(InstructionWord { opcode, operands });
+        }
+
+        Ok(ProgramROM::new(instructions))
     }
 }
 

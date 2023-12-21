@@ -1,13 +1,9 @@
-use byteorder::{LittleEndian, ReadBytesExt};
 use clap::Parser;
-use std::fs::File;
-use std::io::{BufReader, Read, Result, Write};
+use std::io::{stdin, stdout, Read, Write};
 
 use valida_basic::BasicMachine;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{
-    InstructionWord, Machine, Operands, ProgramROM, Word, MEMORY_CELL_BYTES, OPERAND_ELEMENTS,
-};
+use valida_machine::{Machine, ProgramROM, Word, MEMORY_CELL_BYTES};
 use valida_output::MachineWithOutputChip;
 use valida_program::MachineWithProgramChip;
 
@@ -28,14 +24,14 @@ fn main() {
     let args = Args::parse();
 
     let mut machine = BasicMachine::<BabyBear, BabyBear>::default();
-    let rom = load_program_rom(&args.program).unwrap();
+    let rom = ProgramROM::from_file(&args.program).unwrap();
     machine.program_mut().set_program_rom(&rom);
     machine.cpu_mut().fp = args.stack_height;
     machine.cpu_mut().save_register_state();
 
     // Read standard input into the advice tape
     let mut input_bytes = Vec::new();
-    std::io::stdin().read_to_end(&mut input_bytes).unwrap();
+    stdin().read_to_end(&mut input_bytes).unwrap();
     let input_words = input_bytes
         .chunks(MEMORY_CELL_BYTES)
         .map(|chunk| {
@@ -55,31 +51,5 @@ fn main() {
     machine.run(&rom);
 
     // Write output chip values to standard output
-    std::io::stdout()
-        .write_all(
-            &machine
-                .output()
-                .values
-                .iter()
-                .map(|(_, b)| *b)
-                .collect::<Vec<_>>(),
-        )
-        .unwrap();
-}
-
-fn load_program_rom(filename: &str) -> Result<ProgramROM<i32>> {
-    let file = File::open(filename)?;
-    let mut reader = BufReader::new(file);
-    let mut instructions = Vec::new();
-
-    while let Ok(opcode) = reader.read_u32::<LittleEndian>() {
-        let mut operands_arr = [0i32; OPERAND_ELEMENTS];
-        for i in 0..OPERAND_ELEMENTS {
-            operands_arr[i] = reader.read_i32::<LittleEndian>()?;
-        }
-        let operands = Operands(operands_arr);
-        instructions.push(InstructionWord { opcode, operands });
-    }
-
-    Ok(ProgramROM::new(instructions))
+    stdout().write_all(&machine.output().bytes()).unwrap();
 }
