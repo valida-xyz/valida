@@ -1,4 +1,6 @@
 use p3_baby_bear::BabyBear;
+use std::fs::read_to_string;
+use valida_assembler::assemble;
 use valida_basic::BasicMachine;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{FixedAdviceProvider, Machine, ProgramROM};
@@ -8,8 +10,9 @@ use valida_program::MachineWithProgramChip;
 #[test]
 fn run_fibonacci() {
     let mut machine = BasicMachine::<BabyBear, BabyBear>::default();
-    let filepath = "tests/programs/binary/fibonacci.bin";
-    let rom = ProgramROM::from_file(filepath).unwrap();
+    let asm_path = "tests/programs/assembly/fibonacci.val";
+    let asm = read_to_string(asm_path).expect("Failed to read asm");
+    let rom = ProgramROM::from_machine_code(&assemble(&asm).unwrap());
     machine.program_mut().set_program_rom(&rom);
     machine.cpu_mut().fp = 16777216; // default stack height
     machine.cpu_mut().save_register_state();

@@ -367,7 +367,7 @@ where
     {
         let clk = state.cpu().clock;
         let fp = state.cpu().fp as i32;
-        let mem_addr = fp + ops.c();
+        let mem_addr = fp + ops.a();
 
         // Read from the advice tape into memory
         let advice_byte = advice.get_advice().expect("No more advice");
