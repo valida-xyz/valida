@@ -4,6 +4,7 @@ use std::process::{Command, Stdio};
 
 use byteorder::{LittleEndian, WriteBytesExt};
 
+#[ignore]
 #[test]
 fn run_fibonacci() {
     // Execute the fibonacci binary

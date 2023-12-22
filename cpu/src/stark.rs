@@ -1,5 +1,5 @@
 use crate::columns::{CpuCols, NUM_CPU_COLS};
-use crate::CpuChip;
+use crate::{BYTES_PER_INSTR, CpuChip};
 use core::borrow::Borrow;
 use valida_machine::Word;
 
@@ -70,6 +70,7 @@ impl CpuChip {
     ) where
         AB: AirBuilder,
     {
+        let bytes_per_instr_expr = AB::Expr::from_canonical_u32(BYTES_PER_INSTR);
         let is_load = local.opcode_flags.is_load;
         let is_store = local.opcode_flags.is_store;
         let is_jal = local.opcode_flags.is_jal;
@@ -143,7 +144,7 @@ impl CpuChip {
                 .sum::<AB::Expr>(),
         );
         builder.when_transition().when(is_jal + is_jalv).assert_eq(
-            local.pc + AB::F::one(),
+            bytes_per_instr_expr.clone() * (local.pc + AB::F::one()),
             reduce::<AB>(base, local.write_value()),
         );
         builder.when(is_imm32).assert_zero(
@@ -168,6 +169,7 @@ impl CpuChip {
     ) where
         AB: AirBuilder,
     {
+        let bytes_per_instr_expr = AB::Expr::from_canonical_u32(BYTES_PER_INSTR);
         let should_increment_pc = local.opcode_flags.is_imm32
             + local.opcode_flags.is_bus_op
             + local.opcode_flags.is_advice;
@@ -179,28 +181,32 @@ impl CpuChip {
 
         // Branch manipulation
         let equal = AB::Expr::one() - local.not_equal;
-        let next_pc_if_branching = local.instruction.operands.a();
-        let beq_next_pc =
-            equal.clone() * next_pc_if_branching.clone() + local.not_equal * incremented_pc.clone();
-        let bne_next_pc = equal * incremented_pc + local.not_equal * next_pc_if_branching;
+        let next_pc_times_24_if_branching = local.instruction.operands.a();
+        let beq_next_pc_times_24 =
+            equal.clone() * next_pc_times_24_if_branching.clone()
+              + bytes_per_instr_expr.clone() * local.not_equal * incremented_pc.clone();
+        let bne_next_pc_times_24 = bytes_per_instr_expr.clone() * equal * incremented_pc
+                                 + local.not_equal * next_pc_times_24_if_branching;
         builder
             .when_transition()
             .when(local.opcode_flags.is_beq)
-            .assert_eq(next.pc, beq_next_pc);
+            .assert_eq(bytes_per_instr_expr.clone() * next.pc, beq_next_pc_times_24);
         builder
             .when_transition()
             .when(local.opcode_flags.is_bne)
-            .assert_eq(next.pc, bne_next_pc);
+            .assert_eq(bytes_per_instr_expr.clone() * next.pc, bne_next_pc_times_24);
 
         // Jump manipulation
         builder
             .when_transition()
             .when(local.opcode_flags.is_jal)
-            .assert_eq(next.pc, local.instruction.operands.b());
+            .assert_eq(bytes_per_instr_expr.clone() * next.pc,
+                       local.instruction.operands.b());
         builder
             .when_transition()
             .when(local.opcode_flags.is_jalv)
-            .assert_eq(next.pc, reduce::<AB>(base, local.read_value_1()));
+            .assert_eq(bytes_per_instr_expr.clone() * next.pc,
+                       reduce::<AB>(base, local.read_value_1()));
     }
 
     fn eval_fp<AB>(

@@ -89,6 +89,8 @@ pub struct Registers {
     fp: u32,
 }
 
+pub const BYTES_PER_INSTR: u32 = 24; // 4 bytes per word * 6 words per instruction
+
 impl<M> Chip<M> for CpuChip
 where
     M: MachineWithProgramBus
@@ -469,12 +471,12 @@ where
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
-        // Store pc + 1 to local stack variable at offset a
+        // Store 24 * (pc + 1) to local stack variable at offset a
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
         let next_pc = state.cpu().pc + 1;
-        state.mem_mut().write(clk, write_addr, next_pc.into(), true);
-        // Set pc to the field element b
-        state.cpu_mut().pc = ops.b() as u32;
+        state.mem_mut().write(clk, write_addr, (BYTES_PER_INSTR * next_pc).into(), true);
+        // Set pc to the field element b / 24
+        state.cpu_mut().pc = (ops.b() as u32) / BYTES_PER_INSTR;
         // Set fp to fp + c
         state.cpu_mut().fp = (state.cpu().fp as i32 + ops.c()) as u32;
         state
@@ -496,10 +498,12 @@ where
         // Store pc + 1 to local stack variable at offset a
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
         let next_pc = state.cpu().pc + 1;
-        state.mem_mut().write(clk, write_addr, next_pc.into(), true);
+        state.mem_mut().write(clk, write_addr, (BYTES_PER_INSTR * next_pc).into(), true);
         // Set pc to the field element [b]
         let read_addr = (state.cpu().fp as i32 + ops.b()) as u32;
-        state.cpu_mut().pc = state.mem_mut().read(clk, read_addr, true, pc, opcode, 0, "").into();
+        state.cpu_mut().pc =
+          <Word<u8> as Into<u32>>::into(state.mem_mut().read(clk, read_addr, true, pc, opcode, 0, ""))
+            / BYTES_PER_INSTR;
         // Set fp to [c]
         let read_addr = (state.cpu().fp as i32 + ops.c()) as u32;
         let cell: u32 = state.mem_mut().read(clk, read_addr, true, pc, opcode, 2, "").into();
@@ -532,7 +536,7 @@ where
             state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
         };
         if cell_1 == cell_2 {
-            state.cpu_mut().pc = ops.a() as u32;
+            state.cpu_mut().pc = (ops.a() as u32) / BYTES_PER_INSTR;
         } else {
             state.cpu_mut().pc = state.cpu().pc + 1;
         }
@@ -564,7 +568,7 @@ where
             state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
         };
         if cell_1 != cell_2 {
-            state.cpu_mut().pc = ops.a() as u32;
+            state.cpu_mut().pc = (ops.a() as u32) / BYTES_PER_INSTR;
         } else {
             state.cpu_mut().pc = state.cpu().pc + 1;
         }

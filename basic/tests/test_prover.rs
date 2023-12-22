@@ -3,7 +3,7 @@ use valida_alu_u32::add::{Add32Instruction, MachineWithAdd32Chip};
 use valida_basic::BasicMachine;
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
-    MachineWithCpuChip, StopInstruction,
+    MachineWithCpuChip, StopInstruction, BYTES_PER_INSTR
 };
 use valida_machine::config::StarkConfigImpl;
 use valida_machine::{Instruction, InstructionWord, Machine, Operands, ProgramROM, Word};
@@ -30,11 +30,12 @@ fn prove_fibonacci() {
     let mut program = vec![];
 
     // Label locations
-    let fib_bb0 = 8;
-    let fib_bb0_1 = 13;
-    let fib_bb0_2 = 15;
-    let fib_bb0_3 = 19;
-    let fib_bb0_4 = 21;
+    let bytes_per_instr = BYTES_PER_INSTR as i32;
+    let fib_bb0 = 8 * bytes_per_instr;
+    let fib_bb0_1 = 13 * bytes_per_instr;
+    let fib_bb0_2 = 15 * bytes_per_instr;
+    let fib_bb0_3 = 19 * bytes_per_instr;
+    let fib_bb0_4 = 21 * bytes_per_instr;
 
     //main:                                   ; @main
     //; %bb.0:
