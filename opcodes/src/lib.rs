@@ -10,7 +10,6 @@ pub const STOP: u32 = 8;
 
 /// NONDETERMINISTIC
 pub const READ_ADVICE: u32 = 9;
-pub const WRITE_ADVICE: u32 = 10;
 
 /// U32 ALU
 pub const ADD32: u32 = 100;
