@@ -1,4 +1,4 @@
-#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(any(test, feature = "std")), no_std)]
 
 extern crate alloc;
 extern crate self as valida_machine;
@@ -7,20 +7,23 @@ use alloc::vec::Vec;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-pub use crate::core::Word;
-pub use chip::{BusArgument, Chip, Interaction, InteractionType, ValidaAirBuilder};
-
 use crate::config::StarkConfig;
 use crate::proof::MachineProof;
 pub use p3_field::{
     AbstractExtensionField, AbstractField, ExtensionField, Field, PrimeField, PrimeField64,
 };
 
+// TODO: some are also re-exported, so they shouldn't be pub?
 pub mod __internal;
+mod advice;
 pub mod chip;
 pub mod config;
 pub mod core;
 pub mod proof;
+
+pub use advice::*;
+pub use chip::*;
+pub use core::*;
 
 pub const OPERAND_ELEMENTS: usize = 5;
 pub const INSTRUCTION_ELEMENTS: usize = OPERAND_ELEMENTS + 1;
@@ -32,6 +35,14 @@ pub trait Instruction<M: Machine> {
     const OPCODE: u32;
 
     fn execute(state: &mut M, ops: Operands<i32>);
+
+    fn execute_with_advice<Adv: AdviceProvider>(
+        state: &mut M,
+        ops: Operands<i32>,
+        _advice: &mut Adv,
+    ) {
+        Self::execute(state, ops)
+    }
 }
 
 #[derive(Copy, Clone, Default, Debug)]
@@ -117,13 +128,35 @@ impl ProgramROM<i32> {
         }
         Self(instructions)
     }
+
+    #[cfg(feature = "std")]
+    pub fn from_file(filename: &str) -> std::io::Result<Self> {
+        use byteorder::ReadBytesExt;
+        use std::fs::File;
+        use std::io::BufReader;
+
+        let file = File::open(filename)?;
+        let mut reader = BufReader::new(file);
+        let mut instructions = Vec::new();
+
+        while let Ok(opcode) = reader.read_u32::<LittleEndian>() {
+            let mut operands_arr = [0i32; OPERAND_ELEMENTS];
+            for i in 0..OPERAND_ELEMENTS {
+                operands_arr[i] = reader.read_i32::<LittleEndian>()?;
+            }
+            let operands = Operands(operands_arr);
+            instructions.push(InstructionWord { opcode, operands });
+        }
+
+        Ok(ProgramROM::new(instructions))
+    }
 }
 
 pub trait Machine {
     type F: PrimeField64;
     type EF: ExtensionField<Self::F>;
 
-    fn run(&mut self, program: &ProgramROM<i32>);
+    fn run<Adv: AdviceProvider>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv);
 
     fn prove<SC>(&self, config: &SC) -> MachineProof<SC>
     where

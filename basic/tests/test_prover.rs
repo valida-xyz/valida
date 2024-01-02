@@ -1,3 +1,5 @@
+extern crate core;
+
 use p3_baby_bear::BabyBear;
 use valida_alu_u32::add::{Add32Instruction, MachineWithAdd32Chip};
 use valida_basic::BasicMachine;
@@ -6,7 +8,9 @@ use valida_cpu::{
     MachineWithCpuChip, StopInstruction, BYTES_PER_INSTR
 };
 use valida_machine::config::StarkConfigImpl;
-use valida_machine::{Instruction, InstructionWord, Machine, Operands, ProgramROM, Word};
+use valida_machine::{
+    FixedAdviceProvider, Instruction, InstructionWord, Machine, Operands, ProgramROM, Word,
+};
 use valida_memory::MachineWithMemoryChip;
 use valida_program::MachineWithProgramChip;
 
@@ -185,7 +189,7 @@ fn prove_fibonacci() {
     machine.cpu_mut().fp = 0x1000;
     machine.cpu_mut().save_register_state(); // TODO: Initial register state should be saved
                                              // automatically by the machine, not manually here
-    machine.run(&rom);
+    machine.run(&rom, &mut FixedAdviceProvider::empty());
 
     type Val = BabyBear;
     type Challenge = BinomialExtensionField<Val, 5>;

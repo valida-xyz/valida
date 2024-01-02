@@ -112,14 +112,22 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
                         // (0, 0, 0, 0, 0)
                         operands.extend(vec![0; 5]);
                     }
+                    "add" | "sub" | "mul" | "div" | "lt" | "shl" | "shr" | "beq" | "bne"
+                    | "and" | "or" | "xor" | "jal" | "jalv" => {
+                        // (a, b, c, 0, 0)
+                        operands.extend(vec![0; 2]);
+                    }
                     "addi" | "subi" | "muli" | "divi" | "sdivi"| "lti" | "shli" | "shri" | "beqi"
                     | "bnei" | "andi" | "ori" | "xori" => {
                         // (a, b, c, 0, 1)
                         operands.extend(vec![0, 1]);
                     }
+                    "advread" => {
+                        // (a, 0, 0, 0, 0)
+                        operands.extend(vec![0; 4]);
+                    }
                     _ => {
-                        // (a, b, c, 0, 0)
-                        operands.extend(vec![0; 2]);
+                        panic!("Unknown mnemonic {}", mnemonic);
                     }
                 };
 
