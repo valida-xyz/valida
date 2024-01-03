@@ -14,7 +14,8 @@ use valida_machine::{
     instructions, AdviceProvider, Chip, Instruction, InstructionWord, Interaction, Operands, Word,
 };
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
-use valida_opcodes::{BEQ, BNE, IMM32, JAL, JALV, LOAD32, READ_ADVICE, STOP, STORE32};
+use valida_opcodes::{
+    BEQ, BNE, IMM32, JAL, JALV, LOAD32, READ_ADVICE, STOP, STORE32};
 use valida_util::batch_multiplicative_inverse;
 
 use p3_air::VirtualPairCol;
