@@ -18,6 +18,7 @@ use valida_alu_u32::{
         And32Instruction, Bitwise32Chip, MachineWithBitwise32Chip, Or32Instruction,
         Xor32Instruction,
     },
+    com::{Com32Chip, MachineWithCom32Chip, Ne32Instruction},
     div::{Div32Chip, Div32Instruction, MachineWithDiv32Chip, SDiv32Instruction},
     lt::{Lt32Chip, Lt32Instruction, MachineWithLt32Chip},
     mul::{
@@ -279,8 +280,19 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithLt32Chip<F> for BasicMachine<F> 
         &mut self.lt_u32
     }
 }
+impl<F: PrimeField32 + TwoAdicField> MachineWithCom32Chip<F> for BasicMachine<F> {
+    fn com_u32(&self) -> &Com32Chip {
+        &self.com_u32
+    }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithShift32Chip<F> for BasicMachine<F> {
+    fn com_u32_mut(&mut self) -> &mut Com32Chip {
+        &mut self.com_u32
+    }
+}
+
+impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithShift32Chip
+    for BasicMachine<F, EF>
+{
     fn shift_u32(&self) -> &Shift32Chip {
         &self.shift_u32
     }
