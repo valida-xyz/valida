@@ -64,6 +64,7 @@ where
 
         builder.assert_bool(local.is_shl);
         builder.assert_bool(local.is_shr);
-        builder.assert_bool(local.is_shl + local.is_shr);
+        builder.assert_bool(local.is_sra);
+        builder.assert_bool(local.is_shl + local.is_shr + local.is_sra);
     }
 }

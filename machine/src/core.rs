@@ -180,6 +180,27 @@ impl Shr for Word<u8> {
     }
 }
 
+pub trait Sra<Rhs = Self> {
+    /// The resulting type after applying the `/` operator.
+    type Output;
+
+    fn sra(self, rhs: Rhs) -> Self::Output;
+}
+
+impl Sra for Word<u8> {
+    type Output = Self;
+    fn sra(self, other: Self) -> Self {
+        let bu: u32 = self.into();
+        let b = bu as i32;
+        let cu: u32 = other.into();
+        let c = cu as i32;
+        // See https://doc.rust-lang.org/reference/expressions/operator-expr.html#arithmetic-and-logical-binary-operators
+        // >> Performs arithmetic right shift on signed integer types, logical right shift on unsigned integer types.
+        let res = (b >> c) as u32;
+        res.into()
+    }
+}
+
 impl BitXor for Word<u8> {
     type Output = Self;
     fn bitxor(self, other: Self) -> Self {
