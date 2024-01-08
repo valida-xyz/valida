@@ -88,35 +88,15 @@ impl Div32Chip {
         let cols: &mut Div32Cols<F> = unsafe { transmute(&mut row) };
 
         match op {
-            Operation::Div32(a, b, c) => {
+            Operation::Div32(_,_,_) => {
                 cols.is_div = F::one();
-                self.set_cols(a, b, c, cols);
             }
-            Operation::SDiv32(a, b, c) => {
+            Operation::SDiv32(_,_,_) => {
                 cols.is_sdiv = F::one();
-                self.set_cols(a, b, c, cols);
             }
         }
 
         row
-    }
-
-    fn set_cols<F>(&self, a: &Word<u8>, b: &Word<u8>, c: &Word<u8>, cols: &mut Div32Cols<F>)
-    where
-        F: PrimeField,
-    {
-        cols.input_1 = b.transform(F::from_canonical_u8);
-        cols.input_2 = c.transform(F::from_canonical_u8);
-        cols.output = a.transform(F::from_canonical_u8);
-
-        let mut bits_1 = [[F::zero(); 8]; 4];
-        let mut bits_2 = [[F::zero(); 8]; 4];
-        for i in 0..4 {
-            for j in 0..8 {
-                bits_1[i][j] = F::from_canonical_u8(b[i] >> j & 1);
-                bits_2[i][j] = F::from_canonical_u8(c[i] >> j & 1);
-            }
-        }
     }
 }
 
