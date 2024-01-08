@@ -88,6 +88,48 @@ impl Mul for Word<u8> {
     }
 }
 
+pub trait Mulhs<Rhs = Self> {
+    /// The resulting type after applying the `/` operator.
+    type Output;
+
+    fn mulhs(self, rhs: Rhs) -> Self::Output;
+}
+
+impl Mulhs for Word<u8> {
+    type Output = Self;
+    fn mulhs(self, other: Self) -> Self {
+        let bu32: u32 = self.into();
+        let bi64 = bu32 as i64;
+        let cu32: u32 = other.into();
+        let ci64 = cu32 as i64;
+        // The result of regular multiplication represented in i64
+        let mul_res = bi64 * ci64;
+        let res = (mul_res >> 32) as i32 as u32;
+        res.into()
+    }
+}
+
+pub trait Mulhu<Rhs = Self> {
+    /// The resulting type after applying the `/` operator.
+    type Output;
+
+    fn mulhu(self, rhs: Rhs) -> Self::Output;
+}
+
+impl Mulhu for Word<u8> {
+    type Output = Self;
+    fn mulhu(self, other: Self) -> Self {
+        let bu32: u32 = self.into();
+        let bu64 = bu32 as u64;
+        let cu32: u32 = other.into();
+        let cu64 = cu32 as u64;
+        // The result of regular multiplication represented in u64
+        let mul_res = bu64 * cu64;
+        let res = (mul_res >> 32) as u32;
+        res.into()
+    }
+}
+
 impl Div for Word<u8> {
     type Output = Self;
     fn div(self, other: Self) -> Self {

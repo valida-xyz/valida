@@ -12,7 +12,7 @@ use valida_alu_u32::{
     },
     div::{Div32Chip, Div32Instruction, SDiv32Instruction, MachineWithDiv32Chip},
     lt::{Lt32Chip, Lt32Instruction, MachineWithLt32Chip},
-    mul::{MachineWithMul32Chip, Mul32Chip, Mul32Instruction},
+    mul::{MachineWithMul32Chip, Mul32Chip, Mul32Instruction, Mulhs32Instruction, Mulhu32Instruction},
     shift::{MachineWithShift32Chip, Shift32Chip, Shl32Instruction, Shr32Instruction},
     sub::{MachineWithSub32Chip, Sub32Chip, Sub32Instruction},
 };
@@ -64,6 +64,10 @@ pub struct BasicMachine<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> {
     sub32: Sub32Instruction,
     #[instruction(mul_u32)]
     mul32: Mul32Instruction,
+    #[instruction(mul_u32)]
+    mulhs32: Mulhs32Instruction,
+    #[instruction(mul_u32)]
+    mulhu32: Mulhu32Instruction,
     #[instruction(div_u32)]
     div32: Div32Instruction,
     #[instruction(div_u32)]
