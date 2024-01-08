@@ -4,10 +4,15 @@
 extern crate alloc;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
+use p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
 use p3_field::{extension::BinomialExtensionField, TwoAdicField};
 use p3_goldilocks::Goldilocks;
 use p3_maybe_rayon::*;
-use p3_uni_stark::StarkConfig;
+use p3_uni_stark::{
+    get_max_constraint_degree, get_trace_and_quotient_ldes, open, ProverConstraintFolder,
+    StarkConfig, SymbolicAirBuilder, Commitments, Proof
+};
+use p3_util::log2_ceil_usize;
 use valida_alu_u32::{
     add::{Add32Chip, Add32Instruction, MachineWithAdd32Chip},
     bitwise::{
@@ -30,7 +35,7 @@ use valida_cpu::{
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
 use valida_machine::{
-    proof::MachineProof, AbstractExtensionField, AbstractField, BusArgument, Chip, ExtensionField,
+    proof::{MachineProof, ChipProof}, AbstractExtensionField, AbstractField, BusArgument, Chip, ExtensionField,
     Instruction, Machine, PrimeField64, ProgramROM, ValidaAirBuilder,
 };
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
@@ -373,36 +378,119 @@ impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> Machine for BasicMac
     where
         SC: StarkConfig<Val = Self::F, Challenge = Self::EF>,
     {
-        use valida_machine::__internal::prove;
-        let mut chip_proofs = Vec::new();
-
+        let mut trace_commitments = Vec::new();
+        let mut quotient_commitments = Vec::new();
+        let mut log_degrees = Vec::new();
+        let mut log_quotient_degrees = Vec::new();
         if self.cpu.operations.len() > 0 {
-            chip_proofs.push(prove(self, config, &self.cpu, challenger));
-	}
+            let air = &self.cpu;
+            let trace = air.generate_trace(self);
+            let (trace_lde, quotient_lde, log_degree, log_quotient_degree) =
+                get_trace_and_quotient_ldes(config, trace, air, challenger);
+            trace_commitments.push(trace_lde);
+            quotient_commitments.push(quotient_lde);
+            log_degrees.push(log_degree);
+            log_quotient_degrees.push(log_quotient_degree);
+        }
         if self.add_u32.operations.len() > 0 {
-            chip_proofs.push(prove(self, config, &self.add_u32, challenger));
+            let air = &self.add_u32;
+            let trace = air.generate_trace(self);
+            let (trace_lde, quotient_lde, log_degree, log_quotient_degree) =
+                get_trace_and_quotient_ldes(config, trace, air, challenger);
+            trace_commitments.push(trace_lde);
+            quotient_commitments.push(quotient_lde);
+            log_degrees.push(log_degree);
+            log_quotient_degrees.push(log_quotient_degree);
         }
         if self.sub_u32.operations.len() > 0 {
-            chip_proofs.push(prove(self, config, &self.sub_u32, challenger));
+            let air = &self.sub_u32;
+            let trace = air.generate_trace(self);
+            let (trace_lde, quotient_lde, log_degree, log_quotient_degree) =
+                get_trace_and_quotient_ldes(config, trace, air, challenger);
+            trace_commitments.push(trace_lde);
+            quotient_commitments.push(quotient_lde);
+            log_degrees.push(log_degree);
+            log_quotient_degrees.push(log_quotient_degree);
         }
         if self.mul_u32.operations.len() > 0 {
-            chip_proofs.push(prove(self, config, &self.mul_u32, challenger));
+            let air = &self.mul_u32;
+            let trace = air.generate_trace(self);
+            let (trace_lde, quotient_lde, log_degree, log_quotient_degree) =
+                get_trace_and_quotient_ldes(config, trace, air, challenger);
+            trace_commitments.push(trace_lde);
+            quotient_commitments.push(quotient_lde);
+            log_degrees.push(log_degree);
+            log_quotient_degrees.push(log_quotient_degree);
         }
         if self.div_u32.operations.len() > 0 {
-            chip_proofs.push(prove(self, config, &self.div_u32, challenger));
+            let air = &self.div_u32;
+            let trace = air.generate_trace(self);
+            let (trace_lde, quotient_lde, log_degree, log_quotient_degree) =
+                get_trace_and_quotient_ldes(config, trace, air, challenger);
+            trace_commitments.push(trace_lde);
+            quotient_commitments.push(quotient_lde);
+            log_degrees.push(log_degree);
+            log_quotient_degrees.push(log_quotient_degree);
         }
         if self.shift_u32.operations.len() > 0 {
-            chip_proofs.push(prove(self, config, &self.shift_u32, challenger));
+            let air = &self.shift_u32;
+            let trace = air.generate_trace(self);
+            let (trace_lde, quotient_lde, log_degree, log_quotient_degree) =
+                get_trace_and_quotient_ldes(config, trace, air, challenger);
+            trace_commitments.push(trace_lde);
+            quotient_commitments.push(quotient_lde);
+            log_degrees.push(log_degree);
+            log_quotient_degrees.push(log_quotient_degree);
         }
         if self.lt_u32.operations.len() > 0 {
-            chip_proofs.push(prove(self, config, &self.lt_u32, challenger));
-        }
-        if self.bitwise_u32.operations.len() > 0 {
-            chip_proofs.push(prove(self, config, &self.bitwise_u32, challenger));
+            let air = &self.lt_u32;
+            let trace = air.generate_trace(self);
+            let (trace_lde, quotient_lde, log_degree, log_quotient_degree) =
+                get_trace_and_quotient_ldes(config, trace, air, challenger);
+            trace_commitments.push(trace_lde);
+            quotient_commitments.push(quotient_lde);
+            log_degrees.push(log_degree);
+            log_quotient_degrees.push(log_quotient_degree);
         }
 
+        if self.bitwise_u32.operations.len() > 0 {
+            let air = &self.bitwise_u32;
+            let trace = air.generate_trace(self);
+            let (trace_lde, quotient_lde, log_degree, log_quotient_degree) =
+                get_trace_and_quotient_ldes(config, trace, air, challenger);
+            trace_commitments.push(trace_lde);
+            quotient_commitments.push(quotient_lde);
+            log_degrees.push(log_degree);
+            log_quotient_degrees.push(log_quotient_degree);
+        }
+
+        let pcs = config.pcs();
+        let aggregated_trace = pcs.combine(&trace_commitments);
+        let aggregated_quotient = pcs.combine(&quotient_commitments);
+        let max_log_degree = log_degrees.iter().max().unwrap();
+        let max_quotient_degree = log_quotient_degrees.iter().max().unwrap();
+        let (opening_proof, opened_values) = open(
+            config,
+            &aggregated_trace,
+            &aggregated_quotient,
+            *max_log_degree,
+            *max_quotient_degree,
+            challenger,
+        );
+
+	let commitments = Commitments {
+	    trace: aggregated_trace.root(),
+	    quotient_chunks: aggregated_quotient.root()
+	};
         MachineProof {
-            chip_proofs: chip_proofs,
+            chip_proof: ChipProof{
+		proof: Proof{
+		    commitments,
+		    opened_values,
+		    opening_proof,
+		    degree_bits:max_log_degree
+		}
+	    },
             phantom: PhantomData::default(),
         }
     }
