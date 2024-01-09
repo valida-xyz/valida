@@ -127,9 +127,15 @@ where
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let src1 = state
-            .mem_mut()
-            .read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let src1 = if ops.d() == 1 {
+            let b = (ops.b() as u32).into();
+            imm = Some(b);
+            b
+        } else {
+            state
+                .mem_mut()
+                .read(clk, read_addr_1, true, pc, opcode, 0, "")
+        };
         let src2 = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
