@@ -465,22 +465,22 @@ impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> Machine for BasicMac
         }
 
         let pcs = config.pcs();
-        let aggregated_trace = pcs.combine(&trace_commitments);
-        let aggregated_quotient = pcs.combine(&quotient_commitments);
+        let (aggregated_commitment, aggregated_trace) = pcs.combine(&trace_commitments);
+        let (aggregated_quotient_commitment, aggregated_quotient_trace) = pcs.combine(&quotient_commitments);
         let max_log_degree = log_degrees.iter().max().unwrap();
         let max_quotient_degree = log_quotient_degrees.iter().max().unwrap();
         let (opening_proof, opened_values) = open(
             config,
             &aggregated_trace,
-            &aggregated_quotient,
+            &aggregated_quotient_trace,
             *max_log_degree,
             *max_quotient_degree,
             challenger,
         );
 
 	let commitments = Commitments {
-	    trace: aggregated_trace.root(),
-	    quotient_chunks: aggregated_quotient.root()
+	    trace: aggregated_commitment,
+	    quotient_chunks: aggregated_quotient_commitment
 	};
         MachineProof {
             chip_proof: ChipProof{
@@ -488,7 +488,7 @@ impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> Machine for BasicMac
 		    commitments,
 		    opened_values,
 		    opening_proof,
-		    degree_bits:max_log_degree
+		    degree_bits:*max_log_degree
 		}
 	    },
             phantom: PhantomData::default(),
