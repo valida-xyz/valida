@@ -196,6 +196,8 @@ impl Sra for Word<u8> {
         let c = cu as i32;
         // See https://doc.rust-lang.org/reference/expressions/operator-expr.html#arithmetic-and-logical-binary-operators
         // >> Performs arithmetic right shift on signed integer types, logical right shift on unsigned integer types.
+        // TODO: This may panic on overflow. LLVM says `ashr` overflow should result in a poison value.
+        // I think it's fine to return something like `b >> (c % 0b11111)`, but not to immediately panic.
         let res = (b >> c) as u32;
         res.into()
     }

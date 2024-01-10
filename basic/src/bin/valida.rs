@@ -24,9 +24,8 @@ fn main() {
     let args = Args::parse();
 
     let mut machine = BasicMachine::<BabyBear, BabyBear>::default();
-    let rom;
-    match ProgramROM::from_file(&args.program){
-        Ok(contents) => rom = contents,
+    let rom = match ProgramROM::from_file(&args.program) {
+        Ok(contents) => contents,
         Err(e) => panic!("Failure to load file: {}. {}",&args.program, e),
     };
     machine.program_mut().set_program_rom(&rom);
