@@ -1,11 +1,12 @@
 use crate::columns::{CpuCols, NUM_CPU_COLS};
-use crate::{BYTES_PER_INSTR, CpuChip};
+use crate::CpuChip;
 use core::borrow::Borrow;
 use valida_machine::Word;
 
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRowSlices;
+use valida_opcodes::BYTES_PER_INSTR;
 
 impl<F> BaseAir<F> for CpuChip {
     fn width(&self) -> usize {
@@ -108,12 +109,19 @@ impl CpuChip {
             local.read_addr_2(),
             reduce::<AB>(base, local.read_value_1()),
         );
-        builder.when(is_store).assert_eq(local.read_addr_2(), addr_b);
+        builder
+            .when(is_store)
+            .assert_eq(local.read_addr_2(), addr_b);
         builder
             .when(is_jalv + (AB::Expr::one() - is_imm_op) * (is_beq + is_bne + is_bus_op))
             .assert_eq(local.read_addr_2(), addr_c);
         builder
-            .when(is_load + is_store + is_jalv + (AB::Expr::one() - is_imm_op) * (is_beq + is_bne + is_bus_op))
+            .when(
+                is_load
+                    + is_store
+                    + is_jalv
+                    + (AB::Expr::one() - is_imm_op) * (is_beq + is_bne + is_bus_op),
+            )
             .assert_one(local.read_2_used());
         builder
             .when(is_jal + is_imm_op * (is_beq + is_bne + is_bus_op))
@@ -123,10 +131,9 @@ impl CpuChip {
         builder
             .when(is_load + is_jal + is_jalv + is_imm32 + is_bus_op)
             .assert_eq(local.write_addr(), addr_a);
-        builder.when(is_store).assert_eq(
-            local.write_addr(),
-            reduce::<AB>(base, local.read_value_2())
-        );
+        builder
+            .when(is_store)
+            .assert_eq(local.write_addr(), reduce::<AB>(base, local.read_value_2()));
         builder.when(is_store).assert_zero(
             local
                 .read_value_1()
@@ -182,11 +189,10 @@ impl CpuChip {
         // Branch manipulation
         let equal = AB::Expr::one() - local.not_equal;
         let next_pc_times_24_if_branching = local.instruction.operands.a();
-        let beq_next_pc_times_24 =
-            equal.clone() * next_pc_times_24_if_branching.clone()
-              + bytes_per_instr_expr.clone() * local.not_equal * incremented_pc.clone();
+        let beq_next_pc_times_24 = equal.clone() * next_pc_times_24_if_branching.clone()
+            + bytes_per_instr_expr.clone() * local.not_equal * incremented_pc.clone();
         let bne_next_pc_times_24 = bytes_per_instr_expr.clone() * equal * incremented_pc
-                                 + local.not_equal * next_pc_times_24_if_branching;
+            + local.not_equal * next_pc_times_24_if_branching;
         builder
             .when_transition()
             .when(local.opcode_flags.is_beq)
@@ -200,13 +206,17 @@ impl CpuChip {
         builder
             .when_transition()
             .when(local.opcode_flags.is_jal)
-            .assert_eq(bytes_per_instr_expr.clone() * next.pc,
-                       local.instruction.operands.b());
+            .assert_eq(
+                bytes_per_instr_expr.clone() * next.pc,
+                local.instruction.operands.b(),
+            );
         builder
             .when_transition()
             .when(local.opcode_flags.is_jalv)
-            .assert_eq(bytes_per_instr_expr.clone() * next.pc,
-                       reduce::<AB>(base, local.read_value_1()));
+            .assert_eq(
+                bytes_per_instr_expr.clone() * next.pc,
+                reduce::<AB>(base, local.read_value_1()),
+            );
     }
 
     fn eval_fp<AB>(

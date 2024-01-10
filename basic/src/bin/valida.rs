@@ -25,9 +25,9 @@ fn main() {
 
     let mut machine = BasicMachine::<BabyBear, BabyBear>::default();
     let rom;
-    match ProgramROM::from_file(&args.program){
+    match ProgramROM::from_file(&args.program) {
         Ok(contents) => rom = contents,
-        Err(e) => panic!("Failure to load file: {}. {}",&args.program, e),
+        Err(e) => panic!("Failure to load file: {}. {}", &args.program, e),
     };
     machine.program_mut().set_program_rom(&rom);
     machine.cpu_mut().fp = args.stack_height;

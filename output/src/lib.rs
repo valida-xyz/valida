@@ -153,15 +153,15 @@ where
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
-        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let b = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
         state
             .output_mut()
             .values
             .push((clk, b.into_iter().last().unwrap()));
 
-        state
-            .cpu_mut()
-            .push_bus_op(None, opcode, ops);
+        state.cpu_mut().push_bus_op(None, opcode, ops);
 
         // The immediate value flag should be set, and the immediate operand value should
         // equal zero. We only write one byte of one word at a time to output.

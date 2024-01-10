@@ -6,8 +6,8 @@ use columns::{Div32Cols, DIV_COL_MAP, NUM_DIV_COLS};
 use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 use valida_machine::core::SDiv;
+use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 use valida_opcodes::{DIV32, SDIV32};
 use valida_range::MachineWithRangeChip;
 
@@ -88,10 +88,10 @@ impl Div32Chip {
         let cols: &mut Div32Cols<F> = unsafe { transmute(&mut row) };
 
         match op {
-            Operation::Div32(_,_,_) => {
+            Operation::Div32(_, _, _) => {
                 cols.is_div = F::one();
             }
-            Operation::SDiv32(_,_,_) => {
+            Operation::SDiv32(_, _, _) => {
                 cols.is_sdiv = F::one();
             }
         }
@@ -122,14 +122,18 @@ where
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let b = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
         let c = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
+            state
+                .mem_mut()
+                .read(clk, read_addr_2, true, pc, opcode, 1, "")
         };
 
         let a = b / c;
@@ -139,9 +143,7 @@ where
             .div_u32_mut()
             .operations
             .push(Operation::Div32(a, b, c));
-        state
-            .cpu_mut()
-            .push_bus_op(imm, opcode, ops);
+        state.cpu_mut().push_bus_op(imm, opcode, ops);
 
         state.range_check(a);
     }
@@ -160,14 +162,18 @@ where
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let b = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
         let c = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
+            state
+                .mem_mut()
+                .read(clk, read_addr_2, true, pc, opcode, 1, "")
         };
 
         let a = b.sdiv(c);
@@ -177,9 +183,7 @@ where
             .div_u32_mut()
             .operations
             .push(Operation::SDiv32(a, b, c));
-        state
-            .cpu_mut()
-            .push_bus_op(imm, opcode, ops);
+        state.cpu_mut().push_bus_op(imm, opcode, ops);
 
         state.range_check(a);
     }

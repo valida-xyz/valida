@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use columns::{Mul32Cols, MUL_COL_MAP, NUM_MUL_COLS};
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word, Mulhs, Mulhu};
+use valida_machine::{instructions, Chip, Instruction, Interaction, Mulhs, Mulhu, Operands, Word};
 use valida_opcodes::{MUL32, MULHS32, MULHU32};
 use valida_range::MachineWithRangeChip;
 
@@ -82,8 +82,11 @@ where
         fields.extend(input_2);
         fields.extend(output);
 
-        let is_real = 
-            VirtualPairCol::sum_main(vec![MUL_COL_MAP.is_mul, MUL_COL_MAP.is_mulhs, MUL_COL_MAP.is_mulhu]);
+        let is_real = VirtualPairCol::sum_main(vec![
+            MUL_COL_MAP.is_mul,
+            MUL_COL_MAP.is_mulhs,
+            MUL_COL_MAP.is_mulhu,
+        ]);
 
         let receive = Interaction {
             fields,
@@ -119,8 +122,8 @@ impl Mul32Chip {
             }
         }
     }
-    
-        fn set_cols<F>(&self, a: &Word<u8>, b: &Word<u8>, c: &Word<u8>, cols: &mut Mul32Cols<F>)
+
+    fn set_cols<F>(&self, a: &Word<u8>, b: &Word<u8>, c: &Word<u8>, cols: &mut Mul32Cols<F>)
     where
         F: PrimeField,
     {
@@ -150,14 +153,19 @@ where
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let b = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
         let c: Word<u8> = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "").into()
+            state
+                .mem_mut()
+                .read(clk, read_addr_2, true, pc, opcode, 1, "")
+                .into()
         };
 
         let a = b * c;
@@ -167,9 +175,7 @@ where
             .mul_u32_mut()
             .operations
             .push(Operation::Mul32(a, b, c));
-        state
-            .cpu_mut()
-            .push_bus_op(imm, opcode, ops);
+        state.cpu_mut().push_bus_op(imm, opcode, ops);
 
         state.range_check(a);
     }
@@ -188,14 +194,19 @@ where
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let b = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
         let c: Word<u8> = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "").into()
+            state
+                .mem_mut()
+                .read(clk, read_addr_2, true, pc, opcode, 1, "")
+                .into()
         };
 
         let a = b.mulhs(c);
@@ -205,9 +216,7 @@ where
             .mul_u32_mut()
             .operations
             .push(Operation::Mulhs32(a, b, c));
-        state
-            .cpu_mut()
-            .push_bus_op(imm, opcode, ops);
+        state.cpu_mut().push_bus_op(imm, opcode, ops);
 
         state.range_check(a);
     }
@@ -226,14 +235,19 @@ where
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let b = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
         let c: Word<u8> = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "").into()
+            state
+                .mem_mut()
+                .read(clk, read_addr_2, true, pc, opcode, 1, "")
+                .into()
         };
 
         let a = b.mulhu(c);
@@ -243,9 +257,7 @@ where
             .mul_u32_mut()
             .operations
             .push(Operation::Mulhu32(a, b, c));
-        state
-            .cpu_mut()
-            .push_bus_op(imm, opcode, ops);
+        state.cpu_mut().push_bus_op(imm, opcode, ops);
 
         state.range_check(a);
     }
