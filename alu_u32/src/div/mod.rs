@@ -96,6 +96,8 @@ impl Div32Chip {
             }
         }
 
+        // TODO: Fill in other columns.
+
         row
     }
 }

@@ -21,6 +21,8 @@ where
     AB: AirBuilder<F = F>,
 {
     fn eval(&self, builder: &mut AB) {
+        // TODO: Assumes original mul, doesn't work for mulhu or mulhs.
+
         let main = builder.main();
         let local: &Mul32Cols<AB::Var> = main.row_slice(0).borrow();
         let next: &Mul32Cols<AB::Var> = main.row_slice(1).borrow();
