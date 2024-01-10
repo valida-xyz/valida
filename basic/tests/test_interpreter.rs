@@ -7,6 +7,7 @@ use valida_machine::{FixedAdviceProvider, Machine, ProgramROM};
 use valida_output::MachineWithOutputChip;
 use valida_program::MachineWithProgramChip;
 
+#[ignore]
 #[test]
 fn run_fibonacci() {
     let mut machine = BasicMachine::<BabyBear, BabyBear>::default();

@@ -16,12 +16,16 @@ pub const ADD32: u32 = 100;
 pub const SUB32: u32 = 101;
 pub const MUL32: u32 = 102;
 pub const DIV32: u32 = 103;
+pub const SDIV32: u32 = 110;
 pub const LT32: u32 = 104;
 pub const SHL32: u32 = 105;
 pub const SHR32: u32 = 106;
 pub const AND32: u32 = 107;
 pub const OR32: u32 = 108;
 pub const XOR32: u32 = 109;
+pub const MULHU32 : u32 = 112;
+pub const SRA32 : u32 = 113;
+pub const MULHS32 : u32 =114;
 
 /// NATIVE FIELD
 pub const ADD: u32 = 200;

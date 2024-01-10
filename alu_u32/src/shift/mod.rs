@@ -8,8 +8,8 @@ use columns::{Shift32Cols, COL_MAP, NUM_SHIFT_COLS};
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
-use valida_opcodes::{DIV32, MUL32, SHL32, SHR32};
+use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word, Sra};
+use valida_opcodes::{DIV32, SDIV32, MUL32, SHL32, SHR32, SRA32};
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
@@ -24,6 +24,7 @@ pub mod stark;
 pub enum Operation {
     Shl32(Word<u8>, Word<u8>, Word<u8>), // (dst, src, shift)
     Shr32(Word<u8>, Word<u8>, Word<u8>), // ''
+    Sra32(Word<u8>, Word<u8>, Word<u8>), // ''
 }
 
 #[derive(Default)]
@@ -58,6 +59,7 @@ where
             vec![
                 (COL_MAP.is_shl, M::F::from_canonical_u32(MUL32)),
                 (COL_MAP.is_shr, M::F::from_canonical_u32(DIV32)),
+                (COL_MAP.is_sra, M::F::from_canonical_u32(SDIV32)),
             ],
             M::F::zero(),
         );
@@ -70,7 +72,7 @@ where
         fields.extend(input_2);
         fields.extend(output);
 
-        let is_real = VirtualPairCol::sum_main(vec![COL_MAP.is_shl, COL_MAP.is_shr]);
+        let is_real = VirtualPairCol::sum_main(vec![COL_MAP.is_shl, COL_MAP.is_shr, COL_MAP.is_sra]);
 
         let send = Interaction {
             fields,
@@ -86,6 +88,7 @@ where
             vec![
                 (COL_MAP.is_shl, M::F::from_canonical_u32(SHL32)),
                 (COL_MAP.is_shr, M::F::from_canonical_u32(SHR32)),
+                (COL_MAP.is_sra, M::F::from_canonical_u32(SRA32)),
             ],
             M::F::zero(),
         );
@@ -98,7 +101,7 @@ where
         fields.extend(input_2);
         fields.extend(output);
 
-        let is_real = VirtualPairCol::sum_main(vec![COL_MAP.is_shl, COL_MAP.is_shr]);
+        let is_real = VirtualPairCol::sum_main(vec![COL_MAP.is_shl, COL_MAP.is_shr, COL_MAP.is_sra]);
 
         let receive = Interaction {
             fields,
@@ -119,11 +122,15 @@ impl Shift32Chip {
 
         match op {
             Operation::Shr32(a, b, c) => {
-                cols.is_shl = F::one();
+                cols.is_shr = F::one();
+                self.set_cols(cols, a, b, c);
+            }
+            Operation::Sra32(a, b, c) => {
+                cols.is_sra = F::one();
                 self.set_cols(cols, a, b, c);
             }
             Operation::Shl32(a, b, c) => {
-                cols.is_shr = F::one();
+                cols.is_shl = F::one();
                 self.set_cols(cols, a, b, c);
             }
         }
@@ -158,7 +165,7 @@ pub trait MachineWithShift32Chip: MachineWithCpuChip {
     fn shift_u32_mut(&mut self) -> &mut Shift32Chip;
 }
 
-instructions!(Shl32Instruction, Shr32Instruction);
+instructions!(Shl32Instruction, Shr32Instruction, Sra32Instruction);
 
 impl<M> Instruction<M> for Shl32Instruction
 where
@@ -167,18 +174,20 @@ where
     const OPCODE: u32 = SHL32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
+        let opcode = <Self as Instruction<M>>::OPCODE;
         let clk = state.cpu().clock;
+        let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let b = state.mem_mut().read(clk, read_addr_1, true);
+        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
         let c = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true)
+            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
         };
 
         // Write the shifted value to memory
@@ -198,7 +207,7 @@ where
             .push(Operation::Shl32(a, b, c));
         state
             .cpu_mut()
-            .push_bus_op(imm, <Self as Instruction<M>>::OPCODE, ops);
+            .push_bus_op(imm, opcode, ops);
     }
 }
 
@@ -209,18 +218,20 @@ where
     const OPCODE: u32 = SHR32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
+        let opcode = <Self as Instruction<M>>::OPCODE;
         let clk = state.cpu().clock;
+        let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let b = state.mem_mut().read(clk, read_addr_1, true);
+        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
         let c = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true)
+            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
         };
 
         // Write the shifted value to memory
@@ -237,9 +248,54 @@ where
         state
             .shift_u32_mut()
             .operations
-            .push(Operation::Shl32(a, b, c));
+            .push(Operation::Shr32(a, b, c));
         state
             .cpu_mut()
-            .push_bus_op(imm, <Self as Instruction<M>>::OPCODE, ops);
+            .push_bus_op(imm, opcode, ops);
+    }
+}
+
+
+impl<M> Instruction<M> for Sra32Instruction
+where
+    M: MachineWithShift32Chip + MachineWithDiv32Chip,
+{
+    const OPCODE: u32 = SRA32;
+
+    fn execute(state: &mut M, ops: Operands<i32>) {
+        let opcode = <Self as Instruction<M>>::OPCODE;
+        let clk = state.cpu().clock;
+        let pc = state.cpu().pc;
+        let mut imm: Option<Word<u8>> = None;
+        let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
+        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
+        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let c = if ops.is_imm() == 1 {
+            let c = (ops.c() as u32).into();
+            imm = Some(c);
+            c
+        } else {
+            let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
+            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
+        };
+
+        // Write the shifted value to memory
+        let a = b.sra(c);
+        state.mem_mut().write(clk, write_addr, a, true);
+
+        // Add a "receive" division operation to match the "send"
+        let d = Word::from(1) << c;
+        state
+            .div_u32_mut()
+            .operations
+            .push(DivOperation::SDiv32(a, b, d));
+
+        state
+            .shift_u32_mut()
+            .operations
+            .push(Operation::Shr32(a, b, c));
+        state
+            .cpu_mut()
+            .push_bus_op(imm, opcode, ops);
     }
 }

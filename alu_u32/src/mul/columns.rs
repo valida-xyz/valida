@@ -16,7 +16,9 @@ pub struct Mul32Cols<T> {
     pub r: T,
     pub s: T,
 
-    pub is_real: T,
+    pub is_mul: T,
+    pub is_mulhs: T,
+    pub is_mulhu: T,
 
     pub counter: T,
 }

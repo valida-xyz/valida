@@ -11,6 +11,9 @@ pub struct Div32Cols<T> {
 
     /// Witnessed output
     pub output: Word<T>,
+
+    pub is_div: T,
+    pub is_sdiv: T,
 }
 
 pub const NUM_DIV_COLS: usize = size_of::<Div32Cols<u8>>();
