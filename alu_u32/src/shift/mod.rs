@@ -8,8 +8,8 @@ use columns::{Shift32Cols, COL_MAP, NUM_SHIFT_COLS};
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word, Sra};
-use valida_opcodes::{DIV32, SDIV32, MUL32, SHL32, SHR32, SRA32};
+use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Sra, Word};
+use valida_opcodes::{DIV32, MUL32, SDIV32, SHL32, SHR32, SRA32};
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
@@ -72,7 +72,8 @@ where
         fields.extend(input_2);
         fields.extend(output);
 
-        let is_real = VirtualPairCol::sum_main(vec![COL_MAP.is_shl, COL_MAP.is_shr, COL_MAP.is_sra]);
+        let is_real =
+            VirtualPairCol::sum_main(vec![COL_MAP.is_shl, COL_MAP.is_shr, COL_MAP.is_sra]);
 
         let send = Interaction {
             fields,
@@ -101,7 +102,8 @@ where
         fields.extend(input_2);
         fields.extend(output);
 
-        let is_real = VirtualPairCol::sum_main(vec![COL_MAP.is_shl, COL_MAP.is_shr, COL_MAP.is_sra]);
+        let is_real =
+            VirtualPairCol::sum_main(vec![COL_MAP.is_shl, COL_MAP.is_shr, COL_MAP.is_sra]);
 
         let receive = Interaction {
             fields,
@@ -180,14 +182,18 @@ where
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let b = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
         let c = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
+            state
+                .mem_mut()
+                .read(clk, read_addr_2, true, pc, opcode, 1, "")
         };
 
         // Write the shifted value to memory
@@ -205,9 +211,7 @@ where
             .shift_u32_mut()
             .operations
             .push(Operation::Shl32(a, b, c));
-        state
-            .cpu_mut()
-            .push_bus_op(imm, opcode, ops);
+        state.cpu_mut().push_bus_op(imm, opcode, ops);
     }
 }
 
@@ -224,14 +228,18 @@ where
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let b = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
         let c = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
+            state
+                .mem_mut()
+                .read(clk, read_addr_2, true, pc, opcode, 1, "")
         };
 
         // Write the shifted value to memory
@@ -249,12 +257,9 @@ where
             .shift_u32_mut()
             .operations
             .push(Operation::Shr32(a, b, c));
-        state
-            .cpu_mut()
-            .push_bus_op(imm, opcode, ops);
+        state.cpu_mut().push_bus_op(imm, opcode, ops);
     }
 }
-
 
 impl<M> Instruction<M> for Sra32Instruction
 where
@@ -269,14 +274,18 @@ where
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let b = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
         let c = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
+            state
+                .mem_mut()
+                .read(clk, read_addr_2, true, pc, opcode, 1, "")
         };
 
         // Write the shifted value to memory
@@ -294,8 +303,6 @@ where
             .shift_u32_mut()
             .operations
             .push(Operation::Shr32(a, b, c));
-        state
-            .cpu_mut()
-            .push_bus_op(imm, opcode, ops);
+        state.cpu_mut().push_bus_op(imm, opcode, ops);
     }
 }

@@ -62,8 +62,16 @@ impl MemoryChip {
         }
     }
 
-    pub fn read(&mut self, clk: u32, address: u32, log: bool,
-                pc: u32, opcode: u32, ordinal: u32, extra_info: &str) -> Word<u8> {
+    pub fn read(
+        &mut self,
+        clk: u32,
+        address: u32,
+        log: bool,
+        pc: u32,
+        opcode: u32,
+        ordinal: u32,
+        extra_info: &str,
+    ) -> Word<u8> {
         let value = self.cells.get(&address.into()).copied()
           .unwrap_or_else(|| panic!("memory chip: read before write: {} (pc = {}, opcode = {}, ordinal = {}, extra_info = {})", address, pc, opcode, ordinal, extra_info));
         if log {

@@ -10,10 +10,14 @@ use valida_alu_u32::{
         And32Instruction, Bitwise32Chip, MachineWithBitwise32Chip, Or32Instruction,
         Xor32Instruction,
     },
-    div::{Div32Chip, Div32Instruction, SDiv32Instruction, MachineWithDiv32Chip},
+    div::{Div32Chip, Div32Instruction, MachineWithDiv32Chip, SDiv32Instruction},
     lt::{Lt32Chip, Lt32Instruction, MachineWithLt32Chip},
-    mul::{MachineWithMul32Chip, Mul32Chip, Mul32Instruction, Mulhs32Instruction, Mulhu32Instruction},
-    shift::{MachineWithShift32Chip, Shift32Chip, Shl32Instruction, Shr32Instruction, Sra32Instruction},
+    mul::{
+        MachineWithMul32Chip, Mul32Chip, Mul32Instruction, Mulhs32Instruction, Mulhu32Instruction,
+    },
+    shift::{
+        MachineWithShift32Chip, Shift32Chip, Shl32Instruction, Shr32Instruction, Sra32Instruction,
+    },
     sub::{MachineWithSub32Chip, Sub32Chip, Sub32Instruction},
 };
 use valida_bus::{

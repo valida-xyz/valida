@@ -5,7 +5,7 @@ use valida_alu_u32::add::{Add32Instruction, MachineWithAdd32Chip};
 use valida_basic::BasicMachine;
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
-    MachineWithCpuChip, StopInstruction, BYTES_PER_INSTR
+    MachineWithCpuChip, StopInstruction, BYTES_PER_INSTR,
 };
 use valida_machine::config::StarkConfigImpl;
 use valida_machine::{
