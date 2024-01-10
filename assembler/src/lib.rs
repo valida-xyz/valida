@@ -18,7 +18,7 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
         match pair.as_rule() {
             Rule::label => {
                 let label_name = pair.as_str().trim().trim_end_matches(':');
-                label_locations.insert(label_name, pc);
+                label_locations.insert(label_name, BYTES_PER_INSTR as i32 * pc);
             }
             Rule::instruction => {
                 pc += 1;

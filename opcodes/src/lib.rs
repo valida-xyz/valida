@@ -1,3 +1,5 @@
+pub const BYTES_PER_INSTR: u32 = 24; // 4 bytes per word * 6 words per instruction
+
 /// CORE
 pub const LOAD32: u32 = 1;
 pub const STORE32: u32 = 2;
@@ -16,7 +18,7 @@ pub const ADD32: u32 = 100;
 pub const SUB32: u32 = 101;
 pub const MUL32: u32 = 102;
 pub const DIV32: u32 = 103;
-pub const SDIV32: u32 = 110;
+pub const SDIV32: u32 = 110; // TODO: Should we redo the numbers? Need to update compiler?
 pub const LT32: u32 = 104;
 pub const SHL32: u32 = 105;
 pub const SHR32: u32 = 106;
