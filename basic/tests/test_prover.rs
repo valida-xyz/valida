@@ -30,7 +30,6 @@ use rand::thread_rng;
 use valida_machine::__internal::p3_commit::ExtensionMmcs;
 
 #[test]
-#[ignore] // TODO: Bus arguments are failing?
 fn prove_fibonacci() {
     let mut program = vec![];
 
