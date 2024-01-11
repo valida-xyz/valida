@@ -19,6 +19,7 @@ valida-cpu = { path = "../cpu" }
 valida-derive = { path = "../derive" }
 valida-machine = { path = "../machine" }
 valida-memory = { path = "../memory" }
+valida-opcodes = { path = "../opcodes" }
 valida-output = { path = "../output" }
 valida-program = { path = "../program" }
 valida-range = { path = "../range" }

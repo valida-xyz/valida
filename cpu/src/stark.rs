@@ -1,11 +1,12 @@
 use crate::columns::{CpuCols, NUM_CPU_COLS};
-use crate::{CpuChip, BYTES_PER_INSTR};
+use crate::CpuChip;
 use core::borrow::Borrow;
 use valida_machine::Word;
 
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRowSlices;
+use valida_opcodes::BYTES_PER_INSTR;
 
 impl<F> BaseAir<F> for CpuChip {
     fn width(&self) -> usize {
