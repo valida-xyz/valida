@@ -50,12 +50,10 @@ where
         }
 
         // Encode dummy operations as needed to pad the trace.
-        let dummy_op = Operation::Mul32(Word::default(), Word::default(), Word::default());
         for i in num_ops..num_padded_ops {
             let row = &mut values[i * NUM_MUL_COLS..(i + 1) * NUM_MUL_COLS];
             let cols: &mut Mul32Cols<F> = row.borrow_mut();
             cols.counter = F::from_canonical_usize(i + 1);
-            self.op_to_row(&dummy_op, cols);
         }
 
         RowMajorMatrix {
