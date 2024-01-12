@@ -10,7 +10,7 @@ use valida_cpu::MachineWithCpuChip;
 use valida_machine::{
     instructions, Chip, Instruction, Interaction, Operands, Word, MEMORY_CELL_BYTES,
 };
-use valida_opcodes::NE32;
+use valida_opcodes::{EQ32, NE32};
 
 use p3_air::VirtualPairCol;
 use p3_field::PrimeField;
@@ -24,6 +24,8 @@ pub mod stark;
 #[derive(Clone)]
 pub enum Operation {
     Ne32(Word<u8>, Word<u8>, Word<u8>), // (dst, src1, src2)
+    Eq32(Word<u8>, Word<u8>, Word<u8>), // (dst, src1, src2)
+    Eq32(Word<u8>, Word<u8>, Word<u8>), // (dst, src1, src2)
 }
 
 #[derive(Default)]
@@ -52,7 +54,20 @@ where
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
-        let opcode = VirtualPairCol::constant(M::F::from_canonical_u32(NE32));
+        let opcode = VirtualPairCol::new_main(
+            vec![
+                (COM_COL_MAP.is_ne, M::F::from_canonical_u32(NE32)),
+                (COM_COL_MAP.is_eq, M::F::from_canonical_u32(EQ32)),
+            ],
+            M::F::zero(),
+        );
+        let opcode = VirtualPairCol::new_main(
+            vec![
+                (COM_COL_MAP.is_ne, M::F::from_canonical_u32(NE32)),
+                (COM_COL_MAP.is_eq, M::F::from_canonical_u32(EQ32)),
+            ],
+            M::F::zero(),
+        );
         let input_1 = COM_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = COM_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
         let output = (0..MEMORY_CELL_BYTES - 1)
@@ -64,9 +79,12 @@ where
         fields.extend(input_2);
         fields.extend(output);
 
+        let is_real = VirtualPairCol::sum_main(vec![COM_COL_MAP.is_ne, COM_COL_MAP.is_eq]);
+
         let receive = Interaction {
             fields,
-            count: VirtualPairCol::single_main(COM_COL_MAP.multiplicity),
+            count: is_real,
+            count: is_real,
             argument_index: machine.general_bus(),
         };
         vec![receive]
@@ -82,25 +100,11 @@ impl Com32Chip {
         let cols: &mut Com32Cols<F> = unsafe { transmute(&mut row) };
 
         match op {
-            Operation::Ne32(dst, src1, src2) => {
-                if let Some(n) = src1
-                    .into_iter()
-                    .zip(src2.into_iter())
-                    .enumerate()
-                    .find_map(|(n, (x, y))| if x == y { Some(n) } else { None })
-                {
-                    let z = 256u16 + src1[n] as u16 - src2[n] as u16;
-                    for i in 0..10 {
-                        cols.bits[i] = F::from_canonical_u16(z >> i & 1);
-                    }
-                    if n < 3 {
-                        cols.byte_flag[n] = F::one();
-                    }
-                }
-                cols.input_1 = src1.transform(F::from_canonical_u8);
-                cols.input_2 = src2.transform(F::from_canonical_u8);
-                cols.output = F::from_canonical_u8(dst[3]);
-                cols.multiplicity = F::one();
+            Operation::Ne32(_, _, _) => {
+                cols.is_ne = F::one();
+            }
+            Operation::Eq32(_, _, _) => {
+                cols.is_eq = F::one();
             }
         }
         row
@@ -112,13 +116,61 @@ pub trait MachineWithCom32Chip: MachineWithCpuChip {
     fn com_u32_mut(&mut self) -> &mut Com32Chip;
 }
 
-instructions!(Ne32Instruction);
+instructions!(Ne32Instruction, Eq32Instruction);
+instructions!(Ne32Instruction, Eq32Instruction);
 
 impl<M> Instruction<M> for Ne32Instruction
 where
     M: MachineWithCom32Chip,
 {
     const OPCODE: u32 = NE32;
+
+    fn execute(state: &mut M, ops: Operands<i32>) {
+        let opcode = <Self as Instruction<M>>::OPCODE;
+        let clk = state.cpu().clock;
+        let pc = state.cpu().pc;
+        let mut imm: Option<Word<u8>> = None;
+        let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
+        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
+        let src1 = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let src2 = if ops.is_imm() == 1 {
+            let c = (ops.c() as u32).into();
+            imm = Some(c);
+            c
+        } else {
+            let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
+            state
+                .mem_mut()
+                .read(clk, read_addr_2, true, pc, opcode, 1, "")
+        };
+
+        let dst = if src1 != src2 {
+            Word::from(1)
+        } else {
+            Word::from(0)
+        };
+        state.mem_mut().write(clk, write_addr, dst, true);
+
+        state
+            .com_u32_mut()
+            .operations
+            .push(Operation::Ne32(dst, src1, src2));
+        state
+            .com_u32_mut()
+            .operations
+            .push(Operation::Eq32(dst, src1, src2));
+        state.cpu_mut().push_bus_op(imm, opcode, ops);
+    }
+}
+
+
+impl<M> Instruction<M> for Eq32Instruction
+where
+    M: MachineWithCom32Chip,
+{
+    const OPCODE: u32 = EQ32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let opcode = <Self as Instruction<M>>::OPCODE;
@@ -137,7 +189,7 @@ where
             state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
         };
 
-        let dst = if src1 != src2 {
+        let dst = if src1 == src2 {
             Word::from(1)
         } else {
             Word::from(0)
@@ -147,7 +199,7 @@ where
         state
             .com_u32_mut()
             .operations
-            .push(Operation::Ne32(dst, src1, src2));
+            .push(Operation::Eq32(dst, src1, src2));
         state
             .cpu_mut()
             .push_bus_op(imm, opcode, ops);

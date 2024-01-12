@@ -9,15 +9,20 @@ pub struct Com32Cols<T> {
     pub input_1: Word<T>,
     pub input_2: Word<T>,
 
-    /// Boolean flags indicating which byte pair differs
-    pub byte_flag: [T; 3],
-
-    /// Bit decomposition of 256 + input_1 - input_2
-    pub bits: [T; 10],
+    /// When doing an equality test between two words, `x` and `y`, this holds the sum of
+    /// `(x_i - y_i)^2`, which is zero if and only if `x = y`.
+    pub diff: T,
+    /// The inverse of `diff`, or undefined if `diff = 0`.
+    pub diff_inv: T,
+    /// A boolean flag indicating whether `diff != 0`.
+    pub not_equal: T,
 
     pub output: T,
 
-    pub multiplicity: T,
+    pub is_ne: T,
+    pub is_eq: T,
+    pub is_ne: T,
+    pub is_eq: T,
 }
 
 pub const NUM_COM_COLS: usize = size_of::<Com32Cols<u8>>();

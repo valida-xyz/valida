@@ -22,51 +22,25 @@ where
         let main = builder.main();
         let local: &Com32Cols<AB::Var> = main.row_slice(0).borrow();
 
-        let base_2 = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512].map(AB::Expr::from_canonical_u32);
+        // Check if the first two operand values are equal, in case we're doing a conditional branch.
+        // (when is_imm == 1, the second read value is guaranteed to be an immediate value)
+        builder.assert_eq(
+            local.diff,
+            local
+                .input_1
+                .into_iter()
+                .zip(local.input_2)
+                .map(|(a, b)| (a - b) * (a - b))
+                .sum::<AB::Expr>(),
+        );
+        builder.assert_bool(local.not_equal);
+        builder.assert_eq(local.not_equal, local.diff * local.diff_inv);
 
-        let bit_comp: AB::Expr = local
-            .bits
-            .into_iter()
-            .zip(base_2.iter().cloned())
-            .map(|(bit, base)| bit * base)
-            .sum();
+        builder.assert_bool(local.is_ne);
+        builder.assert_bool(local.is_eq);
+        builder.assert_bool(local.is_ne + local.is_eq);
 
-        // Check bit decomposition of z = 256 + input_1[n] - input_2[n], where
-        // n is the most significant byte that differs between inputs
-        for i in 0..3 {
-            builder
-                .when_ne(local.byte_flag[i], AB::Expr::one())
-                .assert_eq(local.input_1[i], local.input_2[i]);
-
-            builder.when(local.byte_flag[i]).assert_eq(
-                AB::Expr::from_canonical_u32(256) + local.input_1[i] - local.input_2[i],
-                bit_comp.clone(),
-            );
-
-            builder.assert_bool(local.byte_flag[i]);
-        }
-
-        // Check final byte (if no other byte flags were set)
-        let flag_sum = local.byte_flag[0] + local.byte_flag[1] + local.byte_flag[2];
-        builder.assert_bool(flag_sum.clone());
-        builder
-            .when_ne(local.multiplicity, AB::Expr::zero())
-            .when_ne(flag_sum, AB::Expr::one())
-            .assert_eq(
-                AB::Expr::from_canonical_u32(256) + local.input_1[3] - local.input_2[3],
-                bit_comp.clone(),
-            );
-
-        // Output constraints
-        builder.when(local.bits[8]).assert_zero(local.output);
-        builder
-            .when_ne(local.multiplicity, AB::Expr::zero())
-            .when_ne(local.bits[8], AB::Expr::one())
-            .assert_one(local.output);
-
-        // Check bit decomposition
-        for bit in local.bits.into_iter() {
-            builder.assert_bool(bit);
-        }
+        builder.when(local.is_ne).assert_one(local.not_equal);
+        builder.when(local.is_eq).assert_zero(local.not_equal);
     }
 }
