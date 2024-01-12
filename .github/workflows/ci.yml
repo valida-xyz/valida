@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "*" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_and_test:
+    name: Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Plonky3
+        uses: actions/checkout@v4
+        with:
+          repository: Plonky3/Plonky3
+          path: Plonky3
+
+      - name: Checkout Valida
+        uses: actions/checkout@v4
+        with:
+          path: valida
+
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+
+      - name: Build
+        working-directory: valida
+        run: cargo build --all-targets
+
+      - name: Test
+        working-directory: valida
+        run: cargo test
+
+  lints:
+    name: Lints
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Plonky3
+        uses: actions/checkout@v4
+        with:
+          repository: Plonky3/Plonky3
+          path: Plonky3
+
+      - name: Checkout Valida
+        uses: actions/checkout@v4
+        with:
+          path: valida
+
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          components: rustfmt, clippy
+
+      - name: Format
+        working-directory: valida
+        run: cargo fmt --all -- --check
+
+# TODO: Enforce clippy at some point...
+#      - name: Run cargo clippy
+#        working-directory: valida
+#        run: cargo clippy --all-features --all-targets -- -D warnings -A incomplete-features

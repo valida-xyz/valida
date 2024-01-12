@@ -3,7 +3,7 @@ use crate::proof::ChipProof;
 use crate::{Chip, Machine};
 use p3_air::Air;
 use p3_uni_stark::{prove as stark_prove,StarkConfig,SymbolicAirBuilder,ProverConstraintFolder};
-
+/*
 pub fn prove<M, A, SC>(
     machine: &M,
     config: &SC,
@@ -22,3 +22,4 @@ where
 	proof
     }
 }
+*/

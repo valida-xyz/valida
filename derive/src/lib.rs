@@ -146,15 +146,14 @@ fn run_method(machine: &syn::DeriveInput, instructions: &[&Field]) -> TokenStrea
         .map(|inst| {
             let ty = &inst.ty;
             quote! {
-                <#ty as Instruction<#name #ty_generics>>::OPCODE => {
-                    #ty::execute(self, ops);
-                }
+                <#ty as Instruction<#name #ty_generics>>::OPCODE =>
+                    #ty::execute_with_advice::<Adv>(self, ops, advice),
             }
         })
         .collect::<TokenStream2>();
 
     quote! {
-        fn run(&mut self, program: &ProgramROM<i32>) {
+        fn run<Adv: ::valida_machine::AdviceProvider>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv) {
             loop {
                 // Fetch
                 let pc = self.cpu().pc;
@@ -279,9 +278,8 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             challenger.observe(perm_commit.clone());
 
             let zeta: SC::Challenge = challenger.sample_ext_element();
-            // TODO: Should be g_subgroups[i] for the i'th trace, but open_multi_batches doesn't
-            // currently support separate opening points for each matrix. Need to revise that API.
-            let zeta_and_next = [zeta, zeta * g_subgroups[0]];
+            let zeta_and_next: [Vec<SC::Challenge>; #num_chips] =
+                core::array::from_fn(|i| vec![zeta, zeta * g_subgroups[i]]);
             let prover_data_and_points = [
                 (&main_data, zeta_and_next.as_slice()),
                 (&perm_data, zeta_and_next.as_slice()),
@@ -328,20 +326,20 @@ pub fn aligned_borrow_derive(input: TokenStream) -> TokenStream {
     let methods = quote! {
         impl<T> Borrow<#name<T>> for [T] {
             fn borrow(&self) -> &#name<T> {
-                // TODO: Double check if this is correct & consider making asserts debug-only.
+                debug_assert_eq!(self.len(), size_of::<#name<u8>>());
                 let (prefix, shorts, _suffix) = unsafe { self.align_to::<#name<T>>() };
-                assert!(prefix.is_empty(), "Data was not aligned");
-                assert_eq!(shorts.len(), 1);
+                debug_assert!(prefix.is_empty(), "Alignment should match");
+                debug_assert_eq!(shorts.len(), 1);
                 &shorts[0]
             }
         }
 
         impl<T> BorrowMut<#name<T>> for [T] {
             fn borrow_mut(&mut self) -> &mut #name<T> {
-                // TODO: Double check if this is correct & consider making asserts debug-only.
+                debug_assert_eq!(self.len(), size_of::<#name<u8>>());
                 let (prefix, shorts, _suffix) = unsafe { self.align_to_mut::<#name<T>>() };
-                assert!(prefix.is_empty(), "Data was not aligned");
-                assert_eq!(shorts.len(), 1);
+                debug_assert!(prefix.is_empty(), "Alignment should match");
+                debug_assert_eq!(shorts.len(), 1);
                 &mut shorts[0]
             }
         }

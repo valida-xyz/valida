@@ -127,14 +127,24 @@ where
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let src1 = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let src1 = if ops.d() == 1 {
+            let b = (ops.b() as u32).into();
+            imm = Some(b);
+            b
+        } else {
+            state
+                .mem_mut()
+                .read(clk, read_addr_1, true, pc, opcode, 0, "")
+        };
         let src2 = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
+            state
+                .mem_mut()
+                .read(clk, read_addr_2, true, pc, opcode, 1, "")
         };
 
         let dst = if src1 < src2 {
@@ -148,8 +158,6 @@ where
             .lt_u32_mut()
             .operations
             .push(Operation::Lt32(dst, src1, src2));
-        state
-            .cpu_mut()
-            .push_bus_op(imm, opcode, ops);
+        state.cpu_mut().push_bus_op(imm, opcode, ops);
     }
 }

@@ -11,11 +11,11 @@ use core::marker::Sync;
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithMemBus, MachineWithProgramBus};
 use valida_machine::{
-    instructions, Chip, Instruction, InstructionWord, Interaction, Operands, Word,
+    instructions, AdviceProvider, Chip, Instruction, InstructionWord, Interaction, Operands, Word,
 };
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 use valida_opcodes::{
-    BEQ, BNE, IMM32, JAL, JALV, LOAD32, READ_ADVICE, STOP, STORE32, WRITE_ADVICE,
+    BEQ, BNE, BYTES_PER_INSTR, IMM32, JAL, JALV, LOAD32, READ_ADVICE, STOP, STORE32,
 };
 use valida_util::batch_multiplicative_inverse;
 
@@ -39,7 +39,6 @@ pub enum Operation {
     Bus(Option<Word<u8>> /*imm*/),
     BusWithMemory(Option<Word<u8>> /*imm*/),
     ReadAdvice,
-    WriteAdvice,
     Stop,
 }
 
@@ -51,38 +50,6 @@ pub struct CpuChip {
     pub registers: Vec<Registers>,
     pub operations: Vec<Operation>,
     pub instructions: Vec<InstructionWord<i32>>,
-    pub advice_tape: AdviceTape,
-}
-
-#[derive(Default)]
-pub struct AdviceTape {
-    pub data: Vec<Word<u8>>,
-}
-
-impl AdviceTape {
-    pub fn new() -> Self {
-        Self { data: vec![] }
-    }
-
-    pub fn len(&self) -> usize {
-        self.data.len()
-    }
-
-    pub fn push(&mut self, word: Word<u8>) {
-        self.data.push(word);
-    }
-
-    pub fn pop(&mut self) -> Option<Word<u8>> {
-        self.data.pop()
-    }
-
-    pub fn read(&self, addr: u32, len: u32) -> Vec<Word<u8>> {
-        self.data[addr as usize..(addr + len) as usize].to_vec()
-    }
-
-    pub fn write(&mut self, addr: u32, data: &[Word<u8>]) {
-        self.data[addr as usize..(addr + data.len() as u32) as usize].copy_from_slice(data);
-    }
 }
 
 #[derive(Default)]
@@ -233,7 +200,7 @@ impl CpuChip {
                 cols.opcode_flags.is_bus_op_with_mem = F::one();
                 self.set_imm_value(cols, *imm);
             }
-            Operation::ReadAdvice | Operation::WriteAdvice => {
+            Operation::ReadAdvice => {
                 cols.opcode_flags.is_advice = F::one();
             }
             Operation::Stop => {
@@ -380,7 +347,6 @@ instructions!(
     BneInstruction,
     Imm32Instruction,
     ReadAdviceInstruction,
-    WriteAdviceInstruction,
     StopInstruction
 );
 
@@ -392,65 +358,29 @@ where
 {
     const OPCODE: u32 = READ_ADVICE;
 
-    fn execute(state: &mut M, ops: Operands<i32>) {
-        // Advice tape location
-        let addr = ops.a() as u32;
-        let buf_len = ops.b() as u32;
+    fn execute(_state: &mut M, _ops: Operands<i32>) {
+        panic!("execute_with_advice should be called instead");
+    }
 
-        // Memory location
-        let mem_addr = ops.c();
+    fn execute_with_advice<Adv>(state: &mut M, ops: Operands<i32>, advice: &mut Adv)
+    where
+        M: MachineWithCpuChip,
+        Adv: AdviceProvider,
+    {
+        let clk = state.cpu().clock;
+        let fp = state.cpu().fp as i32;
+        let mem_addr = fp + ops.a();
 
         // Read from the advice tape into memory
-        let fp = state.cpu().fp as i32;
-        let segment = state.cpu().advice_tape.read(addr, buf_len);
-        for (n, value) in segment.into_iter().enumerate() {
-            state
-                .mem_mut()
-                .cells
-                .insert((fp + mem_addr + n as i32 * 4) as u32, value);
-        }
+        let advice_byte = advice.get_advice().expect("No more advice");
+        state
+            .mem_mut()
+            .write(clk, mem_addr as u32, Word::from_u8(advice_byte), true);
 
         state.cpu_mut().pc += 1;
         state
             .cpu_mut()
             .push_op(Operation::ReadAdvice, <Self as Instruction<M>>::OPCODE, ops);
-    }
-}
-
-impl<M> Instruction<M> for WriteAdviceInstruction
-where
-    M: MachineWithCpuChip,
-{
-    const OPCODE: u32 = WRITE_ADVICE;
-
-    fn execute(state: &mut M, ops: Operands<i32>) {
-        // Advice tape location
-        let addr = ops.a();
-
-        // Memory location
-        let mem_addr = ops.b() as u32;
-        let mem_buf_len = ops.c() as u32;
-
-        // Write a memory segment to the advice tape
-        let fp = state.cpu().fp as u32;
-        let segment = ((fp + mem_addr)..(fp + mem_addr) + mem_buf_len)
-            .map(|n| {
-                state
-                    .mem()
-                    .cells
-                    .get(&(n as u32))
-                    .unwrap_or(&Word::default())
-                    .clone()
-            })
-            .collect::<Vec<_>>();
-        state.cpu_mut().advice_tape.write(addr as u32, &segment);
-
-        state.cpu_mut().pc += 1;
-        state.cpu_mut().push_op(
-            Operation::WriteAdvice,
-            <Self as Instruction<M>>::OPCODE,
-            ops,
-        );
     }
 }
 
@@ -468,14 +398,27 @@ where
         let pc = state.cpu().pc;
         let fp = state.cpu().fp;
         let read_addr_1 = (fp as i32 + ops.c()) as u32;
-        let read_addr_2 = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let read_addr_2 = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let cell = state.mem_mut().read(clk, read_addr_2.into(), true, pc, opcode, 1, &format!("fp = {}, c = {}, [fp+c] = {:?}", fp as i32, ops.c() as u32, read_addr_2));
+        let cell = state.mem_mut().read(
+            clk,
+            read_addr_2.into(),
+            true,
+            pc,
+            opcode,
+            1,
+            &format!(
+                "fp = {}, c = {}, [fp+c] = {:?}",
+                fp as i32,
+                ops.c() as u32,
+                read_addr_2
+            ),
+        );
         state.mem_mut().write(clk, write_addr, cell, true);
         state.cpu_mut().pc += 1;
-        state
-            .cpu_mut()
-            .push_op(Operation::Load32, opcode, ops);
+        state.cpu_mut().push_op(Operation::Load32, opcode, ops);
     }
 }
 
@@ -491,13 +434,15 @@ where
         let read_addr = (state.cpu().fp as i32 + ops.c()) as u32;
         let write_addr_loc = (state.cpu().fp as i32 + ops.b()) as u32;
         let pc = state.cpu().pc;
-        let write_addr = state.mem_mut().read(clk, write_addr_loc.into(), true, pc, opcode, 0, "");
-        let cell = state.mem_mut().read(clk, read_addr, true, pc, opcode, 1, "");
+        let write_addr = state
+            .mem_mut()
+            .read(clk, write_addr_loc.into(), true, pc, opcode, 0, "");
+        let cell = state
+            .mem_mut()
+            .read(clk, read_addr, true, pc, opcode, 1, "");
         state.mem_mut().write(clk, write_addr.into(), cell, true);
         state.cpu_mut().pc += 1;
-        state
-            .cpu_mut()
-            .push_op(Operation::Store32, opcode, ops);
+        state.cpu_mut().push_op(Operation::Store32, opcode, ops);
     }
 }
 
@@ -509,12 +454,14 @@ where
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let clk = state.cpu().clock;
-        // Store pc + 1 to local stack variable at offset a
+        // Store 24 * (pc + 1) to local stack variable at offset a
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
         let next_pc = state.cpu().pc + 1;
-        state.mem_mut().write(clk, write_addr, next_pc.into(), true);
-        // Set pc to the field element b
-        state.cpu_mut().pc = ops.b() as u32;
+        state
+            .mem_mut()
+            .write(clk, write_addr, (BYTES_PER_INSTR * next_pc).into(), true);
+        // Set pc to the field element b / 24
+        state.cpu_mut().pc = (ops.b() as u32) / BYTES_PER_INSTR;
         // Set fp to fp + c
         state.cpu_mut().fp = (state.cpu().fp as i32 + ops.c()) as u32;
         state
@@ -536,17 +483,24 @@ where
         // Store pc + 1 to local stack variable at offset a
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
         let next_pc = state.cpu().pc + 1;
-        state.mem_mut().write(clk, write_addr, next_pc.into(), true);
+        state
+            .mem_mut()
+            .write(clk, write_addr, (BYTES_PER_INSTR * next_pc).into(), true);
         // Set pc to the field element [b]
         let read_addr = (state.cpu().fp as i32 + ops.b()) as u32;
-        state.cpu_mut().pc = state.mem_mut().read(clk, read_addr, true, pc, opcode, 0, "").into();
+        state.cpu_mut().pc = <Word<u8> as Into<u32>>::into(
+            state
+                .mem_mut()
+                .read(clk, read_addr, true, pc, opcode, 0, ""),
+        ) / BYTES_PER_INSTR;
         // Set fp to [c]
         let read_addr = (state.cpu().fp as i32 + ops.c()) as u32;
-        let cell: u32 = state.mem_mut().read(clk, read_addr, true, pc, opcode, 2, "").into();
+        let cell: u32 = state
+            .mem_mut()
+            .read(clk, read_addr, true, pc, opcode, 2, "")
+            .into();
         state.cpu_mut().fp += cell;
-        state
-            .cpu_mut()
-            .push_op(Operation::Jalv, opcode, ops);
+        state.cpu_mut().push_op(Operation::Jalv, opcode, ops);
     }
 }
 
@@ -562,23 +516,25 @@ where
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let pc = state.cpu().pc;
-        let cell_1 = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let cell_1 = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
         let cell_2 = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
+            state
+                .mem_mut()
+                .read(clk, read_addr_2, true, pc, opcode, 1, "")
         };
         if cell_1 == cell_2 {
-            state.cpu_mut().pc = ops.a() as u32;
+            state.cpu_mut().pc = (ops.a() as u32) / BYTES_PER_INSTR;
         } else {
             state.cpu_mut().pc = state.cpu().pc + 1;
         }
-        state
-            .cpu_mut()
-            .push_op(Operation::Beq(imm), opcode, ops);
+        state.cpu_mut().push_op(Operation::Beq(imm), opcode, ops);
     }
 }
 
@@ -594,23 +550,25 @@ where
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let pc = state.cpu().pc;
-        let cell_1 = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let cell_1 = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
         let cell_2 = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
+            state
+                .mem_mut()
+                .read(clk, read_addr_2, true, pc, opcode, 1, "")
         };
         if cell_1 != cell_2 {
-            state.cpu_mut().pc = ops.a() as u32;
+            state.cpu_mut().pc = (ops.a() as u32) / BYTES_PER_INSTR;
         } else {
             state.cpu_mut().pc = state.cpu().pc + 1;
         }
-        state
-            .cpu_mut()
-            .push_op(Operation::Bne(imm), opcode, ops);
+        state.cpu_mut().push_op(Operation::Bne(imm), opcode, ops);
     }
 }
 

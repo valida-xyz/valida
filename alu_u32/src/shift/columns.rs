@@ -21,6 +21,7 @@ pub struct Shift32Cols<T> {
 
     pub is_shl: T,
     pub is_shr: T,
+    pub is_sra: T,
 }
 
 pub const NUM_SHIFT_COLS: usize = size_of::<Shift32Cols<u8>>();

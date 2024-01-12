@@ -4,13 +4,15 @@
 extern crate alloc;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
+use p3_air::Air;
 use p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
 use p3_field::{extension::BinomialExtensionField, TwoAdicField};
 use p3_goldilocks::Goldilocks;
+use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
 use p3_uni_stark::{
-    get_max_constraint_degree, get_trace_and_quotient_ldes, open, ProverConstraintFolder,
-    StarkConfig, SymbolicAirBuilder, Commitments, Proof
+    get_max_constraint_degree, get_trace_and_quotient_ldes, open, Commitments, Proof,
+    ProverConstraintFolder, ProverData, StarkConfig, SymbolicAirBuilder,
 };
 use p3_util::log2_ceil_usize;
 use valida_alu_u32::{
@@ -19,10 +21,14 @@ use valida_alu_u32::{
         And32Instruction, Bitwise32Chip, MachineWithBitwise32Chip, Or32Instruction,
         Xor32Instruction,
     },
-    div::{Div32Chip, Div32Instruction, MachineWithDiv32Chip},
+    div::{Div32Chip, Div32Instruction, MachineWithDiv32Chip, SDiv32Instruction},
     lt::{Lt32Chip, Lt32Instruction, MachineWithLt32Chip},
-    mul::{MachineWithMul32Chip, Mul32Chip, Mul32Instruction},
-    shift::{MachineWithShift32Chip, Shift32Chip, Shl32Instruction, Shr32Instruction},
+    mul::{
+        MachineWithMul32Chip, Mul32Chip, Mul32Instruction, Mulhs32Instruction, Mulhu32Instruction,
+    },
+    shift::{
+        MachineWithShift32Chip, Shift32Chip, Shl32Instruction, Shr32Instruction, Sra32Instruction,
+    },
     sub::{MachineWithSub32Chip, Sub32Chip, Sub32Instruction},
 };
 use valida_bus::{
@@ -35,7 +41,8 @@ use valida_cpu::{
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
 use valida_machine::{
-    proof::{MachineProof, ChipProof}, AbstractExtensionField, AbstractField, BusArgument, Chip, ExtensionField,
+    proof::{ChipProof, MachineProof},
+    AbstractExtensionField, AbstractField, AdviceProvider, BusArgument, Chip, ExtensionField,
     Instruction, Machine, PrimeField64, ProgramROM, ValidaAirBuilder,
 };
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
@@ -69,11 +76,19 @@ pub struct BasicMachine<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> {
 
     mul32: Mul32Instruction,
 
+    mulhs32: Mulhs32Instruction,
+
+    mulhu32: Mulhu32Instruction,
+
     div32: Div32Instruction,
+
+    sdiv32: SDiv32Instruction,
 
     shl32: Shl32Instruction,
 
     shr32: Shr32Instruction,
+
+    sra32: Sra32Instruction,
 
     lt32: Lt32Instruction,
 
@@ -295,7 +310,7 @@ impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithRangeChip
 impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> Machine for BasicMachine<F, EF> {
     type F = F;
     type EF = EF;
-    fn run(&mut self, program: &ProgramROM<i32>) {
+    fn run<Adv: AdviceProvider>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv) {
         loop {
             let pc = self.cpu().pc;
             let instruction = program.get_instruction(pc);
@@ -303,61 +318,76 @@ impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> Machine for BasicMac
             let ops = instruction.operands;
             match opcode {
                 <Load32Instruction as Instruction<Self>>::OPCODE => {
-                    Load32Instruction::execute(self, ops);
+                    Load32Instruction::execute_with_advice(self, ops, advice);
+                }
+                <Store32Instruction as Instruction<Self>>::OPCODE => {
+                    Store32Instruction::execute_with_advice(self, ops, advice);
                 }
                 <JalInstruction as Instruction<Self>>::OPCODE => {
-                    JalInstruction::execute(self, ops);
+                    JalInstruction::execute_with_advice(self, ops, advice);
                 }
                 <JalvInstruction as Instruction<Self>>::OPCODE => {
-                    JalvInstruction::execute(self, ops);
+                    JalvInstruction::execute_with_advice(self, ops, advice);
                 }
                 <BeqInstruction as Instruction<Self>>::OPCODE => {
-                    BeqInstruction::execute(self, ops);
+                    BeqInstruction::execute_with_advice(self, ops, advice);
                 }
                 <BneInstruction as Instruction<Self>>::OPCODE => {
-                    BneInstruction::execute(self, ops);
+                    BneInstruction::execute_with_advice(self, ops, advice);
                 }
                 <Imm32Instruction as Instruction<Self>>::OPCODE => {
-                    Imm32Instruction::execute(self, ops);
+                    Imm32Instruction::execute_with_advice(self, ops, advice);
                 }
                 <Add32Instruction as Instruction<Self>>::OPCODE => {
-                    Add32Instruction::execute(self, ops);
+                    Add32Instruction::execute_with_advice(self, ops, advice);
                 }
                 <Sub32Instruction as Instruction<Self>>::OPCODE => {
-                    Sub32Instruction::execute(self, ops);
+                    Sub32Instruction::execute_with_advice(self, ops, advice);
                 }
                 <Mul32Instruction as Instruction<Self>>::OPCODE => {
-                    Mul32Instruction::execute(self, ops);
+                    Mul32Instruction::execute_with_advice(self, ops, advice);
+                }
+                <Mulhs32Instruction as Instruction<Self>>::OPCODE => {
+                    Mulhs32Instruction::execute_with_advice(self, ops, advice);
+                }
+                <Mulhu32Instruction as Instruction<Self>>::OPCODE => {
+                    Mulhu32Instruction::execute_with_advice(self, ops, advice);
                 }
                 <Div32Instruction as Instruction<Self>>::OPCODE => {
-                    Div32Instruction::execute(self, ops);
+                    Div32Instruction::execute_with_advice(self, ops, advice);
+                }
+                <SDiv32Instruction as Instruction<Self>>::OPCODE => {
+                    SDiv32Instruction::execute_with_advice(self, ops, advice);
                 }
                 <Shl32Instruction as Instruction<Self>>::OPCODE => {
-                    Shl32Instruction::execute(self, ops);
+                    Shl32Instruction::execute_with_advice(self, ops, advice);
                 }
                 <Shr32Instruction as Instruction<Self>>::OPCODE => {
-                    Shr32Instruction::execute(self, ops);
+                    Shr32Instruction::execute_with_advice(self, ops, advice);
+                }
+                <Sra32Instruction as Instruction<Self>>::OPCODE => {
+                    Sra32Instruction::execute_with_advice(self, ops, advice);
                 }
                 <Lt32Instruction as Instruction<Self>>::OPCODE => {
-                    Lt32Instruction::execute(self, ops);
+                    Lt32Instruction::execute_with_advice(self, ops, advice);
                 }
                 <And32Instruction as Instruction<Self>>::OPCODE => {
-                    And32Instruction::execute(self, ops);
+                    And32Instruction::execute_with_advice(self, ops, advice);
                 }
                 <Or32Instruction as Instruction<Self>>::OPCODE => {
-                    Or32Instruction::execute(self, ops);
+                    Or32Instruction::execute_with_advice(self, ops, advice);
                 }
                 <Xor32Instruction as Instruction<Self>>::OPCODE => {
-                    Xor32Instruction::execute(self, ops);
+                    Xor32Instruction::execute_with_advice(self, ops, advice);
                 }
                 <ReadAdviceInstruction as Instruction<Self>>::OPCODE => {
-                    ReadAdviceInstruction::execute(self, ops);
+                    ReadAdviceInstruction::execute_with_advice(self, ops, advice);
                 }
                 <WriteInstruction as Instruction<Self>>::OPCODE => {
-                    WriteInstruction::execute(self, ops);
+                    WriteInstruction::execute_with_advice(self, ops, advice);
                 }
                 <StopInstruction as Instruction<Self>>::OPCODE => {
-                    StopInstruction::execute(self, ops);
+                    StopInstruction::execute_with_advice(self, ops, advice);
                 }
                 _ => {}
             }
@@ -373,7 +403,27 @@ impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> Machine for BasicMac
             self.read_word(self.cpu().pc as usize);
         }
     }
-
+    fn add_chip_trace<SC, A>(
+        &self,
+        config: &SC,
+        challenger: &mut SC::Challenger,
+        trace_commitments: &mut Vec<ProverData<SC>>,
+        quotient_commitments: &mut Vec<ProverData<SC>>,
+        log_degrees: &mut Vec<usize>,
+        log_quotient_degrees: &mut Vec<usize>,
+        chip: &A,
+        trace: RowMajorMatrix<<SC as StarkConfig>::Val>,
+    ) where
+        SC: StarkConfig,
+        A: Air<SymbolicAirBuilder<SC::Val>> + for<'a> Air<ProverConstraintFolder<'a, SC>>,
+    {
+        let (trace_lde, quotient_lde, log_degree, log_quotient_degree) =
+            get_trace_and_quotient_ldes(config, trace, chip, challenger);
+        trace_commitments.push(trace_lde);
+        quotient_commitments.push(quotient_lde);
+        log_degrees.push(log_degree);
+        log_quotient_degrees.push(log_quotient_degree);
+    }
     fn prove<SC>(&self, config: &SC, challenger: &mut SC::Challenger) -> MachineProof<SC>
     where
         SC: StarkConfig<Val = Self::F, Challenge = Self::EF>,
@@ -382,91 +432,126 @@ impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> Machine for BasicMac
         let mut quotient_commitments = Vec::new();
         let mut log_degrees = Vec::new();
         let mut log_quotient_degrees = Vec::new();
-        if self.cpu.operations.len() > 0 {
-            let air = &self.cpu;
-            let trace = air.generate_trace(self);
-            let (trace_lde, quotient_lde, log_degree, log_quotient_degree) =
-                get_trace_and_quotient_ldes(config, trace, air, challenger);
-            trace_commitments.push(trace_lde);
-            quotient_commitments.push(quotient_lde);
-            log_degrees.push(log_degree);
-            log_quotient_degrees.push(log_quotient_degree);
-        }
+
+        let air = &self.cpu;
+        assert_eq!(air.operations.len() > 0, true);
+        let trace = air.generate_trace(self);
+        self.add_chip_trace(
+            config,
+            challenger,
+            &mut trace_commitments,
+            &mut quotient_commitments,
+            &mut log_degrees,
+            &mut log_quotient_degrees,
+            air,
+            trace,
+        );
+
         if self.add_u32.operations.len() > 0 {
             let air = &self.add_u32;
             let trace = air.generate_trace(self);
-            let (trace_lde, quotient_lde, log_degree, log_quotient_degree) =
-                get_trace_and_quotient_ldes(config, trace, air, challenger);
-            trace_commitments.push(trace_lde);
-            quotient_commitments.push(quotient_lde);
-            log_degrees.push(log_degree);
-            log_quotient_degrees.push(log_quotient_degree);
+
+            self.add_chip_trace(
+                config,
+                challenger,
+                &mut trace_commitments,
+                &mut quotient_commitments,
+                &mut log_degrees,
+                &mut log_quotient_degrees,
+                air,
+                trace,
+            );
         }
         if self.sub_u32.operations.len() > 0 {
             let air = &self.sub_u32;
             let trace = air.generate_trace(self);
-            let (trace_lde, quotient_lde, log_degree, log_quotient_degree) =
-                get_trace_and_quotient_ldes(config, trace, air, challenger);
-            trace_commitments.push(trace_lde);
-            quotient_commitments.push(quotient_lde);
-            log_degrees.push(log_degree);
-            log_quotient_degrees.push(log_quotient_degree);
+            self.add_chip_trace(
+                config,
+                challenger,
+                &mut trace_commitments,
+                &mut quotient_commitments,
+                &mut log_degrees,
+                &mut log_quotient_degrees,
+                air,
+                trace,
+            );
         }
         if self.mul_u32.operations.len() > 0 {
             let air = &self.mul_u32;
             let trace = air.generate_trace(self);
-            let (trace_lde, quotient_lde, log_degree, log_quotient_degree) =
-                get_trace_and_quotient_ldes(config, trace, air, challenger);
-            trace_commitments.push(trace_lde);
-            quotient_commitments.push(quotient_lde);
-            log_degrees.push(log_degree);
-            log_quotient_degrees.push(log_quotient_degree);
+            self.add_chip_trace(
+                config,
+                challenger,
+                &mut trace_commitments,
+                &mut quotient_commitments,
+                &mut log_degrees,
+                &mut log_quotient_degrees,
+                air,
+                trace,
+            );
         }
         if self.div_u32.operations.len() > 0 {
             let air = &self.div_u32;
             let trace = air.generate_trace(self);
-            let (trace_lde, quotient_lde, log_degree, log_quotient_degree) =
-                get_trace_and_quotient_ldes(config, trace, air, challenger);
-            trace_commitments.push(trace_lde);
-            quotient_commitments.push(quotient_lde);
-            log_degrees.push(log_degree);
-            log_quotient_degrees.push(log_quotient_degree);
+            self.add_chip_trace(
+                config,
+                challenger,
+                &mut trace_commitments,
+                &mut quotient_commitments,
+                &mut log_degrees,
+                &mut log_quotient_degrees,
+                air,
+                trace,
+            );
         }
         if self.shift_u32.operations.len() > 0 {
             let air = &self.shift_u32;
             let trace = air.generate_trace(self);
-            let (trace_lde, quotient_lde, log_degree, log_quotient_degree) =
-                get_trace_and_quotient_ldes(config, trace, air, challenger);
-            trace_commitments.push(trace_lde);
-            quotient_commitments.push(quotient_lde);
-            log_degrees.push(log_degree);
-            log_quotient_degrees.push(log_quotient_degree);
+            self.add_chip_trace(
+                config,
+                challenger,
+                &mut trace_commitments,
+                &mut quotient_commitments,
+                &mut log_degrees,
+                &mut log_quotient_degrees,
+                air,
+                trace,
+            );
         }
         if self.lt_u32.operations.len() > 0 {
             let air = &self.lt_u32;
             let trace = air.generate_trace(self);
-            let (trace_lde, quotient_lde, log_degree, log_quotient_degree) =
-                get_trace_and_quotient_ldes(config, trace, air, challenger);
-            trace_commitments.push(trace_lde);
-            quotient_commitments.push(quotient_lde);
-            log_degrees.push(log_degree);
-            log_quotient_degrees.push(log_quotient_degree);
+            self.add_chip_trace(
+                config,
+                challenger,
+                &mut trace_commitments,
+                &mut quotient_commitments,
+                &mut log_degrees,
+                &mut log_quotient_degrees,
+                air,
+                trace,
+            );
         }
 
         if self.bitwise_u32.operations.len() > 0 {
             let air = &self.bitwise_u32;
             let trace = air.generate_trace(self);
-            let (trace_lde, quotient_lde, log_degree, log_quotient_degree) =
-                get_trace_and_quotient_ldes(config, trace, air, challenger);
-            trace_commitments.push(trace_lde);
-            quotient_commitments.push(quotient_lde);
-            log_degrees.push(log_degree);
-            log_quotient_degrees.push(log_quotient_degree);
+            self.add_chip_trace(
+                config,
+                challenger,
+                &mut trace_commitments,
+                &mut quotient_commitments,
+                &mut log_degrees,
+                &mut log_quotient_degrees,
+                air,
+                trace,
+            );
         }
 
         let pcs = config.pcs();
         let (aggregated_commitment, aggregated_trace) = pcs.combine(&trace_commitments);
-        let (aggregated_quotient_commitment, aggregated_quotient_trace) = pcs.combine(&quotient_commitments);
+        let (aggregated_quotient_commitment, aggregated_quotient_trace) =
+            pcs.combine(&quotient_commitments);
         let max_log_degree = log_degrees.iter().max().unwrap();
         let max_quotient_degree = log_quotient_degrees.iter().max().unwrap();
         let (opening_proof, opened_values) = open(
@@ -478,19 +563,19 @@ impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> Machine for BasicMac
             challenger,
         );
 
-	let commitments = Commitments {
-	    trace: aggregated_commitment,
-	    quotient_chunks: aggregated_quotient_commitment
-	};
+        let commitments = Commitments {
+            trace: aggregated_commitment,
+            quotient_chunks: aggregated_quotient_commitment,
+        };
         MachineProof {
-            chip_proof: ChipProof{
-		proof: Proof{
-		    commitments,
-		    opened_values,
-		    opening_proof,
-		    degree_bits:*max_log_degree
-		}
-	    },
+            chip_proof: ChipProof {
+                proof: Proof {
+                    commitments,
+                    opened_values,
+                    opening_proof,
+                    degree_bits: *max_log_degree,
+                },
+            },
             phantom: PhantomData::default(),
         }
     }

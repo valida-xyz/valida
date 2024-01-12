@@ -158,14 +158,18 @@ where
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let b = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
         let c = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
+            state
+                .mem_mut()
+                .read(clk, read_addr_2, true, pc, opcode, 1, "")
         };
 
         let a_native = F::from_canonical_u32(b.into()) + F::from_canonical_u32(c.into());
@@ -176,9 +180,7 @@ where
             .native_field_mut()
             .operations
             .push(Operation::Add(a, b, c));
-        state
-            .cpu_mut()
-            .push_bus_op(imm, opcode, ops);
+        state.cpu_mut().push_bus_op(imm, opcode, ops);
 
         state.range_check(a);
     }
@@ -198,14 +200,18 @@ where
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let b = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
         let c = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
+            state
+                .mem_mut()
+                .read(clk, read_addr_2, true, pc, opcode, 1, "")
         };
 
         let a_native = F::from_canonical_u32(b.into()) - F::from_canonical_u32(c.into());
@@ -216,9 +222,7 @@ where
             .native_field_mut()
             .operations
             .push(Operation::Sub(a, b, c));
-        state
-            .cpu_mut()
-            .push_bus_op(imm, opcode, ops);
+        state.cpu_mut().push_bus_op(imm, opcode, ops);
 
         state.range_check(a);
     }
@@ -238,14 +242,18 @@ where
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let b = state.mem_mut().read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let b = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
         let c = if ops.is_imm() == 1 {
             let c = (ops.c() as u32).into();
             imm = Some(c);
             c
         } else {
             let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state.mem_mut().read(clk, read_addr_2, true, pc, opcode, 1, "")
+            state
+                .mem_mut()
+                .read(clk, read_addr_2, true, pc, opcode, 1, "")
         };
 
         let a_m31 = M::F::from_canonical_u32(b.into()) * M::F::from_canonical_u32(c.into());
@@ -256,9 +264,7 @@ where
             .native_field()
             .operations
             .push(Operation::Mul(a, b, c));
-        state
-            .cpu_mut()
-            .push_bus_op(imm, opcode, ops);
+        state.cpu_mut().push_bus_op(imm, opcode, ops);
 
         state.range_check(a);
     }

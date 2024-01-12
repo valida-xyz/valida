@@ -1,3 +1,5 @@
+extern crate core;
+
 use p3_baby_bear::BabyBear;
 use valida_alu_u32::add::{Add32Instruction, MachineWithAdd32Chip};
 use valida_basic::BasicMachine;
@@ -5,9 +7,16 @@ use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
     MachineWithCpuChip, StopInstruction,
 };
+
 use p3_uni_stark::{StarkConfigImpl};
-use valida_machine::{Instruction, InstructionWord, Machine, Operands, ProgramROM, Word};
+
+
+use valida_machine::{
+    FixedAdviceProvider, Instruction, InstructionWord, Machine, Operands, ProgramROM, Word,
+};
+
 use valida_memory::MachineWithMemoryChip;
+use valida_opcodes::BYTES_PER_INSTR;
 use valida_program::MachineWithProgramChip;
 
 use p3_challenger::DuplexChallenger;
@@ -29,11 +38,12 @@ fn prove_fibonacci() {
     let mut program = vec![];
 
     // Label locations
-    let fib_bb0 = 8;
-    let fib_bb0_1 = 13;
-    let fib_bb0_2 = 15;
-    let fib_bb0_3 = 19;
-    let fib_bb0_4 = 21;
+    let bytes_per_instr = BYTES_PER_INSTR as i32;
+    let fib_bb0 = 8 * bytes_per_instr;
+    let fib_bb0_1 = 13 * bytes_per_instr;
+    let fib_bb0_2 = 15 * bytes_per_instr;
+    let fib_bb0_3 = 19 * bytes_per_instr;
+    let fib_bb0_4 = 21 * bytes_per_instr;
 
     //main:                                   ; @main
     //; %bb.0:
@@ -183,7 +193,7 @@ fn prove_fibonacci() {
     machine.cpu_mut().fp = 0x1000;
     machine.cpu_mut().save_register_state(); // TODO: Initial register state should be saved
                                              // automatically by the machine, not manually here
-    machine.run(&rom);
+    machine.run(&rom, &mut FixedAdviceProvider::empty());
 
     type Val = BabyBear;
     type Challenge = BinomialExtensionField<Val, 5>;

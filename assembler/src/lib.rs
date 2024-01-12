@@ -18,7 +18,7 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
         match pair.as_rule() {
             Rule::label => {
                 let label_name = pair.as_str().trim().trim_end_matches(':');
-                label_locations.insert(label_name, pc);
+                label_locations.insert(label_name, BYTES_PER_INSTR as i32 * pc);
             }
             Rule::instruction => {
                 pc += 1;
@@ -68,16 +68,19 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
 
                     // Nondeterministic input
                     "advread" => READ_ADVICE,
-                    "advwrite" => WRITE_ADVICE,
 
                     // U32 ALU
                     "add" | "addi" => ADD32,
                     "sub" | "subi" => SUB32,
                     "mul" | "muli" => MUL32,
+                    "mulhs" | "mulhsi" => MULHS32,
+                    "mulhu" | "mulhui" => MULHU32,
                     "div" | "divi" => DIV32,
+                    "sdiv" | "sdivi" => SDIV32,
                     "lt" | "lti" => LT32,
                     "shl" | "shli" => SHL32,
                     "shr" | "shri" => SHR32,
+                    "sra" | "srai" => SRA32,
                     "and" | "andi" => AND32,
                     "or" | "ori" => OR32,
                     "xor" | "xori" => XOR32,
@@ -112,14 +115,22 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
                         // (0, 0, 0, 0, 0)
                         operands.extend(vec![0; 5]);
                     }
-                    "addi" | "subi" | "muli" | "divi" | "lti" | "shli" | "shri" | "beqi"
-                    | "bnei" | "andi" | "ori" | "xori" => {
+                    "add" | "sub" | "mul" | "mulhs" | "mulhu" | "div" | "lt" | "shl" | "shr"
+                    | "sra" | "beq" | "bne" | "and" | "or" | "xor" | "jal" | "jalv" => {
+                        // (a, b, c, 0, 0)
+                        operands.extend(vec![0; 2]);
+                    }
+                    "addi" | "subi" | "muli" | "mulhsi" | "mulhui" | "divi" | "sdivi" | "lti"
+                    | "shli" | "shri" | "srai" | "beqi" | "bnei" | "andi" | "ori" | "xori" => {
                         // (a, b, c, 0, 1)
                         operands.extend(vec![0, 1]);
                     }
+                    "advread" => {
+                        // (a, 0, 0, 0, 0)
+                        operands.extend(vec![0; 4]);
+                    }
                     _ => {
-                        // (a, b, c, 0, 0)
-                        operands.extend(vec![0; 2]);
+                        panic!("Unknown mnemonic {}", mnemonic);
                     }
                 };
 
