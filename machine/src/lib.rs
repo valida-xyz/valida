@@ -31,7 +31,7 @@ pub const CPU_MEMORY_CHANNELS: usize = 3;
 pub const MEMORY_CELL_BYTES: usize = 4;
 pub const LOOKUP_DEGREE_BOUND: usize = 3;
 
-pub trait Instruction<M: Machine> {
+pub trait Instruction<M: Machine<F>, F: Field> {
     const OPCODE: u32;
 
     fn execute(state: &mut M, ops: Operands<i32>);
@@ -52,7 +52,7 @@ pub struct InstructionWord<F> {
 }
 
 impl InstructionWord<i32> {
-    pub fn flatten<F: PrimeField64>(&self) -> [F; INSTRUCTION_ELEMENTS] {
+    pub fn flatten<F: Field>(&self) -> [F; INSTRUCTION_ELEMENTS] {
         let mut result = [F::default(); INSTRUCTION_ELEMENTS];
         result[0] = F::from_canonical_u32(self.opcode);
         result[1..].copy_from_slice(&Operands::<F>::from_i32_slice(&self.operands.0).0);
@@ -87,7 +87,7 @@ impl<F: Copy> Operands<F> {
     }
 }
 
-impl<F: PrimeField> Operands<F> {
+impl<F: Field> Operands<F> {
     pub fn from_i32_slice(slice: &[i32]) -> Self {
         let mut operands = [F::zero(); OPERAND_ELEMENTS];
         for (i, &operand) in slice.iter().enumerate() {
@@ -152,17 +152,10 @@ impl ProgramROM<i32> {
     }
 }
 
-pub trait Machine {
-    type F: PrimeField64;
-    type EF: ExtensionField<Self::F>;
-
+pub trait Machine<F: Field> {
     fn run<Adv: AdviceProvider>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv);
 
-    fn prove<SC>(&self, config: &SC) -> MachineProof<SC>
-    where
-        SC: StarkConfig<Val = Self::F, Challenge = Self::EF>;
+    fn prove<SC: StarkConfig<Val = F>>(&self, config: &SC) -> MachineProof<SC>;
 
-    fn verify<SC>(proof: &MachineProof<SC>) -> Result<(), ()>
-    where
-        SC: StarkConfig<Val = Self::F, Challenge = Self::EF>;
+    fn verify<SC: StarkConfig<Val = F>>(proof: &MachineProof<SC>) -> Result<(), ()>;
 }

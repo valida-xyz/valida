@@ -1,8 +1,6 @@
-use crate::__internal::ConstraintFolder;
 use crate::config::StarkConfig;
 use crate::proof::ChipProof;
 use crate::{Chip, Machine};
-use p3_air::Air;
 
 pub fn prove<M, A, SC>(
     _machine: &M,
@@ -11,9 +9,9 @@ pub fn prove<M, A, SC>(
     _challenger: &mut SC::Challenger,
 ) -> ChipProof
 where
-    M: Machine,
-    A: for<'a> Air<ConstraintFolder<'a, M::F, M::EF, M>> + Chip<M>,
-    SC: StarkConfig<Val = M::F, Challenge = M::EF>,
+    M: Machine<SC::Val>,
+    A: Chip<M, SC>,
+    SC: StarkConfig,
 {
     // TODO: Sumcheck
     ChipProof

@@ -1,12 +1,12 @@
 use core::marker::PhantomData;
 use p3_challenger::{CanObserve, FieldChallenger};
 use p3_commit::{Pcs, UnivariatePcsWithLde};
-use p3_field::{AbstractExtensionField, ExtensionField, Field, PackedField, TwoAdicField};
+use p3_field::{AbstractExtensionField, ExtensionField, PackedField, PrimeField32, TwoAdicField};
 use p3_matrix::dense::RowMajorMatrix;
 
 pub trait StarkConfig {
     /// The field over which trace data is encoded.
-    type Val: Field;
+    type Val: PrimeField32 + TwoAdicField; // TODO: Relax to Field?
     type PackedVal: PackedField<Scalar = Self::Val>;
 
     /// The field from which most random challenges are drawn.
@@ -51,7 +51,7 @@ impl<Val, Challenge, PackedChallenge, Pcs, Challenger>
 impl<Val, Challenge, PackedChallenge, Pcs, Challenger> StarkConfig
     for StarkConfigImpl<Val, Challenge, PackedChallenge, Pcs, Challenger>
 where
-    Val: Field,
+    Val: PrimeField32 + TwoAdicField, // TODO: Relax to Field?
     Challenge: ExtensionField<Val> + TwoAdicField,
     PackedChallenge: AbstractExtensionField<Val::Packing, F = Challenge>,
     Pcs: UnivariatePcsWithLde<Val, Challenge, RowMajorMatrix<Val>, Challenger>,

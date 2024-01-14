@@ -1,23 +1,25 @@
 use crate::__internal::DebugConstraintBuilder;
 use crate::chip::eval_permutation_constraints;
+use crate::config::StarkConfig;
 use crate::{Chip, Machine};
 use p3_air::{Air, TwoRowMatrixView};
-use p3_field::AbstractField;
+use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_matrix::Matrix;
 use p3_matrix::MatrixRowSlices;
 use p3_maybe_rayon::{MaybeIntoParIter, ParallelIterator};
 
 /// Check that all constraints vanish on the subgroup.
-pub fn check_constraints<M, A>(
+pub fn check_constraints<M, A, SC>(
     machine: &M,
     air: &A,
-    main: &RowMajorMatrix<M::F>,
-    perm: &RowMajorMatrix<M::EF>,
-    perm_challenges: &[M::EF],
+    main: &RowMajorMatrix<SC::Val>,
+    perm: &RowMajorMatrix<SC::Challenge>,
+    perm_challenges: &[SC::Challenge],
 ) where
-    M: Machine + Sync,
-    A: for<'a> Air<DebugConstraintBuilder<'a, M::F, M::EF, M>> + Chip<M>,
+    M: Machine<SC::Val> + Sync,
+    A: Chip<M, SC> + for<'a> Air<DebugConstraintBuilder<'a, M, SC>>,
+    SC: StarkConfig,
 {
     assert_eq!(main.height(), perm.height());
     let height = main.height();
@@ -63,16 +65,16 @@ pub fn check_constraints<M, A>(
                 next: &perm_next,
             },
             perm_challenges,
-            is_first_row: M::F::zero(),
-            is_last_row: M::F::zero(),
-            is_transition: M::F::one(),
+            is_first_row: SC::Val::zero(),
+            is_last_row: SC::Val::zero(),
+            is_transition: SC::Val::one(),
         };
         if i == 0 {
-            builder.is_first_row = M::F::one();
+            builder.is_first_row = SC::Val::one();
         }
         if i == height - 1 {
-            builder.is_last_row = M::F::one();
-            builder.is_transition = M::F::zero();
+            builder.is_last_row = SC::Val::one();
+            builder.is_transition = SC::Val::zero();
         }
 
         air.eval(&mut builder);
@@ -81,13 +83,10 @@ pub fn check_constraints<M, A>(
 }
 
 /// Check that the combined cumulative sum across all lookup tables is zero.
-pub fn check_cumulative_sums<M>(perms: &[RowMajorMatrix<M::EF>])
-where
-    M: Machine + Sync,
-{
-    let sum: M::EF = perms
+pub fn check_cumulative_sums<Challenge: Field>(perms: &[RowMajorMatrix<Challenge>]) {
+    let sum: Challenge = perms
         .iter()
         .map(|perm| *perm.row_slice(perm.height() - 1).last().unwrap())
         .sum();
-    assert_eq!(sum, M::EF::zero());
+    assert_eq!(sum, Challenge::zero());
 }

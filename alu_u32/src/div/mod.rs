@@ -12,9 +12,10 @@ use valida_opcodes::{DIV32, SDIV32};
 use valida_range::MachineWithRangeChip;
 
 use p3_air::VirtualPairCol;
-use p3_field::PrimeField;
+use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
+use valida_machine::config::StarkConfig;
 use valida_util::pad_to_power_of_two;
 
 pub mod columns;
@@ -31,12 +32,12 @@ pub struct Div32Chip {
     pub operations: Vec<Operation>,
 }
 
-impl<F, M> Chip<M> for Div32Chip
+impl<M, SC> Chip<M, SC> for Div32Chip
 where
-    F: PrimeField,
-    M: MachineWithGeneralBus<F = F>,
+    M: MachineWithGeneralBus<SC::Val>,
+    SC: StarkConfig,
 {
-    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
+    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let rows = self
             .operations
             .par_iter()
@@ -46,18 +47,18 @@ where
         let mut trace =
             RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_DIV_COLS);
 
-        pad_to_power_of_two::<NUM_DIV_COLS, F>(&mut trace.values);
+        pad_to_power_of_two::<NUM_DIV_COLS, SC::Val>(&mut trace.values);
 
         trace
     }
 
-    fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
+    fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
         let opcode = VirtualPairCol::new_main(
             vec![
-                (DIV_COL_MAP.is_div, M::F::from_canonical_u32(DIV32)),
-                (DIV_COL_MAP.is_sdiv, M::F::from_canonical_u32(SDIV32)),
+                (DIV_COL_MAP.is_div, SC::Val::from_canonical_u32(DIV32)),
+                (DIV_COL_MAP.is_sdiv, SC::Val::from_canonical_u32(SDIV32)),
             ],
-            M::F::zero(),
+            SC::Val::zero(),
         );
         let input_1 = DIV_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = DIV_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
@@ -102,21 +103,22 @@ impl Div32Chip {
     }
 }
 
-pub trait MachineWithDiv32Chip: MachineWithCpuChip {
+pub trait MachineWithDiv32Chip<F: Field>: MachineWithCpuChip<F> {
     fn div_u32(&self) -> &Div32Chip;
     fn div_u32_mut(&mut self) -> &mut Div32Chip;
 }
 
 instructions!(Div32Instruction, SDiv32Instruction);
 
-impl<M> Instruction<M> for Div32Instruction
+impl<M, F> Instruction<M, F> for Div32Instruction
 where
-    M: MachineWithDiv32Chip + MachineWithRangeChip<256>,
+    M: MachineWithDiv32Chip<F> + MachineWithRangeChip<F, 256>,
+    F: Field,
 {
     const OPCODE: u32 = DIV32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;
@@ -149,14 +151,15 @@ where
     }
 }
 
-impl<M> Instruction<M> for SDiv32Instruction
+impl<M, F> Instruction<M, F> for SDiv32Instruction
 where
-    M: MachineWithDiv32Chip + MachineWithRangeChip<256>,
+    M: MachineWithDiv32Chip<F> + MachineWithRangeChip<F, 256>,
+    F: Field,
 {
     const OPCODE: u32 = SDIV32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;

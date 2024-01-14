@@ -8,15 +8,16 @@ use columns::{NativeFieldCols, COL_MAP, NUM_NATIVE_FIELD_COLS};
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Chip, Instruction, Interaction, Machine, Operands, Word};
+use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 use valida_opcodes::{ADD, MUL, SUB};
 use valida_range::MachineWithRangeChip;
 use valida_util::pad_to_power_of_two;
 
 use p3_air::VirtualPairCol;
-use p3_field::{Field, PrimeField32};
+use p3_field::{AbstractField, Field, PrimeField32};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
+use valida_machine::config::StarkConfig;
 
 pub mod columns;
 pub mod stark;
@@ -32,12 +33,12 @@ pub struct NativeFieldChip {
     operations: Vec<Operation>,
 }
 
-impl<F, M> Chip<M> for NativeFieldChip
+impl<M, SC> Chip<M, SC> for NativeFieldChip
 where
-    F: PrimeField32,
-    M: MachineWithGeneralBus<F = F> + MachineWithRangeBus8,
+    M: MachineWithGeneralBus<SC::Val> + MachineWithRangeBus8<SC::Val>,
+    SC: StarkConfig,
 {
-    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
+    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let rows = self
             .operations
             .par_iter()
@@ -49,12 +50,12 @@ where
             NUM_NATIVE_FIELD_COLS,
         );
 
-        pad_to_power_of_two::<NUM_NATIVE_FIELD_COLS, M::F>(&mut trace.values);
+        pad_to_power_of_two::<NUM_NATIVE_FIELD_COLS, SC::Val>(&mut trace.values);
 
         trace
     }
 
-    fn global_sends(&self, machine: &M) -> Vec<Interaction<M::F>> {
+    fn global_sends(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
         let sends = COL_MAP
             .output
             .0
@@ -74,14 +75,14 @@ where
         sends
     }
 
-    fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
+    fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
         let opcode = VirtualPairCol::new_main(
             vec![
-                (COL_MAP.is_add, M::F::from_canonical_u32(ADD)),
-                (COL_MAP.is_sub, M::F::from_canonical_u32(SUB)),
-                (COL_MAP.is_mul, M::F::from_canonical_u32(MUL)),
+                (COL_MAP.is_add, SC::Val::from_canonical_u32(ADD)),
+                (COL_MAP.is_sub, SC::Val::from_canonical_u32(SUB)),
+                (COL_MAP.is_mul, SC::Val::from_canonical_u32(MUL)),
             ],
-            M::F::zero(),
+            SC::Val::zero(),
         );
         let input_1 = COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = COL_MAP.input_2.0.map(VirtualPairCol::single_main);
@@ -137,22 +138,22 @@ impl NativeFieldChip {
     }
 }
 
-pub trait MachineWithNativeFieldChip: MachineWithCpuChip {
+pub trait MachineWithNativeFieldChip<F: Field>: MachineWithCpuChip<F> {
     fn native_field(&self) -> NativeFieldChip;
     fn native_field_mut(&self) -> &mut NativeFieldChip;
 }
 
 instructions!(AddInstruction, SubInstruction, MulInstruction);
 
-impl<F, M> Instruction<M> for AddInstruction
+impl<M, F> Instruction<M, F> for AddInstruction
 where
-    M: MachineWithNativeFieldChip + MachineWithRangeChip<256> + Machine<F = F>,
+    M: MachineWithNativeFieldChip<F> + MachineWithRangeChip<F, 256>,
     F: PrimeField32,
 {
     const OPCODE: u32 = ADD;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;
@@ -186,15 +187,15 @@ where
     }
 }
 
-impl<F, M> Instruction<M> for SubInstruction
+impl<M, F> Instruction<M, F> for SubInstruction
 where
-    M: MachineWithNativeFieldChip + MachineWithRangeChip<256> + Machine<F = F>,
+    M: MachineWithNativeFieldChip<F> + MachineWithRangeChip<F, 256>,
     F: PrimeField32,
 {
     const OPCODE: u32 = SUB;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;
@@ -228,15 +229,15 @@ where
     }
 }
 
-impl<F, M> Instruction<M> for MulInstruction
+impl<M, F> Instruction<M, F> for MulInstruction
 where
-    M: MachineWithNativeFieldChip + MachineWithRangeChip<256> + Machine<F = F>,
+    M: MachineWithNativeFieldChip<F> + MachineWithRangeChip<F, 256>,
     F: PrimeField32,
 {
     const OPCODE: u32 = MUL;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;
@@ -256,7 +257,7 @@ where
                 .read(clk, read_addr_2, true, pc, opcode, 1, "")
         };
 
-        let a_m31 = M::F::from_canonical_u32(b.into()) * M::F::from_canonical_u32(c.into());
+        let a_m31 = F::from_canonical_u32(b.into()) * F::from_canonical_u32(c.into());
         let a = Word::from(a_m31.as_canonical_u32());
         state.mem_mut().write(clk, write_addr, a, true);
 

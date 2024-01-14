@@ -11,8 +11,9 @@ use valida_range::MachineWithRangeChip;
 
 use core::borrow::BorrowMut;
 use p3_air::VirtualPairCol;
-use p3_field::PrimeField;
+use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
+use valida_machine::config::StarkConfig;
 
 pub mod columns;
 pub mod stark;
@@ -29,31 +30,31 @@ pub struct Mul32Chip {
     pub operations: Vec<Operation>,
 }
 
-impl<F, M> Chip<M> for Mul32Chip
+impl<M, SC> Chip<M, SC> for Mul32Chip
 where
-    F: PrimeField,
-    M: MachineWithGeneralBus<F = F>,
+    M: MachineWithGeneralBus<SC::Val>,
+    SC: StarkConfig,
 {
-    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
+    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         const MIN_LENGTH: usize = 1 << 10; // for the range check counter
 
         let num_ops = self.operations.len();
         let num_padded_ops = num_ops.next_power_of_two().max(MIN_LENGTH);
-        let mut values = vec![F::zero(); num_padded_ops * NUM_MUL_COLS];
+        let mut values = vec![SC::Val::zero(); num_padded_ops * NUM_MUL_COLS];
 
         // Encode the real operations.
         for (i, op) in self.operations.iter().enumerate() {
             let row = &mut values[i * NUM_MUL_COLS..(i + 1) * NUM_MUL_COLS];
-            let cols: &mut Mul32Cols<F> = row.borrow_mut();
-            cols.counter = F::from_canonical_usize(i + 1);
+            let cols: &mut Mul32Cols<SC::Val> = row.borrow_mut();
+            cols.counter = SC::Val::from_canonical_usize(i + 1);
             self.op_to_row(op, cols);
         }
 
         // Encode dummy operations as needed to pad the trace.
         for i in num_ops..num_padded_ops {
             let row = &mut values[i * NUM_MUL_COLS..(i + 1) * NUM_MUL_COLS];
-            let cols: &mut Mul32Cols<F> = row.borrow_mut();
-            cols.counter = F::from_canonical_usize(i + 1);
+            let cols: &mut Mul32Cols<SC::Val> = row.borrow_mut();
+            cols.counter = SC::Val::from_canonical_usize(i + 1);
         }
 
         RowMajorMatrix {
@@ -62,14 +63,14 @@ where
         }
     }
 
-    fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
+    fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
         let opcode = VirtualPairCol::new_main(
             vec![
-                (MUL_COL_MAP.is_mul, M::F::from_canonical_u32(MUL32)),
-                (MUL_COL_MAP.is_mulhs, M::F::from_canonical_u32(MULHS32)),
-                (MUL_COL_MAP.is_mulhu, M::F::from_canonical_u32(MULHU32)),
+                (MUL_COL_MAP.is_mul, SC::Val::from_canonical_u32(MUL32)),
+                (MUL_COL_MAP.is_mulhs, SC::Val::from_canonical_u32(MULHS32)),
+                (MUL_COL_MAP.is_mulhu, SC::Val::from_canonical_u32(MULHU32)),
             ],
-            M::F::zero(),
+            SC::Val::zero(),
         );
         let input_1 = MUL_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = MUL_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
@@ -94,7 +95,7 @@ where
         vec![receive]
     }
 
-    fn local_sends(&self) -> Vec<Interaction<M::F>> {
+    fn local_sends(&self) -> Vec<Interaction<SC::Val>> {
         // TODO
         vec![]
     }
@@ -131,21 +132,22 @@ impl Mul32Chip {
     }
 }
 
-pub trait MachineWithMul32Chip: MachineWithCpuChip {
+pub trait MachineWithMul32Chip<F: Field>: MachineWithCpuChip<F> {
     fn mul_u32(&self) -> &Mul32Chip;
     fn mul_u32_mut(&mut self) -> &mut Mul32Chip;
 }
 
 instructions!(Mul32Instruction, Mulhs32Instruction, Mulhu32Instruction);
 
-impl<M> Instruction<M> for Mul32Instruction
+impl<M, F> Instruction<M, F> for Mul32Instruction
 where
-    M: MachineWithMul32Chip + MachineWithRangeChip<256>,
+    M: MachineWithMul32Chip<F> + MachineWithRangeChip<F, 256>,
+    F: Field,
 {
     const OPCODE: u32 = MUL32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;
@@ -179,14 +181,15 @@ where
     }
 }
 
-impl<M> Instruction<M> for Mulhs32Instruction
+impl<M, F> Instruction<M, F> for Mulhs32Instruction
 where
-    M: MachineWithMul32Chip + MachineWithRangeChip<256>,
+    M: MachineWithMul32Chip<F> + MachineWithRangeChip<F, 256>,
+    F: Field,
 {
     const OPCODE: u32 = MULHS32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;
@@ -220,14 +223,15 @@ where
     }
 }
 
-impl<M> Instruction<M> for Mulhu32Instruction
+impl<M, F> Instruction<M, F> for Mulhu32Instruction
 where
-    M: MachineWithMul32Chip + MachineWithRangeChip<256>,
+    M: MachineWithMul32Chip<F> + MachineWithRangeChip<F, 256>,
+    F: Field,
 {
     const OPCODE: u32 = MULHU32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;

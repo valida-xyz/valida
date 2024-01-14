@@ -10,24 +10,19 @@ use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::parse::{Parse, ParseStream};
-use syn::{spanned::Spanned, Data, Field, Fields, Ident, Token};
+use syn::{spanned::Spanned, Data, Field, Fields, Ident};
 
+// TODO: now trivial with a single field
 struct MachineFields {
-    base_field: Ident,
-    ext_field: Ident,
+    val: Ident,
 }
 
 impl Parse for MachineFields {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let content;
         syn::parenthesized!(content in input);
-        let base_field = content.parse()?;
-        content.parse::<Token![,]>()?;
-        let ext_field = content.parse()?;
-        Ok(MachineFields {
-            base_field,
-            ext_field,
-        })
+        let val = content.parse()?;
+        Ok(MachineFields { val })
     }
 }
 
@@ -56,30 +51,25 @@ fn impl_machine(machine: &syn::DeriveInput) -> TokenStream {
             .copied()
             .collect::<Vec<_>>();
 
-        let name = &machine.ident;
-        let run = run_method(machine, &instructions);
-        let prove = prove_method(&chips);
-        let verify = verify_method(&chips);
-
-        let (impl_generics, ty_generics, where_clause) = machine.generics.split_for_impl();
-
         let machine_fields = machine
             .attrs
             .iter()
             .filter(|a| a.path.segments.len() == 1 && a.path.segments[0].ident == "machine_fields")
             .next()
             .expect("machine_fields attribute required to derive Machine");
-        let machine_fields: MachineFields = syn::parse2(machine_fields.tokens.clone()).expect(
-            "Invalid machine_fields attribute, expected #[machine_fields(<BaseField>, <ExtField>)]",
-        );
+        let machine_fields: MachineFields = syn::parse2(machine_fields.tokens.clone())
+            .expect("Invalid machine_fields attribute, expected #[machine_fields(<Val>)]");
+        let val = &machine_fields.val;
 
-        let base_field = &machine_fields.base_field;
-        let ext_field = &machine_fields.ext_field;
+        let name = &machine.ident;
+        let run = run_method(machine, &instructions, &val);
+        let prove = prove_method(&chips);
+        let verify = verify_method(&chips);
+
+        let (impl_generics, ty_generics, where_clause) = machine.generics.split_for_impl();
 
         let stream = quote! {
-            impl #impl_generics Machine for #name #ty_generics #where_clause {
-                type F = #base_field;
-                type EF = #ext_field;
+            impl #impl_generics Machine<#val> for #name #ty_generics #where_clause {
                 #run
                 #prove
                 #verify
@@ -137,7 +127,7 @@ fn chip_methods(chip: &Field) -> TokenStream2 {
     }
 }
 
-fn run_method(machine: &syn::DeriveInput, instructions: &[&Field]) -> TokenStream2 {
+fn run_method(machine: &syn::DeriveInput, instructions: &[&Field], val: &Ident) -> TokenStream2 {
     let name = &machine.ident;
     let (_, ty_generics, _) = machine.generics.split_for_impl();
 
@@ -146,7 +136,8 @@ fn run_method(machine: &syn::DeriveInput, instructions: &[&Field]) -> TokenStrea
         .map(|inst| {
             let ty = &inst.ty;
             quote! {
-                <#ty as Instruction<#name #ty_generics>>::OPCODE =>
+                // TODO: Self instead of #name #ty_generics?
+                <#ty as Instruction<#name #ty_generics, #val>>::OPCODE =>
                     #ty::execute_with_advice::<Adv>(self, ops, advice),
             }
         })
@@ -169,7 +160,7 @@ fn run_method(machine: &syn::DeriveInput, instructions: &[&Field]) -> TokenStrea
                 self.read_word(pc as usize);
 
                 // A STOP instruction signals the end of the program
-                if opcode == <StopInstruction as Instruction<Self>>::OPCODE {
+                if opcode == <StopInstruction as Instruction<Self, #val>>::OPCODE {
                     break;
                 }
             }
@@ -202,7 +193,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             let chip_name = chip.ident.as_ref().unwrap();
             quote! {
                 #[cfg(debug_assertions)]
-                check_constraints(
+                check_constraints::<Self, _, SC>(
                     self,
                     self.#chip_name(),
                     &main_traces[#n],
@@ -217,9 +208,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
 
     quote! {
         #[tracing::instrument(name = "prove machine execution", skip_all)]
-        fn prove<SC>(&self, config: &SC) -> ::valida_machine::proof::MachineProof<SC>
-        where
-            SC: ::valida_machine::config::StarkConfig<Val = Self::F, Challenge = Self::EF>,
+        fn prove<SC: StarkConfig<Val = F>>(&self, config: &SC) -> ::valida_machine::proof::MachineProof<SC>
         {
             use ::valida_machine::__internal::*;
             use ::valida_machine::__internal::p3_challenger::{CanObserve, FieldChallenger};
@@ -232,7 +221,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             use alloc::vec::Vec;
             use alloc::boxed::Box;
 
-            let mut chips: [Box<&dyn Chip<Self>>; #num_chips] = [ #chip_list ];
+            let mut chips: [Box<&dyn Chip<Self, SC>>; #num_chips] = [ #chip_list ];
 
             let mut challenger = config.challenger();
 
@@ -293,7 +282,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             #prove_starks
 
             #[cfg(debug_assertions)]
-            check_cumulative_sums::<Self>(&perm_traces[..]);
+            check_cumulative_sums(&perm_traces[..]);
 
             MachineProof {
                 // opening_proof,
@@ -306,11 +295,9 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
 
 fn verify_method(_chips: &[&Field]) -> TokenStream2 {
     quote! {
-        fn verify<SC>(
+        fn verify<SC: StarkConfig<Val = F>>(
             proof: &::valida_machine::proof::MachineProof<SC>,
         ) -> core::result::Result<(), ()>
-        where
-            SC: ::valida_machine::config::StarkConfig<Val = Self::F, Challenge = Self::EF>
         {
             Ok(()) // TODO
         }

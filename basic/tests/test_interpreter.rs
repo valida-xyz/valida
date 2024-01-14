@@ -9,7 +9,7 @@ use valida_program::MachineWithProgramChip;
 
 #[test]
 fn run_fibonacci() {
-    let mut machine = BasicMachine::<BabyBear, BabyBear>::default();
+    let mut machine = BasicMachine::<BabyBear>::default();
     let asm_path = "tests/programs/assembly/fibonacci.val";
     let asm = read_to_string(asm_path).expect("Failed to read asm");
     let rom = ProgramROM::from_machine_code(&assemble(&asm).unwrap());
