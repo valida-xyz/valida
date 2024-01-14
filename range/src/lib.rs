@@ -9,10 +9,12 @@ use columns::{RangeCols, NUM_RANGE_COLS, RANGE_COL_MAP};
 use core::mem::transmute;
 use valida_bus::MachineWithRangeBus8;
 use valida_machine::Interaction;
-use valida_machine::{Chip, Machine, PrimeField, Word};
+use valida_machine::{Chip, Machine, Word};
 
 use p3_air::VirtualPairCol;
+use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
+use valida_machine::config::StarkConfig;
 
 pub mod columns;
 pub mod stark;
@@ -22,26 +24,26 @@ pub struct RangeCheckerChip<const MAX: u32> {
     pub count: BTreeMap<u32, u32>,
 }
 
-impl<F, M, const MAX: u32> Chip<M> for RangeCheckerChip<MAX>
+impl<M, SC, const MAX: u32> Chip<M, SC> for RangeCheckerChip<MAX>
 where
-    F: PrimeField,
-    M: MachineWithRangeBus8<F = F>,
+    M: MachineWithRangeBus8<SC::Val>,
+    SC: StarkConfig,
 {
-    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
-        let mut rows = vec![[F::zero(); NUM_RANGE_COLS]; MAX as usize];
+    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
+        let mut rows = vec![[SC::Val::zero(); NUM_RANGE_COLS]; MAX as usize];
         for (n, row) in rows.iter_mut().enumerate() {
-            let cols: &mut RangeCols<F> = unsafe { transmute(row) };
+            let cols: &mut RangeCols<SC::Val> = unsafe { transmute(row) };
             // FIXME: This is very inefficient when the range is large.
             // Iterate over key/val pairs instead in a separate loop.
             if let Some(c) = self.count.get(&(n as u32)) {
-                cols.mult = M::F::from_canonical_u32(*c);
+                cols.mult = SC::Val::from_canonical_u32(*c);
             }
-            cols.counter = M::F::from_canonical_u32(n as u32);
+            cols.counter = SC::Val::from_canonical_u32(n as u32);
         }
         RowMajorMatrix::new(rows.concat(), NUM_RANGE_COLS)
     }
 
-    fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
+    fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
         let input = VirtualPairCol::single_main(RANGE_COL_MAP.counter);
 
         let receive = Interaction {
@@ -53,7 +55,7 @@ where
     }
 }
 
-pub trait MachineWithRangeChip<const MAX: u32>: Machine {
+pub trait MachineWithRangeChip<F: Field, const MAX: u32>: Machine<F> {
     fn range(&self) -> &RangeCheckerChip<MAX>;
     fn range_mut(&mut self) -> &mut RangeCheckerChip<MAX>;
 

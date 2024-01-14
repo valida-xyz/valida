@@ -13,9 +13,10 @@ use valida_machine::{
 use valida_opcodes::LT32;
 
 use p3_air::VirtualPairCol;
-use p3_field::PrimeField;
+use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
+use valida_machine::config::StarkConfig;
 use valida_util::pad_to_power_of_two;
 
 pub mod columns;
@@ -31,12 +32,12 @@ pub struct Lt32Chip {
     pub operations: Vec<Operation>,
 }
 
-impl<F, M> Chip<M> for Lt32Chip
+impl<M, SC> Chip<M, SC> for Lt32Chip
 where
-    F: PrimeField,
-    M: MachineWithGeneralBus<F = F>,
+    M: MachineWithGeneralBus<SC::Val>,
+    SC: StarkConfig,
 {
-    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
+    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let rows = self
             .operations
             .par_iter()
@@ -46,17 +47,17 @@ where
         let mut trace =
             RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_LT_COLS);
 
-        pad_to_power_of_two::<NUM_LT_COLS, F>(&mut trace.values);
+        pad_to_power_of_two::<NUM_LT_COLS, SC::Val>(&mut trace.values);
 
         trace
     }
 
-    fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
-        let opcode = VirtualPairCol::constant(M::F::from_canonical_u32(LT32));
+    fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
+        let opcode = VirtualPairCol::constant(SC::Val::from_canonical_u32(LT32));
         let input_1 = LT_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = LT_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
         let output = (0..MEMORY_CELL_BYTES - 1)
-            .map(|_| VirtualPairCol::constant(M::F::zero()))
+            .map(|_| VirtualPairCol::constant(SC::Val::zero()))
             .chain(iter::once(VirtualPairCol::single_main(LT_COL_MAP.output)));
 
         let mut fields = vec![opcode];
@@ -107,21 +108,22 @@ impl Lt32Chip {
     }
 }
 
-pub trait MachineWithLt32Chip: MachineWithCpuChip {
+pub trait MachineWithLt32Chip<F: Field>: MachineWithCpuChip<F> {
     fn lt_u32(&self) -> &Lt32Chip;
     fn lt_u32_mut(&mut self) -> &mut Lt32Chip;
 }
 
 instructions!(Lt32Instruction);
 
-impl<M> Instruction<M> for Lt32Instruction
+impl<M, F> Instruction<M, F> for Lt32Instruction
 where
-    M: MachineWithLt32Chip,
+    M: MachineWithLt32Chip<F>,
+    F: Field,
 {
     const OPCODE: u32 = LT32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;

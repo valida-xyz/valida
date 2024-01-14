@@ -6,11 +6,13 @@ use crate::columns::{COL_MAP, NUM_PROGRAM_COLS, PREPROCESSED_COL_MAP};
 use alloc::vec;
 use alloc::vec::Vec;
 use valida_bus::MachineWithProgramBus;
-use valida_machine::{Chip, Interaction, Machine, PrimeField64, ProgramROM};
+use valida_machine::{Chip, Interaction, Machine, ProgramROM};
 use valida_util::pad_to_power_of_two;
 
 use p3_air::VirtualPairCol;
+use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
+use valida_machine::config::StarkConfig;
 
 pub mod columns;
 pub mod stark;
@@ -29,24 +31,24 @@ impl ProgramChip {
     }
 }
 
-impl<F, M> Chip<M> for ProgramChip
+impl<M, SC> Chip<M, SC> for ProgramChip
 where
-    F: PrimeField64,
-    M: MachineWithProgramBus<F = F>,
+    M: MachineWithProgramBus<SC::Val>,
+    SC: StarkConfig,
 {
-    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
+    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let mut values = self
             .counts
             .iter()
-            .map(|c| F::from_canonical_u32(*c))
+            .map(|c| SC::Val::from_canonical_u32(*c))
             .collect();
 
-        pad_to_power_of_two::<NUM_PROGRAM_COLS, F>(&mut values);
+        pad_to_power_of_two::<NUM_PROGRAM_COLS, SC::Val>(&mut values);
 
         RowMajorMatrix::new(values, NUM_PROGRAM_COLS)
     }
 
-    fn global_receives(&self, machine: &M) -> Vec<Interaction<F>> {
+    fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
         let pc = VirtualPairCol::single_preprocessed(PREPROCESSED_COL_MAP.pc);
         let opcode = VirtualPairCol::single_preprocessed(PREPROCESSED_COL_MAP.opcode);
         let mut fields = vec![pc, opcode];
@@ -66,7 +68,7 @@ where
     }
 }
 
-pub trait MachineWithProgramChip: Machine {
+pub trait MachineWithProgramChip<F: Field>: Machine<F> {
     fn program(&self) -> &ProgramChip;
 
     fn program_mut(&mut self) -> &mut ProgramChip;

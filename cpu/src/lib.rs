@@ -20,9 +20,10 @@ use valida_opcodes::{
 use valida_util::batch_multiplicative_inverse;
 
 use p3_air::VirtualPairCol;
-use p3_field::PrimeField;
+use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
+use valida_machine::config::StarkConfig;
 
 pub mod columns;
 pub mod stark;
@@ -58,20 +59,21 @@ pub struct Registers {
     fp: u32,
 }
 
-impl<M> Chip<M> for CpuChip
+impl<M, SC> Chip<M, SC> for CpuChip
 where
-    M: MachineWithProgramBus
-        + MachineWithMemoryChip
-        + MachineWithGeneralBus
-        + MachineWithMemBus
+    M: MachineWithProgramBus<SC::Val>
+        + MachineWithMemoryChip<SC::Val>
+        + MachineWithGeneralBus<SC::Val>
+        + MachineWithMemBus<SC::Val>
         + Sync,
+    SC: StarkConfig,
 {
-    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F> {
+    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<SC::Val> {
         let mut rows = self
             .operations
             .par_iter()
             .enumerate()
-            .map(|(n, op)| self.op_to_row(n, op, machine))
+            .map(|(n, op)| self.op_to_row::<M, SC>(n, op, machine))
             .collect::<Vec<_>>();
 
         // Set diff, diff_inv, and not_equal
@@ -85,7 +87,7 @@ where
         trace
     }
 
-    fn global_sends(&self, machine: &M) -> Vec<Interaction<M::F>> {
+    fn global_sends(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
         // Memory bus channels
         let mem_sends = (0..3).map(|i| {
             let channel = &CPU_COL_MAP.mem_channels[i];
@@ -148,84 +150,80 @@ where
 }
 
 impl CpuChip {
-    fn op_to_row<F: PrimeField, M: MachineWithMemoryChip<F = F>>(
-        &self,
-        clk: usize,
-        op: &Operation,
-        machine: &M,
-    ) -> [F; NUM_CPU_COLS]
+    fn op_to_row<M, SC>(&self, clk: usize, op: &Operation, machine: &M) -> [SC::Val; NUM_CPU_COLS]
     where
-        M: MachineWithMemoryChip,
+        M: MachineWithMemoryChip<SC::Val>,
+        SC: StarkConfig,
     {
-        let mut row = [F::zero(); NUM_CPU_COLS];
-        let cols: &mut CpuCols<F> = unsafe { transmute(&mut row) };
+        let mut row = [SC::Val::zero(); NUM_CPU_COLS];
+        let cols: &mut CpuCols<SC::Val> = unsafe { transmute(&mut row) };
 
-        cols.pc = F::from_canonical_u32(self.registers[clk].pc);
-        cols.fp = F::from_canonical_u32(self.registers[clk].fp);
-        cols.clk = F::from_canonical_usize(clk);
+        cols.pc = SC::Val::from_canonical_u32(self.registers[clk].pc);
+        cols.fp = SC::Val::from_canonical_u32(self.registers[clk].fp);
+        cols.clk = SC::Val::from_canonical_usize(clk);
 
         self.set_instruction_values(clk, cols);
-        self.set_memory_channel_values(clk, cols, machine);
+        self.set_memory_channel_values::<M, SC>(clk, cols, machine);
 
         match op {
             Operation::Store32 => {
-                cols.opcode_flags.is_store = F::one();
+                cols.opcode_flags.is_store = SC::Val::one();
             }
             Operation::Load32 => {
-                cols.opcode_flags.is_load = F::one();
+                cols.opcode_flags.is_load = SC::Val::one();
             }
             Operation::Jal => {
-                cols.opcode_flags.is_jal = F::one();
+                cols.opcode_flags.is_jal = SC::Val::one();
             }
             Operation::Jalv => {
-                cols.opcode_flags.is_jalv = F::one();
+                cols.opcode_flags.is_jalv = SC::Val::one();
             }
             Operation::Beq(imm) => {
-                cols.opcode_flags.is_beq = F::one();
+                cols.opcode_flags.is_beq = SC::Val::one();
                 self.set_imm_value(cols, *imm);
             }
             Operation::Bne(imm) => {
-                cols.opcode_flags.is_bne = F::one();
+                cols.opcode_flags.is_bne = SC::Val::one();
                 self.set_imm_value(cols, *imm);
             }
             Operation::Imm32 => {
-                cols.opcode_flags.is_imm32 = F::one();
+                cols.opcode_flags.is_imm32 = SC::Val::one();
             }
             Operation::Bus(imm) => {
-                cols.opcode_flags.is_bus_op = F::one();
+                cols.opcode_flags.is_bus_op = SC::Val::one();
                 self.set_imm_value(cols, *imm);
             }
             Operation::BusWithMemory(imm) => {
-                cols.opcode_flags.is_bus_op = F::one();
-                cols.opcode_flags.is_bus_op_with_mem = F::one();
+                cols.opcode_flags.is_bus_op = SC::Val::one();
+                cols.opcode_flags.is_bus_op_with_mem = SC::Val::one();
                 self.set_imm_value(cols, *imm);
             }
             Operation::ReadAdvice => {
-                cols.opcode_flags.is_advice = F::one();
+                cols.opcode_flags.is_advice = SC::Val::one();
             }
             Operation::Stop => {
-                cols.opcode_flags.is_stop = F::one();
+                cols.opcode_flags.is_stop = SC::Val::one();
             }
         }
 
         row
     }
 
-    fn set_instruction_values<F: PrimeField>(&self, clk: usize, cols: &mut CpuCols<F>) {
+    fn set_instruction_values<F: Field>(&self, clk: usize, cols: &mut CpuCols<F>) {
         cols.instruction.opcode = F::from_canonical_u32(self.instructions[clk].opcode);
         cols.instruction.operands =
             Operands::<F>::from_i32_slice(&self.instructions[clk].operands.0);
     }
 
-    fn set_memory_channel_values<F: PrimeField, M: MachineWithMemoryChip<F = F>>(
+    fn set_memory_channel_values<M: MachineWithMemoryChip<SC::Val>, SC: StarkConfig>(
         &self,
         clk: usize,
-        cols: &mut CpuCols<F>,
+        cols: &mut CpuCols<SC::Val>,
         machine: &M,
     ) {
-        cols.mem_channels[0].is_read = F::one();
-        cols.mem_channels[1].is_read = F::one();
-        cols.mem_channels[2].is_read = F::zero();
+        cols.mem_channels[0].is_read = SC::Val::one();
+        cols.mem_channels[1].is_read = SC::Val::one();
+        cols.mem_channels[2].is_read = SC::Val::zero();
 
         let memory = machine.mem();
         for ops in memory.operations.get(&(clk as u32)).iter() {
@@ -234,20 +232,22 @@ impl CpuChip {
                 match op {
                     MemoryOperation::Read(addr, value) => {
                         if is_first_read {
-                            cols.mem_channels[0].used = F::one();
-                            cols.mem_channels[0].addr = F::from_canonical_u32(*addr);
-                            cols.mem_channels[0].value = value.transform(F::from_canonical_u8);
+                            cols.mem_channels[0].used = SC::Val::one();
+                            cols.mem_channels[0].addr = SC::Val::from_canonical_u32(*addr);
+                            cols.mem_channels[0].value =
+                                value.transform(SC::Val::from_canonical_u8);
                             is_first_read = false;
                         } else {
-                            cols.mem_channels[1].used = F::one();
-                            cols.mem_channels[1].addr = F::from_canonical_u32(*addr);
-                            cols.mem_channels[1].value = value.transform(F::from_canonical_u8);
+                            cols.mem_channels[1].used = SC::Val::one();
+                            cols.mem_channels[1].addr = SC::Val::from_canonical_u32(*addr);
+                            cols.mem_channels[1].value =
+                                value.transform(SC::Val::from_canonical_u8);
                         }
                     }
                     MemoryOperation::Write(addr, value) => {
-                        cols.mem_channels[2].used = F::one();
-                        cols.mem_channels[2].addr = F::from_canonical_u32(*addr);
-                        cols.mem_channels[2].value = value.transform(F::from_canonical_u8);
+                        cols.mem_channels[2].used = SC::Val::one();
+                        cols.mem_channels[2].addr = SC::Val::from_canonical_u32(*addr);
+                        cols.mem_channels[2].value = value.transform(SC::Val::from_canonical_u8);
                     }
                     _ => {}
                 }
@@ -325,7 +325,7 @@ impl CpuChip {
             });
     }
 
-    fn set_imm_value<F: PrimeField>(&self, cols: &mut CpuCols<F>, imm: Option<Word<u8>>) {
+    fn set_imm_value<F: Field>(&self, cols: &mut CpuCols<F>, imm: Option<Word<u8>>) {
         if let Some(imm) = imm {
             cols.opcode_flags.is_imm_op = F::one();
             cols.mem_channels[1].value = imm.transform(F::from_canonical_u8);
@@ -333,7 +333,7 @@ impl CpuChip {
     }
 }
 
-pub trait MachineWithCpuChip: MachineWithMemoryChip {
+pub trait MachineWithCpuChip<F: Field>: MachineWithMemoryChip<F> {
     fn cpu(&self) -> &CpuChip;
     fn cpu_mut(&mut self) -> &mut CpuChip;
 }
@@ -352,9 +352,10 @@ instructions!(
 
 /// Non-deterministic instructions
 
-impl<M> Instruction<M> for ReadAdviceInstruction
+impl<M, F> Instruction<M, F> for ReadAdviceInstruction
 where
-    M: MachineWithCpuChip,
+    M: MachineWithCpuChip<F>,
+    F: Field,
 {
     const OPCODE: u32 = READ_ADVICE;
 
@@ -364,7 +365,7 @@ where
 
     fn execute_with_advice<Adv>(state: &mut M, ops: Operands<i32>, advice: &mut Adv)
     where
-        M: MachineWithCpuChip,
+        M: MachineWithCpuChip<F>,
         Adv: AdviceProvider,
     {
         let clk = state.cpu().clock;
@@ -378,22 +379,25 @@ where
             .write(clk, mem_addr as u32, Word::from_u8(advice_byte), true);
 
         state.cpu_mut().pc += 1;
-        state
-            .cpu_mut()
-            .push_op(Operation::ReadAdvice, <Self as Instruction<M>>::OPCODE, ops);
+        state.cpu_mut().push_op(
+            Operation::ReadAdvice,
+            <Self as Instruction<M, F>>::OPCODE,
+            ops,
+        );
     }
 }
 
 /// Deterministic instructions
 
-impl<M> Instruction<M> for Load32Instruction
+impl<M, F> Instruction<M, F> for Load32Instruction
 where
-    M: MachineWithCpuChip,
+    M: MachineWithCpuChip<F>,
+    F: Field,
 {
     const OPCODE: u32 = LOAD32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let fp = state.cpu().fp;
@@ -422,14 +426,15 @@ where
     }
 }
 
-impl<M> Instruction<M> for Store32Instruction
+impl<M, F> Instruction<M, F> for Store32Instruction
 where
-    M: MachineWithCpuChip,
+    M: MachineWithCpuChip<F>,
+    F: Field,
 {
     const OPCODE: u32 = STORE32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let read_addr = (state.cpu().fp as i32 + ops.c()) as u32;
         let write_addr_loc = (state.cpu().fp as i32 + ops.b()) as u32;
@@ -446,9 +451,10 @@ where
     }
 }
 
-impl<M> Instruction<M> for JalInstruction
+impl<M, F> Instruction<M, F> for JalInstruction
 where
-    M: MachineWithCpuChip,
+    M: MachineWithCpuChip<F>,
+    F: Field,
 {
     const OPCODE: u32 = JAL;
 
@@ -466,18 +472,19 @@ where
         state.cpu_mut().fp = (state.cpu().fp as i32 + ops.c()) as u32;
         state
             .cpu_mut()
-            .push_op(Operation::Jal, <Self as Instruction<M>>::OPCODE, ops);
+            .push_op(Operation::Jal, <Self as Instruction<M, F>>::OPCODE, ops);
     }
 }
 
-impl<M> Instruction<M> for JalvInstruction
+impl<M, F> Instruction<M, F> for JalvInstruction
 where
-    M: MachineWithCpuChip,
+    M: MachineWithCpuChip<F>,
+    F: Field,
 {
     const OPCODE: u32 = JALV;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         // Store pc + 1 to local stack variable at offset a
@@ -504,14 +511,15 @@ where
     }
 }
 
-impl<M> Instruction<M> for BeqInstruction
+impl<M, F> Instruction<M, F> for BeqInstruction
 where
-    M: MachineWithCpuChip,
+    M: MachineWithCpuChip<F>,
+    F: Field,
 {
     const OPCODE: u32 = BEQ;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
@@ -538,14 +546,15 @@ where
     }
 }
 
-impl<M> Instruction<M> for BneInstruction
+impl<M, F> Instruction<M, F> for BneInstruction
 where
-    M: MachineWithCpuChip,
+    M: MachineWithCpuChip<F>,
+    F: Field,
 {
     const OPCODE: u32 = BNE;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let mut imm: Option<Word<u8>> = None;
         let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
@@ -572,9 +581,10 @@ where
     }
 }
 
-impl<M> Instruction<M> for Imm32Instruction
+impl<M, F> Instruction<M, F> for Imm32Instruction
 where
-    M: MachineWithCpuChip,
+    M: MachineWithCpuChip<F>,
+    F: Field,
 {
     const OPCODE: u32 = IMM32;
 
@@ -586,13 +596,14 @@ where
         state.cpu_mut().pc += 1;
         state
             .cpu_mut()
-            .push_op(Operation::Imm32, <Self as Instruction<M>>::OPCODE, ops);
+            .push_op(Operation::Imm32, <Self as Instruction<M, F>>::OPCODE, ops);
     }
 }
 
-impl<M> Instruction<M> for StopInstruction
+impl<M, F> Instruction<M, F> for StopInstruction
 where
-    M: MachineWithCpuChip,
+    M: MachineWithCpuChip<F>,
+    F: Field,
 {
     const OPCODE: u32 = STOP;
 
@@ -600,7 +611,7 @@ where
         state.cpu_mut().pc = state.cpu().pc;
         state
             .cpu_mut()
-            .push_op(Operation::Stop, <Self as Instruction<M>>::OPCODE, ops);
+            .push_op(Operation::Stop, <Self as Instruction<M, F>>::OPCODE, ops);
     }
 }
 

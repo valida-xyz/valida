@@ -12,9 +12,10 @@ use valida_machine::{BusArgument, Chip, Interaction, Machine, Word};
 use valida_util::batch_multiplicative_inverse;
 
 use p3_air::VirtualPairCol;
-use p3_field::PrimeField;
+use p3_field::{Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
+use valida_machine::config::StarkConfig;
 
 pub mod columns;
 pub mod stark;
@@ -49,7 +50,7 @@ pub struct MemoryChip {
     pub operations: BTreeMap<u32, Vec<Operation>>,
 }
 
-pub trait MachineWithMemoryChip: Machine {
+pub trait MachineWithMemoryChip<F: Field>: Machine<F> {
     fn mem(&self) -> &MemoryChip;
     fn mem_mut(&mut self) -> &mut MemoryChip;
 }
@@ -94,11 +95,12 @@ impl MemoryChip {
     }
 }
 
-impl<M> Chip<M> for MemoryChip
+impl<M, SC> Chip<M, SC> for MemoryChip
 where
-    M: MachineWithMemBus,
+    M: MachineWithMemBus<SC::Val>,
+    SC: StarkConfig,
 {
-    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
+    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let mut ops = self
             .operations
             .par_iter()
@@ -134,7 +136,7 @@ where
         trace
     }
 
-    fn local_sends(&self) -> Vec<Interaction<M::F>> {
+    fn local_sends(&self) -> Vec<Interaction<SC::Val>> {
         let sends = Interaction {
             fields: vec![VirtualPairCol::single_main(MEM_COL_MAP.diff)],
             count: VirtualPairCol::one(),
@@ -143,7 +145,7 @@ where
         vec![sends]
     }
 
-    fn local_receives(&self) -> Vec<Interaction<M::F>> {
+    fn local_receives(&self) -> Vec<Interaction<SC::Val>> {
         let receives = Interaction {
             fields: vec![VirtualPairCol::single_main(MEM_COL_MAP.counter)],
             count: VirtualPairCol::single_main(MEM_COL_MAP.counter_mult),
@@ -152,8 +154,8 @@ where
         vec![receives]
     }
 
-    fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
-        let is_read: VirtualPairCol<M::F> = VirtualPairCol::single_main(MEM_COL_MAP.is_read);
+    fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
+        let is_read: VirtualPairCol<SC::Val> = VirtualPairCol::single_main(MEM_COL_MAP.is_read);
         let clk = VirtualPairCol::single_main(MEM_COL_MAP.clk);
         let addr = VirtualPairCol::single_main(MEM_COL_MAP.addr);
         let value = MEM_COL_MAP.value.0.map(VirtualPairCol::single_main);
