@@ -290,9 +290,7 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithCom32Chip<F> for BasicMachine<F>
     }
 }
 
-impl<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> MachineWithShift32Chip
-    for BasicMachine<F, EF>
-{
+impl<F: PrimeField32 + TwoAdicField> MachineWithShift32Chip<F> for BasicMachine<F> {
     fn shift_u32(&self) -> &Shift32Chip {
         &self.shift_u32
     }

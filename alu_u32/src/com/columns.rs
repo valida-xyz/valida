@@ -21,8 +21,6 @@ pub struct Com32Cols<T> {
 
     pub is_ne: T,
     pub is_eq: T,
-    pub is_ne: T,
-    pub is_eq: T,
 }
 
 pub const NUM_COM_COLS: usize = size_of::<Com32Cols<u8>>();
