@@ -235,7 +235,7 @@ fn prove_fibonacci() {
 
     let mut challenger = Challenger::new(perm16);
     let out = machine.prove(&config, &mut challenger);
-
+    assert_eq!(out.chip_proof.proof.opened_values.trace_local.len() > 0, true);
     assert_eq!(machine.cpu().clock, 192);
     assert_eq!(machine.cpu().operations.len(), 192);
     assert_eq!(machine.mem().operations.values().flatten().count(), 401);
