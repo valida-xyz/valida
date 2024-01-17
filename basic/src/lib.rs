@@ -52,10 +52,8 @@ use valida_output::{MachineWithOutputChip, OutputChip, WriteInstruction};
 use valida_program::{MachineWithProgramChip, ProgramChip};
 use valida_range::{MachineWithRangeChip, RangeCheckerChip};
 
-
 #[derive(Default)]
 pub struct BasicMachine<F: PrimeField64 + TwoAdicField, EF: ExtensionField<F>> {
-
     // Core instructions
     load32: Load32Instruction,
 

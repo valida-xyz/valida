@@ -1,4 +1,3 @@
-
 use crate::__internal::ConstraintFolder;
 use crate::proof::ChipProof;
 use crate::{Chip, Machine};
