@@ -7,7 +7,7 @@ mnemonic = {
     "advread" | "advwrite" | 
     "addi" | "add" | "subi" | "sub" | "muli" | "mul" | "mulhsi"| "mulhui"| "mulhs"| "mulhu"  | "divi" | "div" | "sdiv" | "sdivi" |
     "lti" | "lt" | "shli" | "shl" | "shri" | "shr" | "srai" | "sra" |
-    "andi" | "and" | "ori" | "or" | "xori" | "xor" |
+    "andi" | "and" | "ori" | "or" | "xori" | "xor" | "nei" | "ne" | "eqi" | "eq" |
     "feadd" | "fesub" | "femul" |
     "write"
 }
