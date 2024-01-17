@@ -13,7 +13,7 @@ use valida_range::MachineWithRangeChip;
 use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
-use p3_maybe_rayon::*;
+use p3_maybe_rayon::prelude::*;
 use valida_machine::config::StarkConfig;
 use valida_util::pad_to_power_of_two;
 

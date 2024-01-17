@@ -22,7 +22,7 @@ use valida_util::batch_multiplicative_inverse;
 use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
-use p3_maybe_rayon::*;
+use p3_maybe_rayon::prelude::*;
 use valida_machine::config::StarkConfig;
 
 pub mod columns;
@@ -71,7 +71,8 @@ where
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<SC::Val> {
         let mut rows = self
             .operations
-            .par_iter()
+            .as_slice()
+            .into_par_iter()
             .enumerate()
             .map(|(n, op)| self.op_to_row::<M, SC>(n, op, machine))
             .collect::<Vec<_>>();

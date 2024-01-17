@@ -14,7 +14,7 @@ use valida_util::batch_multiplicative_inverse;
 use p3_air::VirtualPairCol;
 use p3_field::{Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
-use p3_maybe_rayon::*;
+use p3_maybe_rayon::prelude::*;
 use valida_machine::config::StarkConfig;
 
 pub mod columns;

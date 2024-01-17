@@ -186,22 +186,46 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
         })
         .collect::<TokenStream2>();
 
-    let prove_starks = chips
+    let quotient_degree_calls = chips
+        .iter()
+        .map(|chip| {
+            let chip_name = chip.ident.as_ref().unwrap();
+            quote! {
+                get_log_quotient_degree::<Self, SC, _>(self, self.#chip_name()),
+            }
+        })
+        .collect::<TokenStream2>();
+
+    let compute_quotients = chips
         .iter()
         .enumerate()
-        .map(|(n, chip)| {
+        .map(|(i, chip)| {
             let chip_name = chip.ident.as_ref().unwrap();
             quote! {
                 #[cfg(debug_assertions)]
                 check_constraints::<Self, _, SC>(
                     self,
                     self.#chip_name(),
-                    &main_traces[#n],
-                    &perm_traces[#n],
+                    &main_traces[#i],
+                    &perm_traces[#i],
                     &perm_challenges,
                 );
 
-                chip_proofs.push(prove(self, config, self.#chip_name(), &mut challenger));
+                // TODO: Needlessly regenerating preprocessed_trace()
+                let ppt: Option<RowMajorMatrix<SC::Val>> = self.#chip_name().preprocessed_trace();
+                let preprocessed_trace_lde = ppt.map(|trace| preprocessed_trace_ldes.remove(0));
+
+                quotients.push(quotient(
+                    self,
+                    config,
+                    self.#chip_name(),
+                    log_degrees[#i],
+                    preprocessed_trace_lde,
+                    main_trace_ldes.remove(0),
+                    perm_trace_ldes.remove(0),
+                    &perm_challenges,
+                    alpha,
+                ));
             }
         })
         .collect::<TokenStream2>();
@@ -211,26 +235,45 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
         fn prove<SC: StarkConfig<Val = F>>(&self, config: &SC) -> ::valida_machine::proof::MachineProof<SC>
         {
             use ::valida_machine::__internal::*;
+            use ::valida_machine::__internal::p3_air::{BaseAir};
             use ::valida_machine::__internal::p3_challenger::{CanObserve, FieldChallenger};
-            use ::valida_machine::__internal::p3_commit::{Pcs, UnivariatePcs};
+            use ::valida_machine::__internal::p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
             use ::valida_machine::__internal::p3_matrix::{Matrix, dense::RowMajorMatrix};
             use ::valida_machine::__internal::p3_util::log2_strict_usize;
             use ::valida_machine::chip::generate_permutation_trace;
-            use ::valida_machine::proof::MachineProof;
+            use ::valida_machine::proof::{MachineProof, ChipProof, Commitments};
             use alloc::vec;
             use alloc::vec::Vec;
             use alloc::boxed::Box;
 
             let mut chips: [Box<&dyn Chip<Self, SC>>; #num_chips] = [ #chip_list ];
+            let log_quotient_degrees: [usize; #num_chips] = [ #quotient_degree_calls ];
 
             let mut challenger = config.challenger();
+            let pcs = config.pcs();
 
-            let main_traces: [RowMajorMatrix<SC::Val>; #num_chips] = tracing::info_span!("generate main traces")
-                .in_scope(||
-                    chips.par_iter().map(|chip| {
-                        chip.generate_trace(self)
-                    }).collect::<Vec<_>>().try_into().unwrap()
-                );
+            let preprocessed_traces: Vec<RowMajorMatrix<SC::Val>> =
+                tracing::info_span!("generate preprocessed traces")
+                    .in_scope(||
+                        chips.par_iter()
+                            .flat_map(|chip| chip.preprocessed_trace())
+                            .collect::<Vec<_>>()
+                    );
+
+            let (preprocessed_commit, preprocessed_data) =
+                tracing::info_span!("commit to preprocessed traces")
+                    .in_scope(|| pcs.commit_batches(preprocessed_traces.to_vec()));
+            challenger.observe(preprocessed_commit.clone());
+            let mut preprocessed_trace_ldes = pcs.get_ldes(&preprocessed_data);
+
+            let main_traces: [RowMajorMatrix<SC::Val>; #num_chips] =
+                tracing::info_span!("generate main traces")
+                    .in_scope(||
+                        chips.par_iter()
+                            .map(|chip| chip.generate_trace(self))
+                            .collect::<Vec<_>>()
+                            .try_into().unwrap()
+                    );
 
             let degrees: [usize; #num_chips] = main_traces.iter()
                 .map(|trace| trace.height())
@@ -240,10 +283,9 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             let g_subgroups = log_degrees.map(|log_deg| SC::Val::two_adic_generator(log_deg));
 
             let (main_commit, main_data) = tracing::info_span!("commit to main traces")
-                .in_scope(||
-                    config.pcs().commit_batches(main_traces.to_vec())
-                );
+                .in_scope(|| pcs.commit_batches(main_traces.to_vec()));
             challenger.observe(main_commit.clone());
+            let mut main_trace_ldes = pcs.get_ldes(&main_data);
 
             let mut perm_challenges = Vec::new();
             for _ in 0..3 {
@@ -259,12 +301,23 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
 
             let (perm_commit, perm_data) = tracing::info_span!("commit to permutation traces")
                 .in_scope(|| {
-                    let flattened_perm_traces = perm_traces.iter().map(|trace| {
-                        trace.flatten_to_base()
-                    }).collect::<Vec<_>>();
-                    config.pcs().commit_batches(flattened_perm_traces)
+                    let flattened_perm_traces = perm_traces.iter()
+                        .map(|trace| trace.flatten_to_base())
+                        .collect::<Vec<_>>();
+                    pcs.commit_batches(flattened_perm_traces)
                 });
             challenger.observe(perm_commit.clone());
+            let mut perm_trace_ldes = pcs.get_ldes(&perm_data);
+
+            let alpha: SC::Challenge = challenger.sample_ext_element();
+
+            let mut quotients: Vec<RowMajorMatrix<SC::Val>> = vec![];
+            #compute_quotients
+            let (quotient_commit, quotient_data) = tracing::info_span!("commit to quotient chunks")
+                .in_scope(|| pcs.commit_batches(quotients.to_vec()));
+
+            #[cfg(debug_assertions)]
+            check_cumulative_sums(&perm_traces[..]);
 
             let zeta: SC::Challenge = challenger.sample_ext_element();
             let zeta_and_next: [Vec<SC::Challenge>; #num_chips] =
@@ -275,19 +328,19 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                 // TODO: Enable when we have quotient computation
                 // (&quotient_data, &[zeta.exp_power_of_2(log_quotient_degree)]),
             ];
-            let (openings, opening_proof) = config.pcs().open_multi_batches(
+            let (openings, opening_proof) = pcs.open_multi_batches(
                &prover_data_and_points, &mut challenger);
 
-            let mut chip_proofs = vec![];
-            #prove_starks
-
-            #[cfg(debug_assertions)]
-            check_cumulative_sums(&perm_traces[..]);
-
+            let commitments = Commitments {
+                main_trace: main_commit,
+                perm_trace: perm_commit,
+                quotient_chunks: quotient_commit,
+            };
+            let chip_proofs = vec![]; // TODO
             MachineProof {
-                // opening_proof,
+                commitments,
+                opening_proof,
                 chip_proofs,
-                phantom: core::marker::PhantomData,
             }
         }
     }

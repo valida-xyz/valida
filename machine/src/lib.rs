@@ -20,6 +20,7 @@ pub mod chip;
 pub mod config;
 pub mod core;
 pub mod proof;
+mod symbolic;
 
 pub use advice::*;
 pub use chip::*;
@@ -152,7 +153,7 @@ impl ProgramROM<i32> {
     }
 }
 
-pub trait Machine<F: Field> {
+pub trait Machine<F: Field>: Sync {
     fn run<Adv: AdviceProvider>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv);
 
     fn prove<SC: StarkConfig<Val = F>>(&self, config: &SC) -> MachineProof<SC>;

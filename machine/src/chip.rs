@@ -5,12 +5,15 @@ use alloc::vec::Vec;
 use valida_util::batch_multiplicative_inverse;
 
 use crate::config::StarkConfig;
+use crate::symbolic::symbolic_builder::SymbolicAirBuilder;
 use p3_air::{Air, AirBuilder, PairBuilder, PermutationAirBuilder, VirtualPairCol};
-use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Powers};
+use p3_field::{AbstractField, ExtensionField, Field, Powers};
 use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRowSlices};
 
 pub trait Chip<M: Machine<SC::Val>, SC: StarkConfig>:
-    for<'a> Air<ProverConstraintFolder<'a, M, SC>> + for<'a> Air<DebugConstraintBuilder<'a, M, SC>>
+    for<'a> Air<ProverConstraintFolder<'a, M, SC>>
+    + for<'a> Air<SymbolicAirBuilder<'a, M, SC>>
+    + for<'a> Air<DebugConstraintBuilder<'a, M, SC>>
 {
     /// Generate the main trace for the chip given the provided machine.
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<SC::Val>;
@@ -179,10 +182,10 @@ where
                 .apply::<SC::Val, SC::Val>(preprocessed_row, main_row);
             match interaction_type {
                 InteractionType::LocalSend | InteractionType::GlobalSend => {
-                    phi[n] += SC::Challenge::from_base(mult) * perm_row[m];
+                    phi[n] += perm_row[m] * mult;
                 }
                 InteractionType::LocalReceive | InteractionType::GlobalReceive => {
-                    phi[n] -= SC::Challenge::from_base(mult) * perm_row[m];
+                    phi[n] -= perm_row[m] * mult;
                 }
             }
         }
@@ -228,22 +231,22 @@ pub fn eval_permutation_constraints<M, C, SC, AB>(
     let (alphas_local, alphas_global) = generate_rlc_elements(builder.machine(), chip, &rand_elems);
     let betas = rand_elems[2].powers();
 
-    let lhs = phi_next - phi_local.clone();
-    let mut rhs = AB::ExprEF::from_base(AB::Expr::zero());
-    let mut phi_0 = AB::ExprEF::from_base(AB::Expr::zero());
+    let lhs = phi_next.into() - phi_local.into();
+    let mut rhs = AB::ExprEF::zero();
+    let mut phi_0 = AB::ExprEF::zero();
     for (m, (interaction, interaction_type)) in all_interactions.iter().enumerate() {
         // Reciprocal constraints
-        let mut rlc = AB::ExprEF::from_base(AB::Expr::zero());
+        let mut rlc = AB::ExprEF::zero();
         for (field, beta) in interaction.fields.iter().zip(betas.clone()) {
             let elem = field.apply::<AB::Expr, AB::Var>(preprocessed_local, main_local);
-            rlc += AB::ExprEF::from(beta) * elem;
+            rlc += AB::ExprEF::from_f(beta) * elem;
         }
         if interaction.is_local() {
-            rlc = rlc + alphas_local[interaction.argument_index()];
+            rlc = rlc + AB::ExprEF::from_f(alphas_local[interaction.argument_index()]);
         } else {
-            rlc = rlc + alphas_global[interaction.argument_index()];
+            rlc = rlc + AB::ExprEF::from_f(alphas_global[interaction.argument_index()]);
         }
-        builder.assert_one_ext::<AB::ExprEF, AB::ExprEF>(rlc * perm_local[m]);
+        builder.assert_one_ext::<AB::ExprEF, AB::ExprEF>(rlc * perm_local[m].into());
 
         let mult_local = interaction
             .count
@@ -255,12 +258,12 @@ pub fn eval_permutation_constraints<M, C, SC, AB>(
         // Build the RHS of the permutation constraint
         match interaction_type {
             InteractionType::LocalSend | InteractionType::GlobalSend => {
-                phi_0 += AB::ExprEF::from_base(mult_local) * perm_local[m];
-                rhs += AB::ExprEF::from_base(mult_next) * perm_next[m];
+                phi_0 += perm_local[m].into() * mult_local;
+                rhs += perm_next[m].into() * mult_next;
             }
             InteractionType::LocalReceive | InteractionType::GlobalReceive => {
-                phi_0 -= AB::ExprEF::from_base(mult_local) * perm_local[m];
-                rhs -= AB::ExprEF::from_base(mult_next) * perm_next[m];
+                phi_0 -= perm_local[m].into() * mult_local;
+                rhs -= perm_next[m].into() * mult_next;
             }
         }
     }
@@ -274,7 +277,7 @@ pub fn eval_permutation_constraints<M, C, SC, AB>(
         .assert_eq_ext(perm_local.last().unwrap().clone(), phi_0);
     builder.when_last_row().assert_eq_ext(
         perm_local.last().unwrap().clone(),
-        AB::ExprEF::from(cumulative_sum),
+        AB::ExprEF::from_f(cumulative_sum),
     );
 }
 

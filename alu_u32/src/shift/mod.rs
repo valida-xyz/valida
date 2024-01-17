@@ -14,7 +14,7 @@ use valida_opcodes::{DIV32, MUL32, SDIV32, SHL32, SHR32, SRA32};
 use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
-use p3_maybe_rayon::*;
+use p3_maybe_rayon::prelude::*;
 use valida_machine::config::StarkConfig;
 use valida_util::pad_to_power_of_two;
 

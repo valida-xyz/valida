@@ -39,7 +39,7 @@ use valida_output::{MachineWithOutputChip, OutputChip, WriteInstruction};
 use valida_program::{MachineWithProgramChip, ProgramChip};
 use valida_range::{MachineWithRangeChip, RangeCheckerChip};
 
-use p3_maybe_rayon::*;
+use p3_maybe_rayon::prelude::*;
 use valida_machine::config::StarkConfig;
 
 #[derive(Machine, Default)]

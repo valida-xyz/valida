@@ -1,16 +1,19 @@
 use crate::{Machine, ValidaAirBuilder};
 use p3_air::{AirBuilder, PairBuilder, PermutationAirBuilder, TwoRowMatrixView};
+use p3_field::AbstractField;
 use valida_machine::config::StarkConfig;
 
 pub struct ProverConstraintFolder<'a, M: Machine<SC::Val>, SC: StarkConfig> {
     pub(crate) machine: &'a M,
-    pub(crate) main: TwoRowMatrixView<'a, SC::Val>,
-    pub(crate) preprocessed: TwoRowMatrixView<'a, SC::Val>,
-    pub(crate) perm: TwoRowMatrixView<'a, SC::Challenge>,
+    pub(crate) preprocessed: TwoRowMatrixView<'a, SC::PackedVal>,
+    pub(crate) main: TwoRowMatrixView<'a, SC::PackedVal>,
+    pub(crate) perm: TwoRowMatrixView<'a, SC::PackedChallenge>,
     pub(crate) perm_challenges: &'a [SC::Challenge],
-    pub(crate) is_first_row: SC::Val,
-    pub(crate) is_last_row: SC::Val,
-    pub(crate) is_transition: SC::Val,
+    pub(crate) is_first_row: SC::PackedVal,
+    pub(crate) is_last_row: SC::PackedVal,
+    pub(crate) is_transition: SC::PackedVal,
+    pub(crate) alpha: SC::Challenge,
+    pub(crate) accumulator: SC::PackedChallenge,
 }
 
 impl<'a, M, SC> AirBuilder for ProverConstraintFolder<'a, M, SC>
@@ -19,9 +22,9 @@ where
     SC: StarkConfig,
 {
     type F = SC::Val;
-    type Expr = SC::Val; // TODO: PackedVal
-    type Var = SC::Val; // TODO: PackedVal
-    type M = TwoRowMatrixView<'a, SC::Val>; // TODO: PackedVal
+    type Expr = SC::PackedVal;
+    type Var = SC::PackedVal;
+    type M = TwoRowMatrixView<'a, SC::PackedVal>;
 
     fn main(&self) -> Self::M {
         self.main
@@ -43,8 +46,10 @@ where
         }
     }
 
-    fn assert_zero<I: Into<Self::Expr>>(&mut self, _x: I) {
-        // TODO
+    fn assert_zero<I: Into<Self::Expr>>(&mut self, x: I) {
+        let x: SC::PackedVal = x.into();
+        self.accumulator *= SC::PackedChallenge::from_f(self.alpha);
+        self.accumulator += x;
     }
 }
 
@@ -64,9 +69,9 @@ where
     SC: StarkConfig,
 {
     type EF = SC::Challenge;
-    type ExprEF = SC::Challenge;
-    type VarEF = SC::Challenge;
-    type MP = TwoRowMatrixView<'a, SC::Challenge>; // TODO: packed challenge?
+    type ExprEF = SC::PackedChallenge;
+    type VarEF = SC::PackedChallenge;
+    type MP = TwoRowMatrixView<'a, SC::PackedChallenge>;
 
     fn permutation(&self) -> Self::MP {
         self.perm
