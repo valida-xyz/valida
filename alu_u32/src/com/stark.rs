@@ -30,7 +30,7 @@ where
                 .input_1
                 .into_iter()
                 .zip(local.input_2)
-                .map(|(a, b)| (a - b) * (a - b))
+                .map(|(a, b)| (a - b).square())
                 .sum::<AB::Expr>(),
         );
         builder.assert_bool(local.not_equal);
@@ -40,7 +40,9 @@ where
         builder.assert_bool(local.is_eq);
         builder.assert_bool(local.is_ne + local.is_eq);
 
-        builder.when(local.is_ne).assert_one(local.not_equal);
-        builder.when(local.is_eq).assert_zero(local.not_equal);
+        builder.assert_eq(
+            local.output,
+            local.is_ne * local.not_equal + local.is_eq * (AB::Expr::one() - local.not_equal),
+        )
     }
 }
