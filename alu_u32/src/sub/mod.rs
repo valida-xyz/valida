@@ -11,9 +11,10 @@ use valida_opcodes::SUB32;
 use valida_range::MachineWithRangeChip;
 
 use p3_air::VirtualPairCol;
-use p3_field::PrimeField;
+use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
+use valida_machine::config::StarkConfig;
 use valida_util::pad_to_power_of_two;
 
 pub mod columns;
@@ -29,12 +30,12 @@ pub struct Sub32Chip {
     pub operations: Vec<Operation>,
 }
 
-impl<F, M> Chip<M> for Sub32Chip
+impl<M, SC> Chip<M, SC> for Sub32Chip
 where
-    F: PrimeField,
-    M: MachineWithGeneralBus<F = F> + MachineWithRangeBus8,
+    M: MachineWithGeneralBus<SC::Val> + MachineWithRangeBus8<SC::Val>,
+    SC: StarkConfig,
 {
-    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
+    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let rows = self
             .operations
             .par_iter()
@@ -44,12 +45,12 @@ where
         let mut trace =
             RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_SUB_COLS);
 
-        pad_to_power_of_two::<NUM_SUB_COLS, F>(&mut trace.values);
+        pad_to_power_of_two::<NUM_SUB_COLS, SC::Val>(&mut trace.values);
 
         trace
     }
 
-    fn global_sends(&self, machine: &M) -> Vec<Interaction<M::F>> {
+    fn global_sends(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
         let sends = SUB_COL_MAP
             .output
             .0
@@ -66,8 +67,8 @@ where
         sends
     }
 
-    fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
-        let opcode = VirtualPairCol::constant(M::F::from_canonical_u32(SUB32));
+    fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
+        let opcode = VirtualPairCol::constant(SC::Val::from_canonical_u32(SUB32));
         let input_1 = SUB_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = SUB_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
         let output = SUB_COL_MAP.output.0.map(VirtualPairCol::single_main);
@@ -116,21 +117,22 @@ impl Sub32Chip {
     }
 }
 
-pub trait MachineWithSub32Chip: MachineWithCpuChip {
+pub trait MachineWithSub32Chip<F: Field>: MachineWithCpuChip<F> {
     fn sub_u32(&self) -> &Sub32Chip;
     fn sub_u32_mut(&mut self) -> &mut Sub32Chip;
 }
 
 instructions!(Sub32Instruction);
 
-impl<M> Instruction<M> for Sub32Instruction
+impl<M, F> Instruction<M, F> for Sub32Instruction
 where
-    M: MachineWithSub32Chip + MachineWithRangeChip<256>,
+    M: MachineWithSub32Chip<F> + MachineWithRangeChip<F, 256>,
+    F: Field,
 {
     const OPCODE: u32 = SUB32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;

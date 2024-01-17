@@ -12,9 +12,10 @@ use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Sra
 use valida_opcodes::{DIV32, MUL32, SDIV32, SHL32, SHR32, SRA32};
 
 use p3_air::VirtualPairCol;
-use p3_field::PrimeField;
+use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
+use valida_machine::config::StarkConfig;
 use valida_util::pad_to_power_of_two;
 
 pub mod columns;
@@ -32,12 +33,12 @@ pub struct Shift32Chip {
     pub operations: Vec<Operation>,
 }
 
-impl<F, M> Chip<M> for Shift32Chip
+impl<M, SC> Chip<M, SC> for Shift32Chip
 where
-    F: PrimeField,
-    M: MachineWithGeneralBus<F = F> + MachineWithRangeBus8,
+    M: MachineWithGeneralBus<SC::Val> + MachineWithRangeBus8<SC::Val>,
+    SC: StarkConfig,
 {
-    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<M::F> {
+    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let rows = self
             .operations
             .par_iter()
@@ -49,19 +50,19 @@ where
             NUM_SHIFT_COLS,
         );
 
-        pad_to_power_of_two::<NUM_SHIFT_COLS, F>(&mut trace.values);
+        pad_to_power_of_two::<NUM_SHIFT_COLS, SC::Val>(&mut trace.values);
 
         trace
     }
 
-    fn global_sends(&self, machine: &M) -> Vec<Interaction<M::F>> {
+    fn global_sends(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
         let opcode = VirtualPairCol::new_main(
             vec![
-                (COL_MAP.is_shl, M::F::from_canonical_u32(MUL32)),
-                (COL_MAP.is_shr, M::F::from_canonical_u32(DIV32)),
-                (COL_MAP.is_sra, M::F::from_canonical_u32(SDIV32)),
+                (COL_MAP.is_shl, SC::Val::from_canonical_u32(MUL32)),
+                (COL_MAP.is_shr, SC::Val::from_canonical_u32(DIV32)),
+                (COL_MAP.is_sra, SC::Val::from_canonical_u32(SDIV32)),
             ],
-            M::F::zero(),
+            SC::Val::zero(),
         );
         let input_1 = COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = COL_MAP.power_of_two.0.map(VirtualPairCol::single_main);
@@ -84,14 +85,14 @@ where
         vec![send]
     }
 
-    fn global_receives(&self, machine: &M) -> Vec<Interaction<M::F>> {
+    fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
         let opcode = VirtualPairCol::new_main(
             vec![
-                (COL_MAP.is_shl, M::F::from_canonical_u32(SHL32)),
-                (COL_MAP.is_shr, M::F::from_canonical_u32(SHR32)),
-                (COL_MAP.is_sra, M::F::from_canonical_u32(SRA32)),
+                (COL_MAP.is_shl, SC::Val::from_canonical_u32(SHL32)),
+                (COL_MAP.is_shr, SC::Val::from_canonical_u32(SHR32)),
+                (COL_MAP.is_sra, SC::Val::from_canonical_u32(SRA32)),
             ],
-            M::F::zero(),
+            SC::Val::zero(),
         );
         let input_1 = COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = COL_MAP.input_2.0.map(VirtualPairCol::single_main);
@@ -162,21 +163,22 @@ impl Shift32Chip {
     }
 }
 
-pub trait MachineWithShift32Chip: MachineWithCpuChip {
+pub trait MachineWithShift32Chip<F: Field>: MachineWithCpuChip<F> {
     fn shift_u32(&self) -> &Shift32Chip;
     fn shift_u32_mut(&mut self) -> &mut Shift32Chip;
 }
 
 instructions!(Shl32Instruction, Shr32Instruction, Sra32Instruction);
 
-impl<M> Instruction<M> for Shl32Instruction
+impl<M, F> Instruction<M, F> for Shl32Instruction
 where
-    M: MachineWithShift32Chip + MachineWithMul32Chip,
+    M: MachineWithShift32Chip<F> + MachineWithMul32Chip<F>,
+    F: Field,
 {
     const OPCODE: u32 = SHL32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;
@@ -215,14 +217,15 @@ where
     }
 }
 
-impl<M> Instruction<M> for Shr32Instruction
+impl<M, F> Instruction<M, F> for Shr32Instruction
 where
-    M: MachineWithShift32Chip + MachineWithDiv32Chip,
+    M: MachineWithShift32Chip<F> + MachineWithDiv32Chip<F>,
+    F: Field,
 {
     const OPCODE: u32 = SHR32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;
@@ -261,14 +264,15 @@ where
     }
 }
 
-impl<M> Instruction<M> for Sra32Instruction
+impl<M, F> Instruction<M, F> for Sra32Instruction
 where
-    M: MachineWithShift32Chip + MachineWithDiv32Chip,
+    M: MachineWithShift32Chip<F> + MachineWithDiv32Chip<F>,
+    F: Field,
 {
     const OPCODE: u32 = SRA32;
 
     fn execute(state: &mut M, ops: Operands<i32>) {
-        let opcode = <Self as Instruction<M>>::OPCODE;
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;

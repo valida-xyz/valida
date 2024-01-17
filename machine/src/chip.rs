@@ -1,35 +1,38 @@
 use crate::Machine;
-use crate::__internal::ConstraintFolder;
+use crate::__internal::{ConstraintFolder, DebugConstraintBuilder};
 use alloc::vec;
 use alloc::vec::Vec;
 use valida_util::batch_multiplicative_inverse;
 
+use crate::config::StarkConfig;
 use p3_air::{Air, AirBuilder, PairBuilder, PermutationAirBuilder, VirtualPairCol};
-use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Powers, PrimeField};
+use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Powers};
 use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRowSlices};
 
-pub trait Chip<M: Machine>: for<'a> Air<ConstraintFolder<'a, M::F, M::EF, M>> {
+pub trait Chip<M: Machine<SC::Val>, SC: StarkConfig>:
+    for<'a> Air<ConstraintFolder<'a, M, SC>> + for<'a> Air<DebugConstraintBuilder<'a, M, SC>>
+{
     /// Generate the main trace for the chip given the provided machine.
-    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<M::F>;
+    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<SC::Val>;
 
-    fn local_sends(&self) -> Vec<Interaction<M::F>> {
+    fn local_sends(&self) -> Vec<Interaction<SC::Val>> {
         vec![]
     }
 
-    fn local_receives(&self) -> Vec<Interaction<M::F>> {
+    fn local_receives(&self) -> Vec<Interaction<SC::Val>> {
         vec![]
     }
 
-    fn global_sends(&self, _machine: &M) -> Vec<Interaction<M::F>> {
+    fn global_sends(&self, _machine: &M) -> Vec<Interaction<SC::Val>> {
         vec![]
     }
 
-    fn global_receives(&self, _machine: &M) -> Vec<Interaction<M::F>> {
+    fn global_receives(&self, _machine: &M) -> Vec<Interaction<SC::Val>> {
         vec![]
     }
 
-    fn all_interactions(&self, machine: &M) -> Vec<(Interaction<M::F>, InteractionType)> {
-        let mut interactions: Vec<(Interaction<M::F>, InteractionType)> = vec![];
+    fn all_interactions(&self, machine: &M) -> Vec<(Interaction<SC::Val>, InteractionType)> {
+        let mut interactions: Vec<(Interaction<SC::Val>, InteractionType)> = vec![];
         interactions.extend(
             self.local_sends()
                 .into_iter()
@@ -105,15 +108,15 @@ impl<F: Field> Interaction<F> {
 
 /// Generate the permutation trace for a chip with the provided machine.
 /// This is called only after `generate_trace` has been called on all chips.
-pub fn generate_permutation_trace<F, M>(
+pub fn generate_permutation_trace<M, SC>(
     machine: &M,
-    chip: &dyn Chip<M>,
-    main: &RowMajorMatrix<M::F>,
-    random_elements: Vec<M::EF>,
-) -> RowMajorMatrix<M::EF>
+    chip: &dyn Chip<M, SC>,
+    main: &RowMajorMatrix<SC::Val>,
+    random_elements: Vec<SC::Challenge>,
+) -> RowMajorMatrix<SC::Challenge>
 where
-    F: Field,
-    M: Machine<F = F>,
+    M: Machine<SC::Val>,
+    SC: StarkConfig,
 {
     let all_interactions = chip.all_interactions(machine);
     let (alphas_local, alphas_global) = generate_rlc_elements(machine, chip, &random_elements);
@@ -134,7 +137,7 @@ where
     let mut perm_values = Vec::with_capacity(main.height() * perm_width);
 
     for (n, main_row) in main.rows().enumerate() {
-        let mut row = vec![M::EF::zero(); perm_width];
+        let mut row = vec![SC::Challenge::zero(); perm_width];
         for (m, (interaction, _)) in all_interactions.iter().enumerate() {
             let alpha_m = if interaction.is_local() {
                 alphas_local[interaction.argument_index()]
@@ -160,7 +163,7 @@ where
     let mut perm = RowMajorMatrix::new(perm_values, perm_width);
 
     // Compute the running sum column
-    let mut phi = vec![M::EF::zero(); perm.height()];
+    let mut phi = vec![SC::Challenge::zero(); perm.height()];
     for (n, (main_row, perm_row)) in main.rows().zip(perm.rows()).enumerate() {
         if n > 0 {
             phi[n] = phi[n - 1];
@@ -173,13 +176,13 @@ where
         for (m, (interaction, interaction_type)) in all_interactions.iter().enumerate() {
             let mult = interaction
                 .count
-                .apply::<M::F, M::F>(preprocessed_row, main_row);
+                .apply::<SC::Val, SC::Val>(preprocessed_row, main_row);
             match interaction_type {
                 InteractionType::LocalSend | InteractionType::GlobalSend => {
-                    phi[n] += M::EF::from_base(mult) * perm_row[m];
+                    phi[n] += SC::Challenge::from_base(mult) * perm_row[m];
                 }
                 InteractionType::LocalReceive | InteractionType::GlobalReceive => {
-                    phi[n] -= M::EF::from_base(mult) * perm_row[m];
+                    phi[n] -= SC::Challenge::from_base(mult) * perm_row[m];
                 }
             }
         }
@@ -192,12 +195,15 @@ where
     perm
 }
 
-pub fn eval_permutation_constraints<F, M, C, AB>(chip: &C, builder: &mut AB, cumulative_sum: AB::EF)
-where
-    F: PrimeField,
-    M: Machine<F = F>,
-    C: Chip<M> + Air<AB>,
-    AB: ValidaAirBuilder<Machine = M, F = F>,
+pub fn eval_permutation_constraints<M, C, SC, AB>(
+    chip: &C,
+    builder: &mut AB,
+    cumulative_sum: AB::EF,
+) where
+    M: Machine<SC::Val>,
+    C: Chip<M, SC> + Air<AB>,
+    SC: StarkConfig,
+    AB: ValidaAirBuilder<Machine = M, F = SC::Val, EF = SC::Challenge>,
 {
     let rand_elems = builder.permutation_randomness().to_vec();
 
@@ -272,15 +278,14 @@ where
     );
 }
 
-fn generate_rlc_elements<F, EF, M>(
+fn generate_rlc_elements<M, SC>(
     machine: &M,
-    chip: &dyn Chip<M>,
-    random_elements: &[EF],
-) -> (Vec<EF>, Vec<EF>)
+    chip: &dyn Chip<M, SC>,
+    random_elements: &[SC::Challenge],
+) -> (Vec<SC::Challenge>, Vec<SC::Challenge>)
 where
-    F: AbstractField,
-    EF: AbstractExtensionField<F>,
-    M: Machine,
+    M: Machine<SC::Val>,
+    SC: StarkConfig,
 {
     let alphas_local = random_elements[0]
         .powers()
