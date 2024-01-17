@@ -9,16 +9,15 @@ use byteorder::{ByteOrder, LittleEndian};
 
 pub use crate::core::Word;
 pub use chip::{BusArgument, Chip, Interaction, InteractionType, ValidaAirBuilder};
-use p3_matrix::dense::{RowMajorMatrix};
+use p3_matrix::dense::RowMajorMatrix;
 
-use p3_air::Air;
 use crate::proof::MachineProof;
+use p3_air::Air;
 pub use p3_field::{
     AbstractExtensionField, AbstractField, ExtensionField, Field, PrimeField, PrimeField64,
 };
 use p3_uni_stark::{
-   ProverConstraintFolder,
-    StarkConfig, SymbolicAirBuilder, Commitments, Proof,  ProverData
+    Commitments, Proof, ProverConstraintFolder, ProverData, StarkConfig, SymbolicAirBuilder,
 };
 // TODO: some are also re-exported, so they shouldn't be pub?
 pub mod __internal;
@@ -173,8 +172,8 @@ pub trait Machine {
         quotient_commitments: &mut Vec<ProverData<SC>>,
         log_degree: &mut Vec<usize>,
         log_quotient_degrees: &mut Vec<usize>,
-	chip:&A,
-	trace:RowMajorMatrix<<SC as StarkConfig>::Val>
+        chip: &A,
+        trace: RowMajorMatrix<<SC as StarkConfig>::Val>,
     ) where
         SC: StarkConfig,
         A: Air<SymbolicAirBuilder<SC::Val>> + for<'a> Air<ProverConstraintFolder<'a, SC>>;

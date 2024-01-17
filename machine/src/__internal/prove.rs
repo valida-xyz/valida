@@ -2,7 +2,7 @@ use crate::__internal::ConstraintFolder;
 use crate::proof::ChipProof;
 use crate::{Chip, Machine};
 use p3_air::Air;
-use p3_uni_stark::{prove as stark_prove,StarkConfig,SymbolicAirBuilder,ProverConstraintFolder};
+use p3_uni_stark::{prove as stark_prove, ProverConstraintFolder, StarkConfig, SymbolicAirBuilder};
 /*
 pub fn prove<M, A, SC>(
     machine: &M,
@@ -19,7 +19,7 @@ where
     let proof = stark_prove(config,air,challenger,trace);
 
     ChipProof{
-	proof
+    proof
     }
 }
 */
