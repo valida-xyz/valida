@@ -1,5 +1,5 @@
 use crate::Machine;
-use crate::__internal::{ConstraintFolder, DebugConstraintBuilder};
+use crate::__internal::{DebugConstraintBuilder, ProverConstraintFolder};
 use alloc::vec;
 use alloc::vec::Vec;
 use valida_util::batch_multiplicative_inverse;
@@ -10,7 +10,7 @@ use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Pow
 use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRowSlices};
 
 pub trait Chip<M: Machine<SC::Val>, SC: StarkConfig>:
-    for<'a> Air<ConstraintFolder<'a, M, SC>> + for<'a> Air<DebugConstraintBuilder<'a, M, SC>>
+    for<'a> Air<ProverConstraintFolder<'a, M, SC>> + for<'a> Air<DebugConstraintBuilder<'a, M, SC>>
 {
     /// Generate the main trace for the chip given the provided machine.
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<SC::Val>;

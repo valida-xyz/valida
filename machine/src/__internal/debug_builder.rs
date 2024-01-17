@@ -26,6 +26,10 @@ where
     type Var = SC::Val;
     type M = TwoRowMatrixView<'a, SC::Val>;
 
+    fn main(&self) -> Self::M {
+        self.main
+    }
+
     fn is_first_row(&self) -> Self::Expr {
         self.is_first_row
     }
@@ -40,10 +44,6 @@ where
         } else {
             panic!("only supports a window size of 2")
         }
-    }
-
-    fn main(&self) -> Self::M {
-        self.main
     }
 
     fn assert_zero<I: Into<Self::Expr>>(&mut self, x: I) {
@@ -71,8 +71,8 @@ where
     SC: StarkConfig,
 {
     type EF = SC::Challenge;
-    type VarEF = SC::Challenge;
     type ExprEF = SC::Challenge;
+    type VarEF = SC::Challenge;
     type MP = TwoRowMatrixView<'a, SC::Challenge>;
 
     fn permutation(&self) -> Self::MP {
