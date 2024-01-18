@@ -7,12 +7,18 @@ use alloc::vec::Vec;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::config::StarkConfig;
+pub use crate::core::Word;
+pub use chip::{BusArgument, Chip, Interaction, InteractionType, ValidaAirBuilder};
+use p3_matrix::dense::RowMajorMatrix;
+
 use crate::proof::MachineProof;
+use p3_air::Air;
 pub use p3_field::{
     AbstractExtensionField, AbstractField, ExtensionField, Field, PrimeField, PrimeField64,
 };
-
+use p3_uni_stark::{
+    Commitments, Proof, ProverConstraintFolder, ProverData, StarkConfig, SymbolicAirBuilder,
+};
 // TODO: some are also re-exported, so they shouldn't be pub?
 pub mod __internal;
 mod advice;
@@ -155,7 +161,23 @@ impl ProgramROM<i32> {
 pub trait Machine<F: Field> {
     fn run<Adv: AdviceProvider>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv);
 
-    fn prove<SC: StarkConfig<Val = F>>(&self, config: &SC) -> MachineProof<SC>;
+    fn add_chip_trace<SC, A>(
+        &self,
+        config: &SC,
+        challenger: &mut SC::Challenger,
+        trace_commitments: &mut Vec<ProverData<SC>>,
+        quotient_commitments: &mut Vec<ProverData<SC>>,
+        log_degree: &mut Vec<usize>,
+        log_quotient_degrees: &mut Vec<usize>,
+        chip: &A,
+        trace: RowMajorMatrix<<SC as StarkConfig>::Val>,
+    ) where
+        SC: StarkConfig,
+        A: Air<SymbolicAirBuilder<SC::Val>> + for<'a> Air<ProverConstraintFolder<'a, SC>>;
+
+    fn prove<SC>(&self, config: &SC, challenger: &mut SC::Challenger) -> MachineProof<SC>
+    where
+        SC: StarkConfig<Val = F>;
 
     fn verify<SC: StarkConfig<Val = F>>(proof: &MachineProof<SC>) -> Result<(), ()>;
 }

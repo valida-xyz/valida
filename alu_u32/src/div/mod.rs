@@ -15,9 +15,9 @@ use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
-use valida_machine::config::StarkConfig;
-use valida_util::pad_to_power_of_two;
 
+use valida_util::pad_to_power_of_two;
+use p3_uni_stark::StarkConfig;
 pub mod columns;
 pub mod stark;
 

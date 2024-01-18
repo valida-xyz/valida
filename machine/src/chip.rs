@@ -4,7 +4,8 @@ use alloc::vec;
 use alloc::vec::Vec;
 use valida_util::batch_multiplicative_inverse;
 
-use crate::config::StarkConfig;
+//use crate::config::StarkConfig;
+use p3_uni_stark::StarkConfig;
 use p3_air::{Air, AirBuilder, PairBuilder, PermutationAirBuilder, VirtualPairCol};
 use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Powers};
 use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRowSlices};
