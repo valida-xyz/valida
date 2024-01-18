@@ -1,6 +1,6 @@
 use crate::{Machine, ValidaAirBuilder};
 use p3_air::{AirBuilder, PairBuilder, PermutationAirBuilder, TwoRowMatrixView};
-use valida_machine::config::StarkConfig;
+use p3_uni_stark::StarkConfig;
 
 pub struct ConstraintFolder<'a, M: Machine<SC::Val>, SC: StarkConfig> {
     pub(crate) machine: &'a M,

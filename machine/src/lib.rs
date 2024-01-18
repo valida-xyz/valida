@@ -177,7 +177,7 @@ pub trait Machine<F: Field> {
 
     fn prove<SC>(&self, config: &SC, challenger: &mut SC::Challenger) -> MachineProof<SC>
     where
-        SC: StarkConfig<Val = Self::F, Challenge = Self::EF>;
+        SC: StarkConfig<Val = F>;
 
     fn verify<SC: StarkConfig<Val = F>>(proof: &MachineProof<SC>) -> Result<(), ()>;
 }

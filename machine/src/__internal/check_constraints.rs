@@ -1,6 +1,7 @@
 use crate::__internal::DebugConstraintBuilder;
 use crate::chip::eval_permutation_constraints;
-use crate::config::StarkConfig;
+use p3_uni_stark::StarkConfig;
+
 use crate::{Chip, Machine};
 use p3_air::{Air, TwoRowMatrixView};
 use p3_field::{AbstractField, Field};

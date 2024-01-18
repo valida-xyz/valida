@@ -1,8 +1,7 @@
-use crate::config::StarkConfig;
 use crate::{Machine, ValidaAirBuilder};
 use p3_air::{AirBuilder, PairBuilder, PermutationAirBuilder, TwoRowMatrixView};
 use p3_field::AbstractField;
-
+use p3_uni_stark::StarkConfig;
 /// An `AirBuilder` which asserts that each constraint is zero, allowing any failed constraints to
 /// be detected early.
 pub struct DebugConstraintBuilder<'a, M: Machine<SC::Val>, SC: StarkConfig> {
