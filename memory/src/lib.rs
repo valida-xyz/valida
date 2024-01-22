@@ -7,15 +7,14 @@ use alloc::collections::BTreeMap;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::mem::transmute;
-use valida_bus::MachineWithMemBus;
-use valida_machine::{BusArgument, Chip, Interaction, Machine, Word};
-use valida_util::batch_multiplicative_inverse;
-use p3_uni_stark::StarkConfig;
 use p3_air::VirtualPairCol;
 use p3_field::{Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
-
+use p3_uni_stark::StarkConfig;
+use valida_bus::MachineWithMemBus;
+use valida_machine::{BusArgument, Chip, Interaction, Machine, Word};
+use valida_util::batch_multiplicative_inverse;
 
 pub mod columns;
 pub mod stark;

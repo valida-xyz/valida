@@ -5,10 +5,10 @@ use alloc::vec::Vec;
 use valida_util::batch_multiplicative_inverse;
 
 //use crate::config::StarkConfig;
-use p3_uni_stark::StarkConfig;
 use p3_air::{Air, AirBuilder, PairBuilder, PermutationAirBuilder, VirtualPairCol};
 use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Powers};
 use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRowSlices};
+use p3_uni_stark::StarkConfig;
 
 pub trait Chip<M: Machine<SC::Val>, SC: StarkConfig>:
     for<'a> Air<ProverConstraintFolder<'a, M, SC>> + for<'a> Air<DebugConstraintBuilder<'a, M, SC>>

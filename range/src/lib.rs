@@ -16,7 +16,6 @@ use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_uni_stark::StarkConfig;
 
-
 pub mod columns;
 pub mod stark;
 
