@@ -18,20 +18,20 @@ jobs:
       - name: Checkout Plonky3
         uses: actions/checkout@v4
         with:
-	  repository: lita-xyz/Plonky3
-	  ref: batch_prover
+          repository: lita-xyz/Plonky3
           path: Plonky3
-
+          ref: batch_prover
+   
       - name: Checkout Valida
         uses: actions/checkout@v4
         with:
           path: valida
-
+	  
       - name: Install nightly toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly
+	  toolchain: nightly
 
       - name: Build
         working-directory: valida
@@ -49,8 +49,9 @@ jobs:
       - name: Checkout Plonky3
         uses: actions/checkout@v4
         with:
-          repository: Plonky3/Plonky3
+          repository: lita-xyz/Plonky3
           path: Plonky3
+          ref: batch_prover
 
       - name: Checkout Valida
         uses: actions/checkout@v4
