@@ -1,4 +1,4 @@
-use crate::__internal::ConstraintFolder;
+//use crate::__internal::ConstraintFolder;
 use crate::proof::ChipProof;
 use crate::{Chip, Machine};
 use p3_air::Air;
