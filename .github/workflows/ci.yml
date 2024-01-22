@@ -18,9 +18,9 @@ jobs:
       - name: Checkout Plonky3
         uses: actions/checkout@v4
         with:
-	 repository: lita-xyz/Plonky3
-	 ref: batch_prover
-         path: Plonky3
+	  repository: lita-xyz/Plonky3
+	  ref: batch_prover
+          path: Plonky3
 
       - name: Checkout Valida
         uses: actions/checkout@v4
