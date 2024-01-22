@@ -31,7 +31,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-	  toolchain: nightly
+          toolchain: nightly
 
       - name: Build
         working-directory: valida
