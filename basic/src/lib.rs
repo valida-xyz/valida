@@ -7,6 +7,7 @@ use alloc::vec::Vec;
 use core::marker::PhantomData;
 use p3_air::Air;
 use p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
+use p3_field::PrimeField32;
 use p3_field::{extension::BinomialExtensionField, TwoAdicField};
 use p3_goldilocks::Goldilocks;
 use p3_matrix::dense::RowMajorMatrix;
@@ -16,7 +17,6 @@ use p3_uni_stark::{
     ProverConstraintFolder, ProverData, StarkConfig, SymbolicAirBuilder,
 };
 use p3_util::log2_ceil_usize;
-use p3_field::PrimeField32;
 use valida_alu_u32::{
     add::{Add32Chip, Add32Instruction, MachineWithAdd32Chip},
     bitwise::{
@@ -277,7 +277,6 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithRangeChip<F, 256> for BasicMachi
 }
 
 impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
-
     fn run<Adv: AdviceProvider>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv) {
         loop {
             let pc = self.cpu.pc;
@@ -285,76 +284,76 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             let opcode = instruction.opcode;
             let ops = instruction.operands;
             match opcode {
-                <Load32Instruction as Instruction<Self,F>>::OPCODE => {
+                <Load32Instruction as Instruction<Self, F>>::OPCODE => {
                     Load32Instruction::execute_with_advice(self, ops, advice);
                 }
-                <Store32Instruction as Instruction<Self,F>>::OPCODE => {
+                <Store32Instruction as Instruction<Self, F>>::OPCODE => {
                     Store32Instruction::execute_with_advice(self, ops, advice);
                 }
-                <JalInstruction as Instruction<Self,F>>::OPCODE => {
+                <JalInstruction as Instruction<Self, F>>::OPCODE => {
                     JalInstruction::execute_with_advice(self, ops, advice);
                 }
-                <JalvInstruction as Instruction<Self,F>>::OPCODE => {
+                <JalvInstruction as Instruction<Self, F>>::OPCODE => {
                     JalvInstruction::execute_with_advice(self, ops, advice);
                 }
-                <BeqInstruction as Instruction<Self,F>>::OPCODE => {
+                <BeqInstruction as Instruction<Self, F>>::OPCODE => {
                     BeqInstruction::execute_with_advice(self, ops, advice);
                 }
-                <BneInstruction as Instruction<Self,F>>::OPCODE => {
+                <BneInstruction as Instruction<Self, F>>::OPCODE => {
                     BneInstruction::execute_with_advice(self, ops, advice);
                 }
-                <Imm32Instruction as Instruction<Self,F>>::OPCODE => {
+                <Imm32Instruction as Instruction<Self, F>>::OPCODE => {
                     Imm32Instruction::execute_with_advice(self, ops, advice);
                 }
-                <Add32Instruction as Instruction<Self,F>>::OPCODE => {
+                <Add32Instruction as Instruction<Self, F>>::OPCODE => {
                     Add32Instruction::execute_with_advice(self, ops, advice);
                 }
-                <Sub32Instruction as Instruction<Self,F>>::OPCODE => {
+                <Sub32Instruction as Instruction<Self, F>>::OPCODE => {
                     Sub32Instruction::execute_with_advice(self, ops, advice);
                 }
-                <Mul32Instruction as Instruction<Self,F>>::OPCODE => {
+                <Mul32Instruction as Instruction<Self, F>>::OPCODE => {
                     Mul32Instruction::execute_with_advice(self, ops, advice);
                 }
-                <Mulhs32Instruction as Instruction<Self,F>>::OPCODE => {
+                <Mulhs32Instruction as Instruction<Self, F>>::OPCODE => {
                     Mulhs32Instruction::execute_with_advice(self, ops, advice);
                 }
-                <Mulhu32Instruction as Instruction<Self,F>>::OPCODE => {
+                <Mulhu32Instruction as Instruction<Self, F>>::OPCODE => {
                     Mulhu32Instruction::execute_with_advice(self, ops, advice);
                 }
-                <Div32Instruction as Instruction<Self,F>>::OPCODE => {
+                <Div32Instruction as Instruction<Self, F>>::OPCODE => {
                     Div32Instruction::execute_with_advice(self, ops, advice);
                 }
-                <SDiv32Instruction as Instruction<Self,F>>::OPCODE => {
+                <SDiv32Instruction as Instruction<Self, F>>::OPCODE => {
                     SDiv32Instruction::execute_with_advice(self, ops, advice);
                 }
-                <Shl32Instruction as Instruction<Self,F>>::OPCODE => {
+                <Shl32Instruction as Instruction<Self, F>>::OPCODE => {
                     Shl32Instruction::execute_with_advice(self, ops, advice);
                 }
-                <Shr32Instruction as Instruction<Self,F>>::OPCODE => {
+                <Shr32Instruction as Instruction<Self, F>>::OPCODE => {
                     Shr32Instruction::execute_with_advice(self, ops, advice);
                 }
-                <Sra32Instruction as Instruction<Self,F>>::OPCODE => {
+                <Sra32Instruction as Instruction<Self, F>>::OPCODE => {
                     Sra32Instruction::execute_with_advice(self, ops, advice);
                 }
-                <Lt32Instruction as Instruction<Self,F>>::OPCODE => {
+                <Lt32Instruction as Instruction<Self, F>>::OPCODE => {
                     Lt32Instruction::execute_with_advice(self, ops, advice);
                 }
-                <And32Instruction as Instruction<Self,F>>::OPCODE => {
+                <And32Instruction as Instruction<Self, F>>::OPCODE => {
                     And32Instruction::execute_with_advice(self, ops, advice);
                 }
-                <Or32Instruction as Instruction<Self,F>>::OPCODE => {
+                <Or32Instruction as Instruction<Self, F>>::OPCODE => {
                     Or32Instruction::execute_with_advice(self, ops, advice);
                 }
-                <Xor32Instruction as Instruction<Self,F>>::OPCODE => {
+                <Xor32Instruction as Instruction<Self, F>>::OPCODE => {
                     Xor32Instruction::execute_with_advice(self, ops, advice);
                 }
-                <ReadAdviceInstruction as Instruction<Self,F>>::OPCODE => {
+                <ReadAdviceInstruction as Instruction<Self, F>>::OPCODE => {
                     ReadAdviceInstruction::execute_with_advice(self, ops, advice);
                 }
-                <WriteInstruction as Instruction<Self,F>>::OPCODE => {
+                <WriteInstruction as Instruction<Self, F>>::OPCODE => {
                     WriteInstruction::execute_with_advice(self, ops, advice);
                 }
-                <StopInstruction as Instruction<Self,F>>::OPCODE => {
+                <StopInstruction as Instruction<Self, F>>::OPCODE => {
                     StopInstruction::execute_with_advice(self, ops, advice);
                 }
                 _ => {}
@@ -362,7 +361,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
             self.read_word(pc as usize);
 
-            if opcode == <StopInstruction as Instruction<Self,F>>::OPCODE {
+            if opcode == <StopInstruction as Instruction<Self, F>>::OPCODE {
                 break;
             }
         }
@@ -400,24 +399,24 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         let mut quotient_commitments = Vec::new();
         let mut log_degrees = Vec::new();
         let mut log_quotient_degrees = Vec::new();
-/*
-        let air = &self.cpu();
-        assert_eq!(air.operations.len() > 0, true);
-        let trace = air.generate_trace(air, self);
-        self.add_chip_trace(
-            config,
-            challenger,
-            &mut trace_commitments,
-            &mut quotient_commitments,
-            &mut log_degrees,
-            &mut log_quotient_degrees,
-            air,
-            trace,
-        );
-*/
+        /*
+                let air = &self.cpu();
+                assert_eq!(air.operations.len() > 0, true);
+                let trace = air.generate_trace(air, self);
+                self.add_chip_trace(
+                    config,
+                    challenger,
+                    &mut trace_commitments,
+                    &mut quotient_commitments,
+                    &mut log_degrees,
+                    &mut log_quotient_degrees,
+                    air,
+                    trace,
+                );
+        */
         if self.add_u32.operations.len() > 0 {
             let air = &self.add_u32;
-            let trace = <Add32Chip as Chip<BasicMachine<F>, SC>>::generate_trace(air,self);
+            let trace = <Add32Chip as Chip<BasicMachine<F>, SC>>::generate_trace(air, self);
 
             self.add_chip_trace(
                 config,
@@ -447,7 +446,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         }
         if self.mul_u32.operations.len() > 0 {
             let air = &self.mul_u32;
-            let trace =<Mul32Chip as Chip<BasicMachine<F>, SC>>::generate_trace(air, self);
+            let trace = <Mul32Chip as Chip<BasicMachine<F>, SC>>::generate_trace(air, self);
 
             self.add_chip_trace(
                 config,
@@ -463,7 +462,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         if self.div_u32.operations.len() > 0 {
             let air = &self.div_u32;
 
-	    let trace = <Div32Chip as Chip<BasicMachine<F>, SC>>::generate_trace(air, self);
+            let trace = <Div32Chip as Chip<BasicMachine<F>, SC>>::generate_trace(air, self);
             self.add_chip_trace(
                 config,
                 challenger,
@@ -477,8 +476,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         }
         if self.shift_u32.operations.len() > 0 {
             let air = &self.shift_u32;
-	    let trace = <Shift32Chip as Chip<BasicMachine<F>, SC>>::generate_trace(air, self);
-
+            let trace = <Shift32Chip as Chip<BasicMachine<F>, SC>>::generate_trace(air, self);
 
             self.add_chip_trace(
                 config,
@@ -493,7 +491,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         }
         if self.lt_u32.operations.len() > 0 {
             let air = &self.lt_u32;
-	    let trace = <Lt32Chip as Chip<BasicMachine<F>, SC>>::generate_trace(air, self);	    
+            let trace = <Lt32Chip as Chip<BasicMachine<F>, SC>>::generate_trace(air, self);
 
             self.add_chip_trace(
                 config,
@@ -509,7 +507,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         if self.bitwise_u32.operations.len() > 0 {
             let air = &self.bitwise_u32;
-	    let trace = <Bitwise32Chip as Chip<BasicMachine<F>, SC>>::generate_trace(air, self);
+            let trace = <Bitwise32Chip as Chip<BasicMachine<F>, SC>>::generate_trace(air, self);
 
             self.add_chip_trace(
                 config,

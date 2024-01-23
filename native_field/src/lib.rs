@@ -19,7 +19,6 @@ use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
 use p3_uni_stark::StarkConfig;
 
-
 pub mod columns;
 pub mod stark;
 
