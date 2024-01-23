@@ -250,6 +250,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             let log_quotient_degrees: [usize; #num_chips] = [ #quotient_degree_calls ];
 
             let mut challenger = config.challenger();
+            // TODO: Seed challenger with digest of all constraints & trace lengths.
             let pcs = config.pcs();
 
             let preprocessed_traces: Vec<RowMajorMatrix<SC::Val>> =
@@ -349,6 +350,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
 fn verify_method(_chips: &[&Field]) -> TokenStream2 {
     quote! {
         fn verify<SC: StarkConfig<Val = F>>(
+            config: &SC,
             proof: &::valida_machine::proof::MachineProof<SC>,
         ) -> core::result::Result<(), ()>
         {

@@ -5,7 +5,6 @@
 mod check_constraints;
 mod debug_builder;
 mod folding_builder;
-mod prove;
 mod quotient;
 
 pub use check_constraints::*;

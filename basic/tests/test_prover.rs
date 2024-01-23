@@ -7,10 +7,11 @@ use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
     MachineWithCpuChip, StopInstruction,
 };
-use valida_machine::config::StarkConfigImpl;
+
 use valida_machine::{
     FixedAdviceProvider, Instruction, InstructionWord, Machine, Operands, ProgramROM, Word,
 };
+
 use valida_memory::MachineWithMemoryChip;
 use valida_opcodes::BYTES_PER_INSTR;
 use valida_program::MachineWithProgramChip;
@@ -25,10 +26,10 @@ use p3_ldt::QuotientMmcs;
 use p3_mds::coset_mds::CosetMds;
 use p3_merkle_tree::FieldMerkleTreeMmcs;
 use p3_poseidon::Poseidon;
-use p3_symmetric::CompressionFunctionFromHasher;
-use p3_symmetric::SerializingHasher32;
+use p3_symmetric::{CompressionFunctionFromHasher, SerializingHasher32};
 use rand::thread_rng;
 use valida_machine::__internal::p3_commit::ExtensionMmcs;
+use valida_machine::config::StarkConfigImpl;
 
 #[test]
 fn prove_fibonacci() {
@@ -229,10 +230,11 @@ fn prove_fibonacci() {
     type MyConfig = StarkConfigImpl<Val, Challenge, PackedChallenge, Pcs, Challenger>;
 
     let pcs = Pcs::new(dft, val_mmcs, ldt);
-    let challenger = DuplexChallenger::new(perm16);
-    let config = MyConfig::new(pcs, challenger);
-    machine.prove(&config);
 
+    let challenger = Challenger::new(perm16);
+    let config = MyConfig::new(pcs, challenger);
+    let proof = machine.prove(&config);
+    BasicMachine::verify(&config, &proof).expect("verification failed");
     assert_eq!(machine.cpu().clock, 192);
     assert_eq!(machine.cpu().operations.len(), 192);
     assert_eq!(machine.mem().operations.values().flatten().count(), 401);

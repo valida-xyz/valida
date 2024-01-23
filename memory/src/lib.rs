@@ -7,15 +7,14 @@ use alloc::collections::BTreeMap;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::mem::transmute;
-use valida_bus::MachineWithMemBus;
-use valida_machine::{BusArgument, Chip, Interaction, Machine, Word};
-use valida_util::batch_multiplicative_inverse;
-
 use p3_air::VirtualPairCol;
 use p3_field::{Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::prelude::*;
+use valida_bus::MachineWithMemBus;
 use valida_machine::config::StarkConfig;
+use valida_machine::{BusArgument, Chip, Interaction, Machine, Word};
+use valida_util::batch_multiplicative_inverse_allowing_zero;
 
 pub mod columns;
 pub mod stark;
@@ -294,7 +293,7 @@ impl MemoryChip {
         for n in 0..(rows.len() - 1) {
             let addr = ops[n].1.get_address();
             let addr_next = ops[n + 1].1.get_address();
-            let value = if (addr_next - addr) != 0 {
+            let value = if addr_next != addr {
                 addr_next - addr
             } else {
                 let clk = ops[n].0;
@@ -306,7 +305,7 @@ impl MemoryChip {
         }
 
         // Compute `diff_inv`
-        let diff_inv = batch_multiplicative_inverse(diff.clone());
+        let diff_inv = batch_multiplicative_inverse_allowing_zero(diff.clone());
 
         // Set trace values
         for n in 0..(rows.len() - 1) {

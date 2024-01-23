@@ -2,13 +2,13 @@ use crate::Machine;
 use crate::__internal::{DebugConstraintBuilder, ProverConstraintFolder};
 use alloc::vec;
 use alloc::vec::Vec;
-use valida_util::batch_multiplicative_inverse;
 
 use crate::config::StarkConfig;
 use crate::symbolic::symbolic_builder::SymbolicAirBuilder;
 use p3_air::{Air, AirBuilder, PairBuilder, PermutationAirBuilder, VirtualPairCol};
 use p3_field::{AbstractField, ExtensionField, Field, Powers};
 use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRowSlices};
+use valida_util::batch_multiplicative_inverse_allowing_zero;
 
 pub trait Chip<M: Machine<SC::Val>, SC: StarkConfig>:
     for<'a> Air<ProverConstraintFolder<'a, M, SC>>
@@ -162,7 +162,9 @@ where
         }
         perm_values.extend(row);
     }
-    let perm_values = batch_multiplicative_inverse(perm_values);
+    // TODO: Switch to batch_multiplicative_inverse (not allowing zero)?
+    // Zero should be vanishingly unlikely if properly randomized?
+    let perm_values = batch_multiplicative_inverse_allowing_zero(perm_values);
     let mut perm = RowMajorMatrix::new(perm_values, perm_width);
 
     // Compute the running sum column

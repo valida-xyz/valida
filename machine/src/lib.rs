@@ -7,12 +7,12 @@ use alloc::vec::Vec;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::config::StarkConfig;
+pub use crate::core::Word;
 use crate::proof::MachineProof;
+pub use chip::{BusArgument, Chip, Interaction, InteractionType, ValidaAirBuilder};
 pub use p3_field::{
     AbstractExtensionField, AbstractField, ExtensionField, Field, PrimeField, PrimeField64,
 };
-
 // TODO: some are also re-exported, so they shouldn't be pub?
 pub mod __internal;
 mod advice;
@@ -22,6 +22,7 @@ pub mod core;
 pub mod proof;
 mod symbolic;
 
+use crate::config::StarkConfig;
 pub use advice::*;
 pub use chip::*;
 pub use core::*;
@@ -154,9 +155,15 @@ impl ProgramROM<i32> {
 }
 
 pub trait Machine<F: Field>: Sync {
-    fn run<Adv: AdviceProvider>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv);
+    fn run<Adv>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv)
+    where
+        Adv: AdviceProvider;
 
-    fn prove<SC: StarkConfig<Val = F>>(&self, config: &SC) -> MachineProof<SC>;
+    fn prove<SC>(&self, config: &SC) -> MachineProof<SC>
+    where
+        SC: StarkConfig<Val = F>;
 
-    fn verify<SC: StarkConfig<Val = F>>(proof: &MachineProof<SC>) -> Result<(), ()>;
+    fn verify<SC>(config: &SC, proof: &MachineProof<SC>) -> Result<(), ()>
+    where
+        SC: StarkConfig<Val = F>;
 }
