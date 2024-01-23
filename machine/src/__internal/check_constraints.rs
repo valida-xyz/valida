@@ -1,14 +1,14 @@
 use crate::__internal::DebugConstraintBuilder;
 use crate::chip::eval_permutation_constraints;
-use p3_uni_stark::StarkConfig;
+use valida_machine::config::StarkConfig;
 
 use crate::{Chip, Machine};
-use p3_air::{Air, TwoRowMatrixView};
+use p3_air::TwoRowMatrixView;
 use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_matrix::Matrix;
 use p3_matrix::MatrixRowSlices;
-use p3_maybe_rayon::{MaybeIntoParIter, ParallelIterator};
+use p3_maybe_rayon::prelude::*;
 
 /// Check that all constraints vanish on the subgroup.
 pub fn check_constraints<M, A, SC>(
@@ -18,8 +18,8 @@ pub fn check_constraints<M, A, SC>(
     perm: &RowMajorMatrix<SC::Challenge>,
     perm_challenges: &[SC::Challenge],
 ) where
-    M: Machine<SC::Val> + Sync,
-    A: Chip<M, SC> + for<'a> Air<DebugConstraintBuilder<'a, M, SC>>,
+    M: Machine<SC::Val>,
+    A: Chip<M, SC>,
     SC: StarkConfig,
 {
     assert_eq!(main.height(), perm.height());

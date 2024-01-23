@@ -8,16 +8,10 @@ use alloc::vec::Vec;
 use byteorder::{ByteOrder, LittleEndian};
 
 pub use crate::core::Word;
-pub use chip::{BusArgument, Chip, Interaction, InteractionType, ValidaAirBuilder};
-use p3_matrix::dense::RowMajorMatrix;
-
 use crate::proof::MachineProof;
-use p3_air::Air;
+pub use chip::{BusArgument, Chip, Interaction, InteractionType, ValidaAirBuilder};
 pub use p3_field::{
     AbstractExtensionField, AbstractField, ExtensionField, Field, PrimeField, PrimeField64,
-};
-use p3_uni_stark::{
-    Commitments, Proof, ProverConstraintFolder, ProverData, StarkConfig, SymbolicAirBuilder,
 };
 // TODO: some are also re-exported, so they shouldn't be pub?
 pub mod __internal;
@@ -26,7 +20,9 @@ pub mod chip;
 pub mod config;
 pub mod core;
 pub mod proof;
+mod symbolic;
 
+use crate::config::StarkConfig;
 pub use advice::*;
 pub use chip::*;
 pub use core::*;
@@ -158,26 +154,16 @@ impl ProgramROM<i32> {
     }
 }
 
-pub trait Machine<F: Field> {
-    fn run<Adv: AdviceProvider>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv);
+pub trait Machine<F: Field>: Sync {
+    fn run<Adv>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv)
+    where
+        Adv: AdviceProvider;
 
-    fn add_chip_trace<SC, A>(
-        &self,
-        config: &SC,
-        challenger: &mut SC::Challenger,
-        trace_commitments: &mut Vec<ProverData<SC>>,
-        quotient_commitments: &mut Vec<ProverData<SC>>,
-        log_degree: &mut Vec<usize>,
-        log_quotient_degrees: &mut Vec<usize>,
-        chip: &A,
-        trace: RowMajorMatrix<<SC as StarkConfig>::Val>,
-    ) where
-        SC: StarkConfig,
-        A: Air<SymbolicAirBuilder<SC::Val>> + for<'a> Air<ProverConstraintFolder<'a, SC>>;
-
-    fn prove<SC>(&self, config: &SC, challenger: &mut SC::Challenger) -> MachineProof<SC>
+    fn prove<SC>(&self, config: &SC) -> MachineProof<SC>
     where
         SC: StarkConfig<Val = F>;
 
-    fn verify<SC: StarkConfig<Val = F>>(proof: &MachineProof<SC>) -> Result<(), ()>;
+    fn verify<SC>(config: &SC, proof: &MachineProof<SC>) -> Result<(), ()>
+    where
+        SC: StarkConfig<Val = F>;
 }

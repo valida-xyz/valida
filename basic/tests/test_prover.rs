@@ -8,8 +8,6 @@ use valida_cpu::{
     MachineWithCpuChip, StopInstruction,
 };
 
-use p3_uni_stark::StarkConfigImpl;
-
 use valida_machine::{
     FixedAdviceProvider, Instruction, InstructionWord, Machine, Operands, ProgramROM, Word,
 };
@@ -28,9 +26,10 @@ use p3_ldt::QuotientMmcs;
 use p3_mds::coset_mds::CosetMds;
 use p3_merkle_tree::FieldMerkleTreeMmcs;
 use p3_poseidon::Poseidon;
-use p3_symmetric::{CompressionFunctionFromHasher, CryptographicPermutation, SerializingHasher32};
+use p3_symmetric::{CompressionFunctionFromHasher, SerializingHasher32};
 use rand::thread_rng;
 use valida_machine::__internal::p3_commit::ExtensionMmcs;
+use valida_machine::config::StarkConfigImpl;
 
 #[test]
 fn prove_fibonacci() {
@@ -223,7 +222,8 @@ fn prove_fibonacci() {
 
     type Quotient = QuotientMmcs<Val, Challenge, ValMmcs>;
     type MyFriConfig = FriConfigImpl<Val, Challenge, Quotient, ChallengeMmcs, Challenger>;
-    let fri_config = MyFriConfig::new(40, challenge_mmcs);
+    // TODO: Change log_blowup from 2 to 1 once degree >3 constraints are eliminated.
+    let fri_config = MyFriConfig::new(2, 40, challenge_mmcs);
     let ldt = FriLdt { config: fri_config };
 
     type Pcs = FriBasedPcs<MyFriConfig, ValMmcs, Dft, Challenger>;
@@ -231,14 +231,10 @@ fn prove_fibonacci() {
 
     let pcs = Pcs::new(dft, val_mmcs, ldt);
 
-    let config = MyConfig::new(pcs);
-
-    let mut challenger = Challenger::new(perm16);
-    let out = machine.prove(&config, &mut challenger);
-    assert_eq!(
-        out.chip_proof.proof.opened_values.trace_local.len() > 0,
-        true
-    );
+    let challenger = Challenger::new(perm16);
+    let config = MyConfig::new(pcs, challenger);
+    let proof = machine.prove(&config);
+    BasicMachine::verify(&config, &proof).expect("verification failed");
     assert_eq!(machine.cpu().clock, 192);
     assert_eq!(machine.cpu().operations.len(), 192);
     assert_eq!(machine.mem().operations.values().flatten().count(), 401);

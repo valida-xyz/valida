@@ -17,13 +17,13 @@ use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 use valida_opcodes::{
     BEQ, BNE, BYTES_PER_INSTR, IMM32, JAL, JALV, LOAD32, READ_ADVICE, STOP, STORE32,
 };
-use valida_util::batch_multiplicative_inverse;
 
 use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
-use p3_maybe_rayon::*;
-use p3_uni_stark::StarkConfig;
+use p3_maybe_rayon::prelude::*;
+use valida_machine::config::StarkConfig;
+use valida_util::batch_multiplicative_inverse_allowing_zero;
 
 pub mod columns;
 pub mod stark;
@@ -71,7 +71,8 @@ where
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<SC::Val> {
         let mut rows = self
             .operations
-            .par_iter()
+            .as_slice()
+            .into_par_iter()
             .enumerate()
             .map(|(n, op)| self.op_to_row::<M, SC>(n, op, machine))
             .collect::<Vec<_>>();
@@ -270,12 +271,12 @@ impl CpuChip {
                 .map(|i| rows[n][i])
                 .collect::<Vec<_>>();
             for (a, b) in word_1.into_iter().zip(word_2) {
-                diff[n] += (a - b) * (a - b);
+                diff[n] += (a - b).square();
             }
         }
 
         // Compute `diff_inv`
-        let diff_inv = batch_multiplicative_inverse(diff.clone());
+        let diff_inv = batch_multiplicative_inverse_allowing_zero(diff.clone());
 
         // Set trace values
         for n in 0..rows.len() {

@@ -15,9 +15,9 @@ use valida_opcodes::LT32;
 use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
-use p3_maybe_rayon::*;
+use p3_maybe_rayon::prelude::*;
 
-use p3_uni_stark::StarkConfig;
+use valida_machine::config::StarkConfig;
 use valida_util::pad_to_power_of_two;
 pub mod columns;
 pub mod stark;

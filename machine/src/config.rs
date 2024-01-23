@@ -11,7 +11,7 @@ pub trait StarkConfig {
 
     /// The field from which most random challenges are drawn.
     type Challenge: ExtensionField<Self::Val> + TwoAdicField;
-    type PackedChallenge: AbstractExtensionField<Self::PackedVal, F = Self::Challenge>;
+    type PackedChallenge: AbstractExtensionField<Self::PackedVal, F = Self::Challenge> + Copy;
 
     /// The PCS used to commit to trace polynomials.
     type Pcs: UnivariatePcsWithLde<
@@ -53,7 +53,7 @@ impl<Val, Challenge, PackedChallenge, Pcs, Challenger> StarkConfig
 where
     Val: PrimeField32 + TwoAdicField, // TODO: Relax to Field?
     Challenge: ExtensionField<Val> + TwoAdicField,
-    PackedChallenge: AbstractExtensionField<Val::Packing, F = Challenge>,
+    PackedChallenge: AbstractExtensionField<Val::Packing, F = Challenge> + Copy,
     Pcs: UnivariatePcsWithLde<Val, Challenge, RowMajorMatrix<Val>, Challenger>,
     Challenger: FieldChallenger<Val>
         + Clone

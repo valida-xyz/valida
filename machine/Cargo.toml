@@ -11,6 +11,8 @@ std = []
 [dependencies]
 byteorder = "1.4.3"
 itertools = "0.10.3"
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+tracing = "0.1.37"
 
 p3-air = { path = "../../Plonky3/air" }
 p3-baby-bear = { path = "../../Plonky3/baby-bear" }
@@ -20,7 +22,6 @@ p3-dft = { path = "../../Plonky3/dft" }
 p3-field = { path = "../../Plonky3/field" }
 p3-matrix = { path = "../../Plonky3/matrix" }
 p3-maybe-rayon = { path = "../../Plonky3/maybe-rayon" }
-p3-util = { path = "../../Plonky3/util" }
 p3-uni-stark = { path = "../../Plonky3/uni-stark" }
+p3-util = { path = "../../Plonky3/util" }
 valida-util = { path = "../util" }
-
