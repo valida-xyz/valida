@@ -322,15 +322,21 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
 
             let zeta: SC::Challenge = challenger.sample_ext_element();
             let zeta_and_next: [Vec<SC::Challenge>; #num_chips] =
-                core::array::from_fn(|i| vec![zeta, zeta * g_subgroups[i]]);
+                g_subgroups.map(|g| vec![zeta, zeta * g]);
+            let zeta_exp_quotient_degree: [Vec<SC::Challenge>; #num_chips] =
+                log_quotient_degrees.map(|log_deg| vec![zeta.exp_power_of_2(log_deg)]);
             let prover_data_and_points = [
+                // TODO: Causes some errors, probably related to the fact that not all chips have preprocessed traces?
+                // (&preprocessed_data, zeta_and_next.as_slice()),
                 (&main_data, zeta_and_next.as_slice()),
                 (&perm_data, zeta_and_next.as_slice()),
-                // TODO: Enable when we have quotient computation
-                // (&quotient_data, &[zeta.exp_power_of_2(log_quotient_degree)]),
+                (&quotient_data, zeta_exp_quotient_degree.as_slice()),
             ];
             let (openings, opening_proof) = pcs.open_multi_batches(
                &prover_data_and_points, &mut challenger);
+
+            // let [preprocessed_openings, main_openings, perm_openings, quotient_openings] =
+            //     openings.try_into().expect("Should have 4 rounds of openings");
 
             let commitments = Commitments {
                 main_trace: main_commit,
