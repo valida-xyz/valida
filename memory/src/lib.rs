@@ -290,17 +290,17 @@ impl MemoryChip {
         // Compute `diff` and `counter_mult`
         let mut diff = vec![F::zero(); rows.len()];
         let mut mult = vec![F::zero(); rows.len()];
-        for n in 0..(rows.len() - 1) {
-            let addr = ops[n].1.get_address();
-            let addr_next = ops[n + 1].1.get_address();
+        for i in 0..(rows.len() - 1) {
+            let addr = ops[i].1.get_address();
+            let addr_next = ops[i + 1].1.get_address();
             let value = if addr_next != addr {
                 addr_next - addr
             } else {
-                let clk = ops[n].0;
-                let clk_next = ops[n + 1].0;
+                let clk = ops[i].0;
+                let clk_next = ops[i + 1].0;
                 clk_next - clk
             };
-            diff[n] = F::from_canonical_u32(value);
+            diff[i] = F::from_canonical_u32(value);
             mult[value as usize] += F::one();
         }
 
@@ -308,15 +308,15 @@ impl MemoryChip {
         let diff_inv = batch_multiplicative_inverse_allowing_zero(diff.clone());
 
         // Set trace values
-        for n in 0..(rows.len() - 1) {
-            rows[n][MEM_COL_MAP.diff] = diff[n];
-            rows[n][MEM_COL_MAP.diff_inv] = diff_inv[n];
-            rows[n][MEM_COL_MAP.counter_mult] = mult[n];
+        for i in 0..(rows.len() - 1) {
+            rows[i][MEM_COL_MAP.diff] = diff[i];
+            rows[i][MEM_COL_MAP.diff_inv] = diff_inv[i];
+            rows[i][MEM_COL_MAP.counter_mult] = mult[i];
 
-            let addr = ops[n].1.get_address();
-            let addr_next = ops[n + 1].1.get_address();
+            let addr = ops[i].1.get_address();
+            let addr_next = ops[i + 1].1.get_address();
             if addr_next - addr != 0 {
-                rows[n][MEM_COL_MAP.addr_not_equal] = F::one();
+                rows[i][MEM_COL_MAP.addr_not_equal] = F::one();
             }
         }
 

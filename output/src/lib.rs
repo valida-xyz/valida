@@ -47,16 +47,16 @@ where
                 let clk_diff = clk_2 - clk_1;
                 let num_rows = (clk_diff / table_len) as usize + 1;
                 let mut rows = Vec::with_capacity(num_rows);
-                for n in 0..num_rows {
+                for i in 0..num_rows {
                     let mut row = [SC::Val::zero(); NUM_OUTPUT_COLS];
                     let cols: &mut OutputCols<SC::Val> = unsafe { transmute(&mut row) };
-                    if n == 0 {
+                    if i == 0 {
                         cols.is_real = SC::Val::one();
                         cols.clk = SC::Val::from_canonical_u32(clk_1);
                         cols.value = SC::Val::from_canonical_u8(val_1);
                     } else {
                         // Dummy output to satisfy range check
-                        cols.clk = SC::Val::from_canonical_u32(clk_1 + table_len * (n + 1) as u32);
+                        cols.clk = SC::Val::from_canonical_u32(clk_1 + table_len * (i + 1) as u32);
                     }
                     rows.push(row);
                 }

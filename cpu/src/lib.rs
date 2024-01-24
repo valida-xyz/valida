@@ -259,19 +259,19 @@ impl CpuChip {
     fn compute_word_diffs<F: PrimeField>(rows: &mut Vec<[F; NUM_CPU_COLS]>) {
         // Compute `diff`
         let mut diff = vec![F::zero(); rows.len()];
-        for n in 0..rows.len() {
+        for i in 0..rows.len() {
             let word_1 = CPU_COL_MAP.mem_channels[0]
                 .value
                 .into_iter()
-                .map(|i| rows[n][i])
+                .map(|i| rows[i][i])
                 .collect::<Vec<_>>();
             let word_2 = CPU_COL_MAP.mem_channels[1]
                 .value
                 .into_iter()
-                .map(|i| rows[n][i])
+                .map(|i| rows[i][i])
                 .collect::<Vec<_>>();
             for (a, b) in word_1.into_iter().zip(word_2) {
-                diff[n] += (a - b).square();
+                diff[i] += (a - b).square();
             }
         }
 
@@ -279,11 +279,11 @@ impl CpuChip {
         let diff_inv = batch_multiplicative_inverse_allowing_zero(diff.clone());
 
         // Set trace values
-        for n in 0..rows.len() {
-            rows[n][CPU_COL_MAP.diff] = diff[n];
-            rows[n][CPU_COL_MAP.diff_inv] = diff_inv[n];
-            if diff[n] != F::zero() {
-                rows[n][CPU_COL_MAP.not_equal] = F::one();
+        for i in 0..rows.len() {
+            rows[i][CPU_COL_MAP.diff] = diff[i];
+            rows[i][CPU_COL_MAP.diff_inv] = diff_inv[i];
+            if diff[i] != F::zero() {
+                rows[i][CPU_COL_MAP.not_equal] = F::one();
             }
         }
     }
