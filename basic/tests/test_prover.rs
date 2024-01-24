@@ -9,7 +9,8 @@ use valida_cpu::{
 };
 
 use valida_machine::{
-    FixedAdviceProvider, Instruction, InstructionWord, Machine, Operands, ProgramROM, Word,
+    FixedAdviceProvider, Instruction, InstructionWord, Machine, MachineProof, Operands, ProgramROM,
+    Word,
 };
 
 use valida_memory::MachineWithMemoryChip;
@@ -234,7 +235,16 @@ fn prove_fibonacci() {
     let challenger = Challenger::new(perm16);
     let config = MyConfig::new(pcs, challenger);
     let proof = machine.prove(&config);
+
+    let mut bytes = vec![];
+    ciborium::into_writer(&proof, &mut bytes).expect("serialization failed");
+    println!("Proof size: {} bytes", bytes.len());
+    let deserialized_proof: MachineProof<MyConfig> =
+        ciborium::from_reader(bytes.as_slice()).expect("deserialization failed");
+
     BasicMachine::verify(&config, &proof).expect("verification failed");
+    BasicMachine::verify(&config, &deserialized_proof).expect("verification failed");
+
     assert_eq!(machine.cpu().clock, 192);
     assert_eq!(machine.cpu().operations.len(), 192);
     assert_eq!(machine.mem().operations.values().flatten().count(), 401);
