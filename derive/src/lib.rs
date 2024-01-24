@@ -232,7 +232,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
 
     quote! {
         #[tracing::instrument(name = "prove machine execution", skip_all)]
-        fn prove<SC: StarkConfig<Val = F>>(&self, config: &SC) -> ::valida_machine::proof::MachineProof<SC>
+        fn prove<SC: StarkConfig<Val = F>>(&self, config: &SC) -> ::valida_machine::MachineProof<SC>
         {
             use ::valida_machine::__internal::*;
             use ::valida_machine::__internal::p3_air::{BaseAir};
@@ -240,8 +240,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             use ::valida_machine::__internal::p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
             use ::valida_machine::__internal::p3_matrix::{Matrix, dense::RowMajorMatrix};
             use ::valida_machine::__internal::p3_util::log2_strict_usize;
-            use ::valida_machine::generate_permutation_trace;
-            use ::valida_machine::proof::{MachineProof, ChipProof, Commitments};
+            use ::valida_machine::{generate_permutation_trace, MachineProof, ChipProof, Commitments};
             use alloc::vec;
             use alloc::vec::Vec;
             use alloc::boxed::Box;
@@ -357,7 +356,7 @@ fn verify_method(_chips: &[&Field]) -> TokenStream2 {
     quote! {
         fn verify<SC: StarkConfig<Val = F>>(
             config: &SC,
-            proof: &::valida_machine::proof::MachineProof<SC>,
+            proof: &::valida_machine::MachineProof<SC>,
         ) -> core::result::Result<(), ()>
         {
             Ok(()) // TODO

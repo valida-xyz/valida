@@ -12,7 +12,7 @@ use p3_field::{Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::prelude::*;
 use valida_bus::MachineWithMemBus;
-use valida_machine::config::StarkConfig;
+use valida_machine::StarkConfig;
 use valida_machine::{BusArgument, Chip, Interaction, Machine, Word};
 use valida_util::batch_multiplicative_inverse_allowing_zero;
 

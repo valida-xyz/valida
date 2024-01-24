@@ -38,9 +38,8 @@ use valida_cpu::{
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
 use valida_machine::{
-    proof::{ChipProof, MachineProof},
-    AbstractExtensionField, AbstractField, AdviceProvider, BusArgument, Chip, ExtensionField,
-    Instruction, Machine, PrimeField64, ProgramROM, ValidaAirBuilder,
+    AbstractExtensionField, AbstractField, AdviceProvider, BusArgument, Chip, ChipProof,
+    ExtensionField, Instruction, Machine, MachineProof, PrimeField64, ProgramROM, ValidaAirBuilder,
 };
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_output::{MachineWithOutputChip, OutputChip, WriteInstruction};
@@ -48,7 +47,7 @@ use valida_program::{MachineWithProgramChip, ProgramChip};
 use valida_range::{MachineWithRangeChip, RangeCheckerChip};
 
 use p3_maybe_rayon::prelude::*;
-use valida_machine::config::StarkConfig;
+use valida_machine::StarkConfig;
 
 #[derive(Machine, Default)]
 #[machine_fields(F)]

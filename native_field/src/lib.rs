@@ -17,7 +17,7 @@ use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field, PrimeField32};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::prelude::*;
-use valida_machine::config::StarkConfig;
+use valida_machine::StarkConfig;
 
 pub mod columns;
 pub mod stark;

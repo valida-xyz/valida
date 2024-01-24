@@ -14,7 +14,7 @@ use valida_machine::{Chip, Machine, Word};
 use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
-use valida_machine::config::StarkConfig;
+use valida_machine::StarkConfig;
 
 pub mod columns;
 pub mod stark;

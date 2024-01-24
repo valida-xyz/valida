@@ -22,7 +22,7 @@ use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::prelude::*;
-use valida_machine::config::StarkConfig;
+use valida_machine::StarkConfig;
 use valida_util::batch_multiplicative_inverse_allowing_zero;
 
 pub mod columns;

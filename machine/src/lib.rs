@@ -8,26 +8,28 @@ pub use chip::{BusArgument, Chip, Interaction, InteractionType, ValidaAirBuilder
 pub use p3_field::{
     AbstractExtensionField, AbstractField, ExtensionField, Field, PrimeField, PrimeField64,
 };
-// TODO: some are also re-exported, so they shouldn't be pub?
+
 pub mod __internal;
 mod advice;
 mod check_constraints;
 mod chip;
-pub mod config;
-pub mod core;
+mod config;
+mod core;
 mod debug_builder;
 mod folding_builder;
 mod machine;
 mod program;
-pub mod proof;
+mod proof;
 mod quotient;
 mod symbolic;
 
 pub use advice::*;
 pub use chip::*;
+pub use config::*;
 pub use core::*;
 pub use machine::*;
 pub use program::*;
+pub use proof::*;
 
 pub const OPERAND_ELEMENTS: usize = 5;
 pub const INSTRUCTION_ELEMENTS: usize = OPERAND_ELEMENTS + 1;

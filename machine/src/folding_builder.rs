@@ -1,7 +1,7 @@
 use crate::{Machine, ValidaAirBuilder};
 use p3_air::{AirBuilder, PairBuilder, PermutationAirBuilder, TwoRowMatrixView};
 use p3_field::AbstractField;
-use valida_machine::config::StarkConfig;
+use valida_machine::StarkConfig;
 
 pub struct ProverConstraintFolder<'a, M: Machine<SC::Val>, SC: StarkConfig> {
     pub(crate) machine: &'a M,

@@ -1,6 +1,6 @@
 use crate::__internal::DebugConstraintBuilder;
 use crate::chip::eval_permutation_constraints;
-use valida_machine::config::StarkConfig;
+use valida_machine::StarkConfig;
 
 use crate::{Chip, Machine};
 use p3_air::TwoRowMatrixView;

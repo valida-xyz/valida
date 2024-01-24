@@ -28,8 +28,8 @@ use p3_merkle_tree::FieldMerkleTreeMmcs;
 use p3_poseidon::Poseidon;
 use p3_symmetric::{CompressionFunctionFromHasher, SerializingHasher32};
 use rand::thread_rng;
+use valida_machine::StarkConfigImpl;
 use valida_machine::__internal::p3_commit::ExtensionMmcs;
-use valida_machine::config::StarkConfigImpl;
 
 #[test]
 fn prove_fibonacci() {
