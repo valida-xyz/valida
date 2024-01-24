@@ -236,6 +236,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
         {
             use ::valida_machine::__internal::*;
             use ::valida_machine::__internal::p3_air::{BaseAir};
+            use ::valida_machine::__internal::p3_field::{AbstractField};
             use ::valida_machine::__internal::p3_challenger::{CanObserve, FieldChallenger};
             use ::valida_machine::__internal::p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
             use ::valida_machine::__internal::p3_matrix::{Matrix, dense::RowMajorMatrix};

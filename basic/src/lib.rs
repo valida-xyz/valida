@@ -38,8 +38,8 @@ use valida_cpu::{
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
 use valida_machine::{
-    AbstractExtensionField, AbstractField, AdviceProvider, BusArgument, Chip, ChipProof,
-    ExtensionField, Instruction, Machine, MachineProof, PrimeField64, ProgramROM, ValidaAirBuilder,
+    AdviceProvider, BusArgument, Chip, ChipProof, Instruction, Machine, MachineProof, ProgramROM,
+    ValidaAirBuilder,
 };
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_output::{MachineWithOutputChip, OutputChip, WriteInstruction};

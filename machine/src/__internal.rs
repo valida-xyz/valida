@@ -10,5 +10,6 @@ pub use crate::symbolic::symbolic_builder::*;
 pub use p3_air;
 pub use p3_challenger;
 pub use p3_commit;
+pub use p3_field;
 pub use p3_matrix;
 pub use p3_util;

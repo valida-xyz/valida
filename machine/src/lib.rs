@@ -3,12 +3,6 @@
 extern crate alloc;
 extern crate self as valida_machine;
 
-pub use crate::core::Word;
-pub use chip::{BusArgument, Chip, Interaction, InteractionType, ValidaAirBuilder};
-pub use p3_field::{
-    AbstractExtensionField, AbstractField, ExtensionField, Field, PrimeField, PrimeField64,
-};
-
 pub mod __internal;
 mod advice;
 mod check_constraints;

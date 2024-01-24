@@ -1,6 +1,7 @@
-use super::{Field, PrimeField, MEMORY_CELL_BYTES};
+use super::MEMORY_CELL_BYTES;
 use core::cmp::Ordering;
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Index, IndexMut, Mul, Shl, Shr, Sub};
+use p3_field::{Field, PrimeField};
 
 // Currently stored in big-endian form.
 #[derive(Copy, Clone, Debug, Default)]
