@@ -16,10 +16,14 @@ pub use p3_field::{
 // TODO: some are also re-exported, so they shouldn't be pub?
 pub mod __internal;
 mod advice;
-pub mod chip;
+mod check_constraints;
+mod chip;
 pub mod config;
 pub mod core;
+mod debug_builder;
+mod folding_builder;
 pub mod proof;
+mod quotient;
 mod symbolic;
 
 use crate::config::StarkConfig;

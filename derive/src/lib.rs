@@ -240,7 +240,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             use ::valida_machine::__internal::p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
             use ::valida_machine::__internal::p3_matrix::{Matrix, dense::RowMajorMatrix};
             use ::valida_machine::__internal::p3_util::log2_strict_usize;
-            use ::valida_machine::chip::generate_permutation_trace;
+            use ::valida_machine::generate_permutation_trace;
             use ::valida_machine::proof::{MachineProof, ChipProof, Commitments};
             use alloc::vec;
             use alloc::vec::Vec;
