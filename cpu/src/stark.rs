@@ -257,7 +257,7 @@ impl CpuChip {
                 .read_value_1()
                 .into_iter()
                 .zip(local.read_value_2())
-                .map(|(a, b)| (a - b) * (a - b))
+                .map(|(a, b)| (a - b).square())
                 .sum::<AB::Expr>(),
         );
         builder.assert_bool(local.not_equal);

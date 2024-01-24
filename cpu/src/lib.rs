@@ -263,12 +263,12 @@ impl CpuChip {
             let word_1 = CPU_COL_MAP.mem_channels[0]
                 .value
                 .into_iter()
-                .map(|i| rows[i][i])
+                .map(|j| rows[i][j])
                 .collect::<Vec<_>>();
             let word_2 = CPU_COL_MAP.mem_channels[1]
                 .value
                 .into_iter()
-                .map(|i| rows[i][i])
+                .map(|j| rows[i][j])
                 .collect::<Vec<_>>();
             for (a, b) in word_1.into_iter().zip(word_2) {
                 diff[i] += (a - b).square();
