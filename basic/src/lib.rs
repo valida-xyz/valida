@@ -78,6 +78,9 @@ pub struct BasicMachine<F: PrimeField32 + TwoAdicField> {
     #[instruction]
     stop: StopInstruction,
 
+    #[instruction]
+    loadfp: LoadFpInstruction,
+
     // ALU instructions
     #[instruction(add_u32)]
     add32: Add32Instruction,

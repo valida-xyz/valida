@@ -15,7 +15,7 @@ use valida_machine::{
 };
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 use valida_opcodes::{
-    BEQ, BNE, BYTES_PER_INSTR, IMM32, JAL, JALV, LOAD32, READ_ADVICE, STOP, STORE32,
+    BEQ, BNE, BYTES_PER_INSTR, IMM32, JAL, JALV, LOAD32, READ_ADVICE, STOP, STORE32, LOADFP,
 };
 
 use p3_air::VirtualPairCol;
@@ -41,6 +41,7 @@ pub enum Operation {
     BusWithMemory(Option<Word<u8>> /*imm*/),
     ReadAdvice,
     Stop,
+    LoadFp,
 }
 
 #[derive(Default)]
@@ -205,6 +206,9 @@ impl CpuChip {
             Operation::Stop => {
                 cols.opcode_flags.is_stop = SC::Val::one();
             }
+            Operation::LoadFp => {
+                cols.opcode_flags.is_loadfp = SC::Val::one();
+            }
         }
 
         row
@@ -348,7 +352,8 @@ instructions!(
     BneInstruction,
     Imm32Instruction,
     ReadAdviceInstruction,
-    StopInstruction
+    StopInstruction,
+    LoadFpInstruction,
 );
 
 /// Non-deterministic instructions
@@ -645,5 +650,17 @@ impl CpuChip {
             fp: self.fp,
         };
         self.registers.push(registers);
+    }
+}
+
+impl<M, F> Instruction<M, F> for LoadFpInstruction
+where
+    M : MachineWithCpuChip<F>,
+    F : Field,
+{
+    const OPCODE: u32 = LOADFP;
+
+    fn execute(_state: &mut M, _ops: Operands<i32>) {
+        panic!("TODO: LoadFpInstruction::execute");
     }
 }
