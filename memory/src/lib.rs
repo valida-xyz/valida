@@ -162,9 +162,10 @@ where
         let mut fields = vec![is_read, clk, addr];
         fields.extend(value);
 
+        let is_real = VirtualPairCol::sum_main(vec![MEM_COL_MAP.is_read, MEM_COL_MAP.is_write]);
         let receive = Interaction {
             fields,
-            count: VirtualPairCol::single_main(MEM_COL_MAP.is_real),
+            count: is_real,
             argument_index: machine.mem_bus(),
         };
         vec![receive]
@@ -184,17 +185,15 @@ impl MemoryChip {
                 cols.addr = F::from_canonical_u32(addr);
                 cols.value = value.transform(F::from_canonical_u8);
                 cols.is_read = F::one();
-                cols.is_real = F::one();
             }
             Operation::Write(addr, value) => {
                 cols.addr = F::from_canonical_u32(addr);
                 cols.value = value.transform(F::from_canonical_u8);
-                cols.is_real = F::one();
+                cols.is_write = F::one();
             }
             Operation::DummyRead(addr, value) => {
                 cols.addr = F::from_canonical_u32(addr);
                 cols.value = value.transform(F::from_canonical_u8);
-                cols.is_read = F::one();
             }
         }
 
