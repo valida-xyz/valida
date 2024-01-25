@@ -35,6 +35,7 @@ use valida_bus::{
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
     Load32Instruction, ReadAdviceInstruction, StopInstruction, Store32Instruction,
+    LoadFpInstruction,
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;

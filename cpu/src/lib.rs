@@ -353,7 +353,7 @@ instructions!(
     Imm32Instruction,
     ReadAdviceInstruction,
     StopInstruction,
-    LoadFpInstruction,
+    LoadFpInstruction
 );
 
 /// Non-deterministic instructions
@@ -621,6 +621,18 @@ where
     }
 }
 
+impl<M, F> Instruction<M, F> for LoadFpInstruction
+where
+    M : MachineWithCpuChip<F>,
+    F : Field,
+{
+    const OPCODE: u32 = LOADFP;
+
+    fn execute(_state: &mut M, _ops: Operands<i32>) {
+        panic!("TODO: LoadFpInstruction::execute");
+    }
+}
+
 impl CpuChip {
     pub fn push_bus_op_with_memory(
         &mut self,
@@ -653,14 +665,3 @@ impl CpuChip {
     }
 }
 
-impl<M, F> Instruction<M, F> for LoadFpInstruction
-where
-    M : MachineWithCpuChip<F>,
-    F : Field,
-{
-    const OPCODE: u32 = LOADFP;
-
-    fn execute(_state: &mut M, _ops: Operands<i32>) {
-        panic!("TODO: LoadFpInstruction::execute");
-    }
-}
