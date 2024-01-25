@@ -18,6 +18,7 @@ use valida_alu_u32::{
         And32Instruction, Bitwise32Chip, MachineWithBitwise32Chip, Or32Instruction,
         Xor32Instruction,
     },
+    com::{Com32Chip, Eq32Instruction, MachineWithCom32Chip, Ne32Instruction},
     div::{Div32Chip, Div32Instruction, MachineWithDiv32Chip, SDiv32Instruction},
     lt::{Lt32Chip, Lt32Instruction, MachineWithLt32Chip},
     mul::{
@@ -120,6 +121,12 @@ pub struct BasicMachine<F: PrimeField32 + TwoAdicField> {
     #[instruction(bitwise_u32)]
     xor32: Xor32Instruction,
 
+    #[instruction(com_u32)]
+    ne32: Ne32Instruction,
+
+    #[instruction(com_u32)]
+    eq32: Eq32Instruction,
+
     // Input/output instructions
     #[instruction]
     read: ReadAdviceInstruction,
@@ -153,6 +160,9 @@ pub struct BasicMachine<F: PrimeField32 + TwoAdicField> {
 
     #[chip]
     lt_u32: Lt32Chip,
+
+    #[chip]
+    com_u32: Com32Chip,
 
     #[chip]
     bitwise_u32: Bitwise32Chip,
@@ -277,6 +287,15 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithLt32Chip<F> for BasicMachine<F> 
 
     fn lt_u32_mut(&mut self) -> &mut Lt32Chip {
         &mut self.lt_u32
+    }
+}
+impl<F: PrimeField32 + TwoAdicField> MachineWithCom32Chip<F> for BasicMachine<F> {
+    fn com_u32(&self) -> &Com32Chip {
+        &self.com_u32
+    }
+
+    fn com_u32_mut(&mut self) -> &mut Com32Chip {
+        &mut self.com_u32
     }
 }
 

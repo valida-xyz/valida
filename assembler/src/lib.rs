@@ -84,6 +84,8 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
                     "and" | "andi" => AND32,
                     "or" | "ori" => OR32,
                     "xor" | "xori" => XOR32,
+                    "ne" | "nei" => NE32,
+                    "eq" | "eqi" => EQ32,
 
                     // Native field
                     "feadd" => ADD,
@@ -116,12 +118,14 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
                         operands.extend(vec![0; 5]);
                     }
                     "add" | "sub" | "mul" | "mulhs" | "mulhu" | "div" | "lt" | "shl" | "shr"
-                    | "sra" | "beq" | "bne" | "and" | "or" | "xor" | "jal" | "jalv" => {
+                    | "sra" | "beq" | "bne" | "and" | "or" | "xor" | "ne" | "eq" | "jal"
+                    | "jalv" => {
                         // (a, b, c, 0, 0)
                         operands.extend(vec![0; 2]);
                     }
                     "addi" | "subi" | "muli" | "mulhsi" | "mulhui" | "divi" | "sdivi" | "lti"
-                    | "shli" | "shri" | "srai" | "beqi" | "bnei" | "andi" | "ori" | "xori" => {
+                    | "shli" | "shri" | "srai" | "beqi" | "bnei" | "andi" | "ori" | "xori"
+                    | "nei" | "eqi" => {
                         // (a, b, c, 0, 1)
                         operands.extend(vec![0, 1]);
                     }
