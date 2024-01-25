@@ -7,7 +7,7 @@ use core::iter;
 use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::config::StarkConfig;
+use valida_machine::StarkConfig;
 use valida_machine::{
     instructions, Chip, Instruction, Interaction, Operands, Word, MEMORY_CELL_BYTES,
 };
@@ -16,7 +16,8 @@ use valida_opcodes::{EQ32, NE32};
 use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
-use p3_maybe_rayon::*;
+// use p3_maybe_rayon::*;
+use p3_maybe_rayon::prelude::IntoParallelRefIterator;
 use valida_util::pad_to_power_of_two;
 
 pub mod columns;
