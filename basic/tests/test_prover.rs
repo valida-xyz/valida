@@ -223,8 +223,7 @@ fn prove_fibonacci() {
 
     type Quotient = QuotientMmcs<Val, Challenge, ValMmcs>;
     type MyFriConfig = FriConfigImpl<Val, Challenge, Quotient, ChallengeMmcs, Challenger>;
-    // TODO: Change log_blowup from 2 to 1 once degree >3 constraints are eliminated.
-    let fri_config = MyFriConfig::new(2, 40, 8, challenge_mmcs);
+    let fri_config = MyFriConfig::new(1, 40, 8, challenge_mmcs);
     let ldt = FriLdt { config: fri_config };
 
     type Pcs = FriBasedPcs<MyFriConfig, ValMmcs, Dft, Challenger>;
