@@ -628,8 +628,15 @@ where
 {
     const OPCODE: u32 = LOADFP;
 
-    fn execute(_state: &mut M, _ops: Operands<i32>) {
-        panic!("TODO: LoadFpInstruction::execute");
+    fn execute(state: &mut M, ops: Operands<i32>) {
+        let clk = state.cpu().clock;
+        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
+        let value = (state.cpu().fp as i32 + ops.b()) as u32;
+        state.mem_mut().write(clk, write_addr, value.into(), true);
+        state.cpu_mut().pc += 1;
+        state
+            .cpu_mut()
+            .push_op(Operation::LoadFp, <Self as Instruction<M, F>>::OPCODE, ops);
     }
 }
 

@@ -151,6 +151,7 @@ fn run_method(machine: &syn::DeriveInput, instructions: &[&Field], val: &Ident) 
                 let instruction = program.get_instruction(pc);
                 let opcode = instruction.opcode;
                 let ops = instruction.operands;
+                std::println!("trace: pc = {:?}, instruction = {:?}", pc, instruction);
 
                 // Execute
                 match opcode {

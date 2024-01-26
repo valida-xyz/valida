@@ -2,6 +2,7 @@
 #![allow(unused)]
 
 extern crate alloc;
+extern crate std;
 
 use alloc::vec::Vec;
 use core::marker::PhantomData;
