@@ -27,17 +27,17 @@ pub struct Commitments<Com> {
 
 #[derive(Serialize, Deserialize)]
 pub struct ChipProof<Challenge> {
-    pub(crate) log_degree: usize,
-    pub(crate) opened_values: OpenedValues<Challenge>,
+    pub log_degree: usize,
+    pub opened_values: OpenedValues<Challenge>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct OpenedValues<Challenge> {
-    pub(crate) preprocessed_local: Vec<Challenge>,
-    pub(crate) preprocessed_next: Vec<Challenge>,
-    pub(crate) trace_local: Vec<Challenge>,
-    pub(crate) trace_next: Vec<Challenge>,
-    pub(crate) permutation_local: Vec<Challenge>,
-    pub(crate) permutation_next: Vec<Challenge>,
-    pub(crate) quotient_chunks: Vec<Challenge>,
+    pub preprocessed_local: Vec<Challenge>,
+    pub preprocessed_next: Vec<Challenge>,
+    pub trace_local: Vec<Challenge>,
+    pub trace_next: Vec<Challenge>,
+    pub permutation_local: Vec<Challenge>,
+    pub permutation_next: Vec<Challenge>,
+    pub quotient_chunks: Vec<Challenge>,
 }

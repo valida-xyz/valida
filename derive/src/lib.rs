@@ -242,6 +242,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             use ::valida_machine::__internal::p3_matrix::{Matrix, dense::RowMajorMatrix};
             use ::valida_machine::__internal::p3_util::log2_strict_usize;
             use ::valida_machine::{generate_permutation_trace, MachineProof, ChipProof, Commitments};
+            use ::valida_machine::OpenedValues;
             use alloc::vec;
             use alloc::vec::Vec;
             use alloc::boxed::Box;
@@ -335,15 +336,50 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             let (openings, opening_proof) = pcs.open_multi_batches(
                &prover_data_and_points, &mut challenger);
 
-            // let [preprocessed_openings, main_openings, perm_openings, quotient_openings] =
-            //     openings.try_into().expect("Should have 4 rounds of openings");
+
+            // TODO: add preprocessed openings
+            let [main_openings, perm_openings, quotient_openings] =
+                openings.try_into().expect("Should have 4 rounds of openings");
 
             let commitments = Commitments {
                 main_trace: main_commit,
                 perm_trace: perm_commit,
                 quotient_chunks: quotient_commit,
             };
-            let chip_proofs = vec![]; // TODO
+
+
+            // TODO: add preprocessed openings
+            let chip_proofs = log_quotient_degrees
+                .iter()
+                .zip(main_openings)
+                .zip(perm_openings)
+                .zip(quotient_openings)
+                .map(|(((log_degree,  main), perm), quotient)| {
+                    // TODO: add preprocessed openings
+                    let [preprocessed_local, preprocessed_next] =
+                        [vec![], vec![]];
+
+                    let [main_local, main_next] = main.try_into().expect("Should have 2 openings");
+                    let [perm_local, perm_next] = perm.try_into().expect("Should have 2 openings");
+                    let [quotient_chunks] = quotient.try_into().expect("Should have 1 opening");
+
+                    let opened_values = OpenedValues {
+                        preprocessed_local,
+                        preprocessed_next,
+                        trace_local: main_local,
+                        trace_next: main_next,
+                        permutation_local: perm_local,
+                        permutation_next: perm_next,
+                        quotient_chunks,
+                    };
+
+                    ChipProof {
+                        log_degree: *log_degree,
+                        opened_values,
+                    }
+                })
+                .collect::<Vec<_>>();
+
             MachineProof {
                 commitments,
                 opening_proof,
