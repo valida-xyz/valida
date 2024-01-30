@@ -464,6 +464,7 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
             use alloc::vec::Vec;
             use alloc::boxed::Box;
 
+
             let mut chips: [Box<&dyn Chip<Self, SC>>; #num_chips] = [ #chip_list ];
             let log_quotient_degrees: [usize; #num_chips] = [ #quotient_degree_calls ];
             let mut challenger = config.challenger();
@@ -590,8 +591,17 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
             // Verify the constraints.
             #verify_constraints
             // Verify that the commulative sums add up to zero.
+            let sum: SC::Challenge = proof
+                .chip_proofs
+                .iter()
+                .map(|chip_proof| chip_proof.commulative_sum)
+                .sum();
 
-            Ok(()) // TODO
+            if sum != SC::Challenge::zero() {
+                return Err(());
+            }
+
+            Ok(())
         }
     }
 }
