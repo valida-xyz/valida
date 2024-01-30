@@ -1,3 +1,4 @@
+use crate::folding_builder::VerifierConstraintFolder;
 use crate::Machine;
 use crate::__internal::{DebugConstraintBuilder, ProverConstraintFolder};
 use alloc::vec;
@@ -12,6 +13,7 @@ use valida_util::batch_multiplicative_inverse_allowing_zero;
 
 pub trait Chip<M: Machine<SC::Val>, SC: StarkConfig>:
     for<'a> Air<ProverConstraintFolder<'a, M, SC>>
+    + for<'a> Air<VerifierConstraintFolder<'a, M, SC::Val, SC::Challenge, SC::ChallengeAlgebra>>
     + for<'a> Air<SymbolicAirBuilder<'a, M, SC>>
     + for<'a> Air<DebugConstraintBuilder<'a, M, SC>>
 {

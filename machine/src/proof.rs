@@ -29,6 +29,7 @@ pub struct Commitments<Com> {
 pub struct ChipProof<Challenge> {
     pub log_degree: usize,
     pub opened_values: OpenedValues<Challenge>,
+    pub commulative_sum: Challenge,
 }
 
 #[derive(Serialize, Deserialize)]

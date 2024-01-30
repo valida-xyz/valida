@@ -49,22 +49,23 @@ where
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
-        let pc = VirtualPairCol::single_preprocessed(PREPROCESSED_COL_MAP.pc);
-        let opcode = VirtualPairCol::single_preprocessed(PREPROCESSED_COL_MAP.opcode);
-        let mut fields = vec![pc, opcode];
-        fields.extend(
-            PREPROCESSED_COL_MAP
-                .operands
-                .0
-                .iter()
-                .map(|op| VirtualPairCol::single_preprocessed(*op)),
-        );
-        let receives = Interaction {
-            fields,
-            count: VirtualPairCol::single_main(COL_MAP.multiplicity),
-            argument_index: machine.program_bus(),
-        };
-        vec![receives]
+        // let pc = VirtualPairCol::single_preprocessed(PREPROCESSED_COL_MAP.pc);
+        // let opcode = VirtualPairCol::single_preprocessed(PREPROCESSED_COL_MAP.opcode);
+        // let mut fields = vec![pc, opcode];
+        // fields.extend(
+        //     PREPROCESSED_COL_MAP
+        //         .operands
+        //         .0
+        //         .iter()
+        //         .map(|op| VirtualPairCol::single_preprocessed(*op)),
+        // );
+        // let receives = Interaction {
+        //     fields,
+        //     count: VirtualPairCol::single_main(COL_MAP.multiplicity),
+        //     argument_index: machine.program_bus(),
+        // };
+        // vec![receives]
+        vec![]
     }
 }
 

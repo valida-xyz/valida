@@ -239,7 +239,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             use ::valida_machine::__internal::p3_field::{AbstractField};
             use ::valida_machine::__internal::p3_challenger::{CanObserve, FieldChallenger};
             use ::valida_machine::__internal::p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
-            use ::valida_machine::__internal::p3_matrix::{Matrix, dense::RowMajorMatrix};
+            use ::valida_machine::__internal::p3_matrix::{Matrix, MatrixRowSlices, dense::RowMajorMatrix};
             use ::valida_machine::__internal::p3_util::log2_strict_usize;
             use ::valida_machine::{generate_permutation_trace, MachineProof, ChipProof, Commitments};
             use ::valida_machine::OpenedValues;
@@ -356,7 +356,8 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                 .zip(main_openings)
                 .zip(perm_openings)
                 .zip(quotient_openings)
-                .map(|(((log_degree,  main), perm), quotient)| {
+                .zip(perm_traces)
+                .map(|((((log_degree,  main), perm), quotient), perm_trace)| {
                     // TODO: add preprocessed openings
                     let [preprocessed_local, preprocessed_next] =
                         [vec![], vec![]];
@@ -375,9 +376,11 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                         quotient_chunks,
                     };
 
+                    let commulative_sum = perm_trace.row_slice(perm_trace.height() - 1).last().unwrap().clone();
                     ChipProof {
                         log_degree: *log_degree,
                         opened_values,
+                        commulative_sum,
                     }
                 })
                 .collect::<Vec<_>>();
@@ -413,6 +416,26 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
         })
         .collect::<TokenStream2>();
 
+    let verify_constraints = chips
+        .iter()
+        .enumerate()
+        .map(|(i, chip)| {
+            let chip_name = chip.ident.as_ref().unwrap();
+            quote! {
+                verify_constraints::<Self, _, SC>(
+                    self,
+                    self.#chip_name(),
+                    &proof.chip_proofs[#i].opened_values,
+                    proof.chip_proofs[#i].log_degree,
+                    g_subgroups[#i],
+                    zeta,
+                    alpha,
+                    &perm_challenges
+                ).expect(&alloc::format!("Failed to verify constraints on chip {}", #i));
+            }
+        })
+        .collect::<TokenStream2>();
+
     quote! {
         fn verify<SC: StarkConfig<Val = F>>(
             &self,
@@ -427,7 +450,7 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
             use ::valida_machine::__internal::p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
             use ::valida_machine::__internal::p3_matrix::Dimensions;
             use ::valida_machine::__internal::p3_util::log2_strict_usize;
-            use ::valida_machine::{generate_permutation_trace, MachineProof, ChipProof, Commitments};
+            use ::valida_machine::{verify_constraints, MachineProof, ChipProof, Commitments};
             use ::valida_machine::OpenedValues;
             use ::valida_machine::{VerificationError, ProofShapeError, OodEvaluationMismatch};
             use alloc::vec;
@@ -436,6 +459,7 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
 
             let mut chips: [Box<&dyn Chip<Self, SC>>; #num_chips] = [ #chip_list ];
             let log_quotient_degrees: [usize; #num_chips] = [ #quotient_degree_calls ];
+            let log_deg = log_quotient_degrees[0];
             let mut challenger = config.challenger();
             // TODO: Seed challenger with digest of all constraints & trace lengths.
             let pcs = config.pcs();
@@ -543,8 +567,6 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
                  g_subgroups.map(|g| vec![zeta, zeta * g]);
              let zeta_exp_quotient_degree: [Vec<SC::Challenge>; #num_chips] =
                  log_quotient_degrees.map(|log_deg| vec![zeta.exp_power_of_2(log_deg)]);
-
-
             pcs
                 .verify_multi_batches(
                     &[
@@ -559,8 +581,9 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
                 )
                 .map_err(|_| ())?;
 
-
-
+            // Verify the constraints.
+            #verify_constraints
+            // Verify that the commulative sums add up to zero.
 
             Ok(()) // TODO
         }

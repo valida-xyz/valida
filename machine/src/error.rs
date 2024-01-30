@@ -12,6 +12,7 @@ pub enum VerificationError {
     OodEvaluationMismatch,
 }
 
+#[derive(Debug)]
 pub struct OodEvaluationMismatch;
 
 #[derive(Debug)]
