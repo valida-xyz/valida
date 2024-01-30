@@ -315,8 +315,15 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
 
             let mut quotients: Vec<RowMajorMatrix<SC::Val>> = vec![];
             #compute_quotients
+            assert_eq!(quotients.len(), #num_chips);
+            assert_eq!(log_quotient_degrees.len(), #num_chips);
+            let coset_shifts = tracing::debug_span!("coset shift").in_scope(|| {
+                let pcs_coset_shift = pcs.coset_shift();
+                log_quotient_degrees.map(|log_d| pcs_coset_shift.exp_power_of_2(log_d))
+            });
+            assert_eq!(coset_shifts.len(), #num_chips);
             let (quotient_commit, quotient_data) = tracing::info_span!("commit to quotient chunks")
-                .in_scope(|| pcs.commit_batches(quotients.to_vec()));
+                .in_scope(|| pcs.commit_shifted_batches(quotients.to_vec(), &coset_shifts));
 
             challenger.observe(quotient_commit.clone());
 
@@ -459,7 +466,6 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
 
             let mut chips: [Box<&dyn Chip<Self, SC>>; #num_chips] = [ #chip_list ];
             let log_quotient_degrees: [usize; #num_chips] = [ #quotient_degree_calls ];
-            let log_deg = log_quotient_degrees[0];
             let mut challenger = config.challenger();
             // TODO: Seed challenger with digest of all constraints & trace lengths.
             let pcs = config.pcs();
