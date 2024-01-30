@@ -58,6 +58,10 @@ pub trait Chip<M: Machine<SC::Val>, SC: StarkConfig>:
         );
         interactions
     }
+
+    fn trace_width(&self) -> usize {
+        self.width()
+    }
 }
 
 pub trait ValidaAirBuilder: PairBuilder + PermutationAirBuilder {

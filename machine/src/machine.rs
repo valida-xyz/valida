@@ -13,7 +13,7 @@ pub trait Machine<F: Field>: Sync {
     where
         SC: StarkConfig<Val = F>;
 
-    fn verify<SC>(config: &SC, proof: &MachineProof<SC>) -> Result<(), ()>
+    fn verify<SC>(&self, config: &SC, proof: &MachineProof<SC>) -> Result<(), ()>
     where
         SC: StarkConfig<Val = F>;
 }
