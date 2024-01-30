@@ -508,7 +508,7 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
             } = &proof.commitments;
 
 
-            // Compute the preprocessed traces (TODO: avoid in the future)
+            // Compute the commitments to preprocessed traces (TODO: avoid in the future)
             let preprocessed_traces: Vec<RowMajorMatrix<SC::Val>> =
             tracing::info_span!("generate preprocessed traces")
                 .in_scope(||
