@@ -15,7 +15,7 @@ use valida_machine::{
 };
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 use valida_opcodes::{
-    BEQ, BNE, BYTES_PER_INSTR, IMM32, JAL, JALV, LOAD32, READ_ADVICE, STOP, STORE32, LOADFP,
+    BEQ, BNE, BYTES_PER_INSTR, IMM32, JAL, JALV, LOAD32, LOADFP, READ_ADVICE, STOP, STORE32,
 };
 
 use p3_air::VirtualPairCol;
@@ -623,8 +623,8 @@ where
 
 impl<M, F> Instruction<M, F> for LoadFpInstruction
 where
-    M : MachineWithCpuChip<F>,
-    F : Field,
+    M: MachineWithCpuChip<F>,
+    F: Field,
 {
     const OPCODE: u32 = LOADFP;
 
@@ -671,4 +671,3 @@ impl CpuChip {
         self.registers.push(registers);
     }
 }
-

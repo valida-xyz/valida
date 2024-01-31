@@ -163,10 +163,9 @@ impl CpuChip {
                 .map(|(a, b)| (a - b) * (a - b))
                 .sum::<AB::Expr>(),
         );
-        builder.when(is_loadfp).assert_eq(
-            local.fp,
-            reduce::<AB>(base, local.write_value())
-        );
+        builder
+            .when(is_loadfp)
+            .assert_eq(local.fp, reduce::<AB>(base, local.write_value()));
         builder
             .when(is_store + is_load + is_jal + is_jalv + is_imm32 + is_loadfp + is_bus_op)
             .assert_one(local.write_used());
