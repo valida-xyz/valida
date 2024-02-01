@@ -34,7 +34,8 @@ use valida_bus::{
 };
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
-    Load32Instruction, ReadAdviceInstruction, StopInstruction, Store32Instruction,
+    Load32Instruction, LoadFpInstruction, ReadAdviceInstruction, StopInstruction,
+    Store32Instruction,
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
@@ -77,6 +78,9 @@ pub struct BasicMachine<F: PrimeField32 + TwoAdicField> {
 
     #[instruction]
     stop: StopInstruction,
+
+    #[instruction]
+    loadfp: LoadFpInstruction,
 
     // ALU instructions
     #[instruction(add_u32)]
