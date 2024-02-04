@@ -20,7 +20,7 @@ jobs:
         with:
           repository: Plonky3/Plonky3
           path: Plonky3
-   
+
       - name: Checkout Valida
         uses: actions/checkout@v4
         with:
@@ -39,6 +39,33 @@ jobs:
       - name: Test
         working-directory: valida
         run: cargo test
+
+  coverage:
+    name: Code coverage
+    runs-on: ubuntu-latest
+    container:
+      image: xd009642/tarpaulin:develop-nightly
+      options: --security-opt seccomp=unconfined
+
+    steps:
+      - name: Checkout Plonky3
+        uses: actions/checkout@v4
+        with:
+          repository: Plonky3/Plonky3
+          path: Plonky3
+
+      - name: Checkout Valida
+        uses: actions/checkout@v4
+        with:
+          path: valida
+
+      - name: Generate code coverage
+        working-directory: valida
+        run: |
+          cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v2
 
   lints:
     name: Lints
