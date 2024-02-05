@@ -4,7 +4,7 @@ use core::borrow::Borrow;
 use valida_machine::Word;
 
 use p3_air::{Air, AirBuilder, BaseAir};
-use p3_field::{AbstractField, PrimeField};
+use p3_field::AbstractField;
 use p3_matrix::MatrixRowSlices;
 use valida_opcodes::BYTES_PER_INSTR;
 
@@ -14,10 +14,9 @@ impl<F> BaseAir<F> for CpuChip {
     }
 }
 
-impl<F, AB> Air<AB> for CpuChip
+impl<AB> Air<AB> for CpuChip
 where
-    F: PrimeField,
-    AB: AirBuilder<F = F>,
+    AB: AirBuilder,
 {
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();

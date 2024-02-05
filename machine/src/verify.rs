@@ -1,5 +1,5 @@
 use p3_air::TwoRowMatrixView;
-use p3_field::{AbstractExtensionField, Res};
+use p3_field::AbstractExtensionField;
 use p3_field::{AbstractField, Field};
 use p3_util::reverse_slice_index_bits;
 
@@ -43,19 +43,13 @@ where
     let embed_alg = |v: &[SC::Challenge]| {
         v.chunks_exact(SC::Challenge::D)
             .map(|chunk| {
-                let res_chunk = chunk
+                chunk
                     .iter()
-                    .map(|x| Res::from_inner(*x))
-                    .collect::<Vec<Res<SC::Val, SC::Challenge>>>();
-                SC::ChallengeAlgebra::from_base_slice(&res_chunk)
+                    .zip(monomials.iter())
+                    .map(|(x, m)| *x * *m)
+                    .sum()
             })
-            .collect::<Vec<SC::ChallengeAlgebra>>()
-    };
-
-    let res = |v: &[SC::Challenge]| {
-        v.iter()
-            .map(|x| Res::from_inner(*x))
-            .collect::<Vec<Res<SC::Val, SC::Challenge>>>()
+            .collect::<Vec<SC::Challenge>>()
     };
 
     // Recompute the quotient as extension elements.
@@ -70,15 +64,15 @@ where
         })
         .collect::<Vec<SC::Challenge>>();
 
-    let mut folder = VerifierConstraintFolder {
+    let mut folder = VerifierConstraintFolder::<M, SC::Val, SC::Challenge> {
         machine,
         preprocessed: TwoRowMatrixView {
-            local: &res(preprocessed_local),
-            next: &res(preprocessed_next),
+            local: &preprocessed_local,
+            next: &preprocessed_next,
         },
         main: TwoRowMatrixView {
-            local: &res(trace_local),
-            next: &res(trace_next),
+            local: &trace_local,
+            next: &trace_next,
         },
         perm: TwoRowMatrixView {
             local: &embed_alg(permutation_local),
@@ -89,7 +83,8 @@ where
         is_last_row,
         is_transition,
         alpha,
-        accumulator: Res::zero(),
+        accumulator: SC::Challenge::zero(),
+        _phantom: core::marker::PhantomData,
     };
     chip.eval(&mut folder);
 
@@ -100,7 +95,7 @@ where
         .map(|(weight, part)| part * weight)
         .sum();
 
-    let folded_constraints = folder.accumulator.into_inner();
+    let folded_constraints = folder.accumulator;
 
     match folded_constraints == z_h * quotient {
         true => Ok(()),

@@ -1,5 +1,6 @@
 use alloc::vec;
 use alloc::vec::Vec;
+use p3_field::AbstractExtensionField;
 
 use crate::config::StarkConfig;
 use crate::{Machine, ValidaAirBuilder};
@@ -124,6 +125,15 @@ impl<'a, M: Machine<SC::Val>, SC: StarkConfig> PermutationAirBuilder
 
     fn permutation(&self) -> Self::MP {
         self.permutation.clone()
+    }
+
+    fn assert_zero_ext<I>(&mut self, x: I)
+    where
+        I: Into<Self::ExprEF>,
+    {
+        for xb in x.into().as_base_slice().iter().cloned::<Self::Expr>() {
+            self.assert_zero(xb);
+        }
     }
 
     fn permutation_randomness(&self) -> &[Self::EF] {

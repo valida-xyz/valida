@@ -6,7 +6,7 @@ use valida_machine::Word;
 
 use crate::mul::columns::NUM_MUL_COLS;
 use p3_air::{Air, AirBuilder, BaseAir};
-use p3_field::{AbstractField, PrimeField};
+use p3_field::AbstractField;
 use p3_matrix::MatrixRowSlices;
 
 impl<F> BaseAir<F> for Mul32Chip {
@@ -15,10 +15,9 @@ impl<F> BaseAir<F> for Mul32Chip {
     }
 }
 
-impl<F, AB> Air<AB> for Mul32Chip
+impl<AB> Air<AB> for Mul32Chip
 where
-    F: PrimeField,
-    AB: AirBuilder<F = F>,
+    AB: AirBuilder,
 {
     fn eval(&self, builder: &mut AB) {
         // TODO: Assumes original mul, doesn't work for mulhu or mulhs.

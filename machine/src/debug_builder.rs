@@ -78,6 +78,17 @@ where
         self.perm
     }
 
+    fn assert_zero_ext<I>(&mut self, x: I)
+    where
+        I: Into<Self::ExprEF>,
+    {
+        assert_eq!(
+            x.into(),
+            SC::Challenge::zero(),
+            "constraints must evaluate to zero"
+        );
+    }
+
     fn permutation_randomness(&self) -> &[Self::EF] {
         self.perm_challenges
     }

@@ -6,14 +6,14 @@ use alloc::vec::Vec;
 
 use crate::config::StarkConfig;
 use crate::symbolic::symbolic_builder::SymbolicAirBuilder;
-use p3_air::{Air, AirBuilder, PairBuilder, PermutationAirBuilder, VirtualPairCol};
+use p3_air::{Air, BaseAir, PairBuilder, PermutationAirBuilder, VirtualPairCol};
 use p3_field::{AbstractField, ExtensionField, Field, Powers};
 use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRowSlices};
 use valida_util::batch_multiplicative_inverse_allowing_zero;
 
 pub trait Chip<M: Machine<SC::Val>, SC: StarkConfig>:
     for<'a> Air<ProverConstraintFolder<'a, M, SC>>
-    + for<'a> Air<VerifierConstraintFolder<'a, M, SC::Val, SC::Challenge, SC::ChallengeAlgebra>>
+    + for<'a> Air<VerifierConstraintFolder<'a, M, SC::Val, SC::Challenge>>
     + for<'a> Air<SymbolicAirBuilder<'a, M, SC>>
     + for<'a> Air<DebugConstraintBuilder<'a, M, SC>>
 {
@@ -62,7 +62,7 @@ pub trait Chip<M: Machine<SC::Val>, SC: StarkConfig>:
     }
 
     fn trace_width(&self) -> usize {
-        self.width()
+        <Self as BaseAir<SC::Val>>::width(self)
     }
 }
 
@@ -254,7 +254,7 @@ pub fn eval_permutation_constraints<M, C, SC, AB>(
         } else {
             rlc = rlc + AB::ExprEF::from_f(alphas_global[interaction.argument_index()]);
         }
-        builder.assert_one_ext::<AB::ExprEF, AB::ExprEF>(rlc * perm_local[m].into());
+        builder.assert_one_ext(rlc * perm_local[m].into());
 
         let mult_local = interaction
             .count
@@ -277,9 +277,7 @@ pub fn eval_permutation_constraints<M, C, SC, AB>(
     }
 
     // Running sum constraints
-    builder
-        .when_transition()
-        .assert_eq_ext::<AB::ExprEF, _, _>(lhs, rhs);
+    builder.when_transition().assert_eq_ext(lhs, rhs);
     builder
         .when_first_row()
         .assert_eq_ext(perm_local.last().unwrap().clone(), phi_0);
