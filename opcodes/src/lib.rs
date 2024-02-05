@@ -9,6 +9,7 @@ pub const BEQ: u32 = 5;
 pub const BNE: u32 = 6;
 pub const IMM32: u32 = 7;
 pub const STOP: u32 = 8;
+pub const LOADFP: u32 = 10;
 
 /// NONDETERMINISTIC
 pub const READ_ADVICE: u32 = 9;
