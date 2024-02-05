@@ -20,7 +20,7 @@ use valida_program::MachineWithProgramChip;
 use p3_challenger::DuplexChallenger;
 use p3_dft::Radix2Bowers;
 use p3_field::extension::BinomialExtensionField;
-use p3_field::{Field, Res};
+use p3_field::Field;
 use p3_fri::{FriBasedPcs, FriConfigImpl, FriLdt};
 use p3_keccak::Keccak256Hash;
 use p3_ldt::QuotientMmcs;
@@ -197,7 +197,6 @@ fn prove_fibonacci() {
     type Val = BabyBear;
     type Challenge = BinomialExtensionField<Val, 5>;
     type PackedChallenge = BinomialExtensionField<<Val as Field>::Packing, 5>;
-    type ChallengeAlgebra = BinomialExtensionField<Res<Val, BinomialExtensionField<Val, 5>>, 5>;
 
     type Mds16 = CosetMds<Val, 16>;
     let mds16 = Mds16::default();
@@ -228,8 +227,7 @@ fn prove_fibonacci() {
     let ldt = FriLdt { config: fri_config };
 
     type Pcs = FriBasedPcs<MyFriConfig, ValMmcs, Dft, Challenger>;
-    type MyConfig =
-        StarkConfigImpl<Val, Challenge, PackedChallenge, ChallengeAlgebra, Pcs, Challenger>;
+    type MyConfig = StarkConfigImpl<Val, Challenge, PackedChallenge, Pcs, Challenger>;
 
     let pcs = Pcs::new(dft, val_mmcs, ldt);
 
