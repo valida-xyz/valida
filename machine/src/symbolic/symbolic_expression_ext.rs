@@ -22,6 +22,16 @@ impl<EF: Field> From<SymbolicVariable<EF>> for SymbolicExpressionExt<EF> {
     }
 }
 
+impl<F, EF> From<SymbolicExpression<F>> for SymbolicExpressionExt<EF>
+where
+    F: Field,
+    EF: ExtensionField<F>,
+{
+    fn from(value: SymbolicExpression<F>) -> Self {
+        Self::from_base(value)
+    }
+}
+
 impl<EF> AbstractField for SymbolicExpressionExt<EF>
 where
     EF: Field,
