@@ -117,10 +117,37 @@ where
             SymbolicExpression::IsLastRow => Self(SymbolicExpression::IsLastRow),
             SymbolicExpression::IsTransition => Self(SymbolicExpression::IsTransition),
             SymbolicExpression::Constant(c) => Self(SymbolicExpression::Constant(EF::from_base(c))),
-            SymbolicExpression::Add(x, y) => Self(SymbolicExpression::Add(map_rc(x), map_rc(y))),
-            SymbolicExpression::Sub(x, y) => Self(SymbolicExpression::Sub(map_rc(x), map_rc(y))),
-            SymbolicExpression::Neg(x) => Self(SymbolicExpression::Neg(map_rc(x))),
-            SymbolicExpression::Mul(x, y) => Self(SymbolicExpression::Mul(map_rc(x), map_rc(y))),
+            SymbolicExpression::Add {
+                x,
+                y,
+                degree_multiple,
+            } => Self(SymbolicExpression::Add {
+                x: map_rc(x),
+                y: map_rc(y),
+                degree_multiple,
+            }),
+            SymbolicExpression::Sub {
+                x,
+                y,
+                degree_multiple,
+            } => Self(SymbolicExpression::Sub {
+                x: map_rc(x),
+                y: map_rc(y),
+                degree_multiple,
+            }),
+            SymbolicExpression::Neg { x, degree_multiple } => Self(SymbolicExpression::Neg {
+                x: map_rc(x),
+                degree_multiple,
+            }),
+            SymbolicExpression::Mul {
+                x,
+                y,
+                degree_multiple,
+            } => Self(SymbolicExpression::Mul {
+                x: map_rc(x),
+                y: map_rc(y),
+                degree_multiple,
+            }),
         }
     }
 
