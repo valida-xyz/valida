@@ -223,6 +223,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     preprocessed_trace_lde,
                     main_trace_ldes.remove(0),
                     perm_trace_ldes.remove(0),
+                    cummulative_sums[#i],
                     &perm_challenges,
                     alpha,
                 ));
@@ -300,6 +301,10 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                         generate_permutation_trace(self, *chip, &main_traces[i], perm_challenges.clone())
                     }).collect::<Vec<_>>()
                 );
+
+            let cummulative_sums = perm_traces.iter()
+                .map(|trace| trace.row_slice(trace.height() - 1).last().unwrap().clone())
+                .collect::<Vec<_>>();
 
             let (perm_commit, perm_data) = tracing::info_span!("commit to permutation traces")
                 .in_scope(|| {
@@ -383,11 +388,11 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                         quotient_chunks,
                     };
 
-                    let commulative_sum = perm_trace.row_slice(perm_trace.height() - 1).last().unwrap().clone();
+                    let cumulative_sum = perm_trace.row_slice(perm_trace.height() - 1).last().unwrap().clone();
                     ChipProof {
                         log_degree: *log_degree,
                         opened_values,
-                        commulative_sum,
+                        cumulative_sum,
                     }
                 })
                 .collect::<Vec<_>>();
@@ -433,6 +438,7 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
                     self,
                     self.#chip_name(),
                     &proof.chip_proofs[#i].opened_values,
+                    proof.chip_proofs[#i].cumulative_sum,
                     proof.chip_proofs[#i].log_degree,
                     g_subgroups[#i],
                     zeta,
@@ -590,11 +596,11 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
 
             // Verify the constraints.
             #verify_constraints
-            // Verify that the commulative sums add up to zero.
+            // Verify that the cumulative_sum sums add up to zero.
             let sum: SC::Challenge = proof
                 .chip_proofs
                 .iter()
-                .map(|chip_proof| chip_proof.commulative_sum)
+                .map(|chip_proof| chip_proof.cumulative_sum)
                 .sum();
 
             if sum != SC::Challenge::zero() {

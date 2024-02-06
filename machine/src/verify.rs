@@ -4,12 +4,15 @@ use p3_field::{AbstractField, Field};
 use p3_util::reverse_slice_index_bits;
 
 use crate::folding_builder::VerifierConstraintFolder;
-use crate::{Chip, Machine, OodEvaluationMismatch, OpenedValues, StarkConfig};
+use crate::{
+    eval_permutation_constraints, Chip, Machine, OodEvaluationMismatch, OpenedValues, StarkConfig,
+};
 
 pub fn verify_constraints<M, C, SC>(
     machine: &M,
     chip: &C,
     opened_values: &OpenedValues<SC::Challenge>,
+    cumulative_sum: SC::Challenge,
     log_degree: usize,
     g: SC::Val,
     zeta: SC::Challenge,
@@ -18,7 +21,7 @@ pub fn verify_constraints<M, C, SC>(
 ) -> Result<(), OodEvaluationMismatch>
 where
     M: Machine<SC::Val>,
-    C: Chip<M, SC> + ?Sized,
+    C: Chip<M, SC>,
     SC: StarkConfig,
 {
     let z_h = zeta.exp_power_of_2(log_degree) - SC::Challenge::one();
@@ -92,6 +95,7 @@ where
         accumulator: Res::zero(),
     };
     chip.eval(&mut folder);
+    // eval_permutation_constraints(chip, &mut folder, cumulative_sum);
 
     reverse_slice_index_bits(&mut quotient_parts);
     let quotient: SC::Challenge = zeta
