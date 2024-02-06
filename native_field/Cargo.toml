@@ -5,7 +5,7 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-itertools = "0.10.5"
+itertools = "0.12.0"
 
 p3-air = { path = "../../Plonky3/air" }
 p3-field = { path = "../../Plonky3/field" }
