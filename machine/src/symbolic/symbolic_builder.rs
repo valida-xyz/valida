@@ -3,7 +3,9 @@ use alloc::vec::Vec;
 
 use crate::config::StarkConfig;
 use crate::{Machine, ValidaAirBuilder};
+use p3_air::ExtensionBuilder;
 use p3_air::{Air, AirBuilder, PairBuilder, PermutationAirBuilder};
+use p3_field::AbstractExtensionField;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_util::log2_ceil_usize;
 use valida_machine::symbolic::symbolic_expression_ext::SymbolicExpressionExt;
@@ -114,12 +116,24 @@ impl<'a, M: Machine<SC::Val>, SC: StarkConfig> PairBuilder for SymbolicAirBuilde
     }
 }
 
-impl<'a, M: Machine<SC::Val>, SC: StarkConfig> PermutationAirBuilder
-    for SymbolicAirBuilder<'a, M, SC>
-{
+impl<'a, M: Machine<SC::Val>, SC: StarkConfig> ExtensionBuilder for SymbolicAirBuilder<'a, M, SC> {
     type EF = SC::Challenge;
     type ExprEF = SymbolicExpressionExt<SC::Challenge>;
     type VarEF = SymbolicVariable<SC::Challenge>;
+
+    fn assert_zero_ext<I>(&mut self, x: I)
+    where
+        I: Into<Self::ExprEF>,
+    {
+        for xb in x.into().as_base_slice().iter().cloned() {
+            self.assert_zero::<SymbolicExpression<SC::Val>>(xb);
+        }
+    }
+}
+
+impl<'a, M: Machine<SC::Val>, SC: StarkConfig> PermutationAirBuilder
+    for SymbolicAirBuilder<'a, M, SC>
+{
     type MP = RowMajorMatrix<Self::VarEF>;
 
     fn permutation(&self) -> Self::MP {

@@ -15,7 +15,7 @@ use valida_machine::{
 };
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 use valida_opcodes::{
-    BEQ, BNE, BYTES_PER_INSTR, IMM32, JAL, JALV, LOAD32, READ_ADVICE, STOP, STORE32,
+    BEQ, BNE, BYTES_PER_INSTR, IMM32, JAL, JALV, LOAD32, LOADFP, READ_ADVICE, STOP, STORE32,
 };
 
 use p3_air::VirtualPairCol;
@@ -41,6 +41,7 @@ pub enum Operation {
     BusWithMemory(Option<Word<u8>> /*imm*/),
     ReadAdvice,
     Stop,
+    LoadFp,
 }
 
 #[derive(Default)]
@@ -205,6 +206,9 @@ impl CpuChip {
             Operation::Stop => {
                 cols.opcode_flags.is_stop = SC::Val::one();
             }
+            Operation::LoadFp => {
+                cols.opcode_flags.is_loadfp = SC::Val::one();
+            }
         }
 
         row
@@ -348,7 +352,8 @@ instructions!(
     BneInstruction,
     Imm32Instruction,
     ReadAdviceInstruction,
-    StopInstruction
+    StopInstruction,
+    LoadFpInstruction
 );
 
 /// Non-deterministic instructions
@@ -613,6 +618,25 @@ where
         state
             .cpu_mut()
             .push_op(Operation::Stop, <Self as Instruction<M, F>>::OPCODE, ops);
+    }
+}
+
+impl<M, F> Instruction<M, F> for LoadFpInstruction
+where
+    M: MachineWithCpuChip<F>,
+    F: Field,
+{
+    const OPCODE: u32 = LOADFP;
+
+    fn execute(state: &mut M, ops: Operands<i32>) {
+        let clk = state.cpu().clock;
+        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
+        let value = (state.cpu().fp as i32 + ops.b()) as u32;
+        state.mem_mut().write(clk, write_addr, value.into(), true);
+        state.cpu_mut().pc += 1;
+        state
+            .cpu_mut()
+            .push_op(Operation::LoadFp, <Self as Instruction<M, F>>::OPCODE, ops);
     }
 }
 

@@ -219,7 +219,7 @@ where
                 accumulator,
             };
             air.eval(&mut folder);
-            // eval_permutation_constraints(air, &mut folder, cumulative_sum);
+            eval_permutation_constraints(air, &mut folder, cumulative_sum);
 
             // quotient(x) = constraints(x) / Z_H(x)
             let zerofier_inv: SC::PackedVal = zerofier_on_coset.eval_inverse_packed(i_local_start);

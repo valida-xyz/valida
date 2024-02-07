@@ -1,6 +1,6 @@
 use crate::{Machine, ValidaAirBuilder};
-use p3_air::{AirBuilder, PairBuilder, PermutationAirBuilder, TwoRowMatrixView};
-use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, Field, Res};
+use p3_air::{AirBuilder, ExtensionBuilder, PairBuilder, PermutationAirBuilder, TwoRowMatrixView};
+use p3_field::AbstractField;
 use valida_machine::StarkConfig;
 
 pub struct ProverConstraintFolder<'a, M: Machine<SC::Val>, SC: StarkConfig> {
@@ -16,17 +16,17 @@ pub struct ProverConstraintFolder<'a, M: Machine<SC::Val>, SC: StarkConfig> {
     pub(crate) accumulator: SC::PackedChallenge,
 }
 
-pub struct VerifierConstraintFolder<'a, M, F, EF, EA> {
+pub struct VerifierConstraintFolder<'a, M, SC: StarkConfig> {
     pub(crate) machine: &'a M,
-    pub(crate) preprocessed: TwoRowMatrixView<'a, Res<F, EF>>,
-    pub(crate) main: TwoRowMatrixView<'a, Res<F, EF>>,
-    pub(crate) perm: TwoRowMatrixView<'a, EA>,
-    pub(crate) perm_challenges: &'a [EF],
-    pub(crate) is_first_row: EF,
-    pub(crate) is_last_row: EF,
-    pub(crate) is_transition: EF,
-    pub(crate) alpha: EF,
-    pub(crate) accumulator: Res<F, EF>,
+    pub(crate) preprocessed: TwoRowMatrixView<'a, SC::Challenge>,
+    pub(crate) main: TwoRowMatrixView<'a, SC::Challenge>,
+    pub(crate) perm: TwoRowMatrixView<'a, SC::Challenge>,
+    pub(crate) perm_challenges: &'a [SC::Challenge],
+    pub(crate) is_first_row: SC::Challenge,
+    pub(crate) is_last_row: SC::Challenge,
+    pub(crate) is_transition: SC::Challenge,
+    pub(crate) alpha: SC::Challenge,
+    pub(crate) accumulator: SC::Challenge,
 }
 
 impl<'a, M, SC> AirBuilder for ProverConstraintFolder<'a, M, SC>
@@ -76,7 +76,7 @@ where
     }
 }
 
-impl<'a, M, SC> PermutationAirBuilder for ProverConstraintFolder<'a, M, SC>
+impl<'a, M, SC> ExtensionBuilder for ProverConstraintFolder<'a, M, SC>
 where
     M: Machine<SC::Val>,
     SC: StarkConfig,
@@ -84,6 +84,22 @@ where
     type EF = SC::Challenge;
     type ExprEF = SC::PackedChallenge;
     type VarEF = SC::PackedChallenge;
+
+    fn assert_zero_ext<I>(&mut self, x: I)
+    where
+        I: Into<Self::ExprEF>,
+    {
+        let x: SC::PackedChallenge = x.into();
+        self.accumulator *= SC::PackedChallenge::from_f(self.alpha);
+        self.accumulator += x;
+    }
+}
+
+impl<'a, M, SC> PermutationAirBuilder for ProverConstraintFolder<'a, M, SC>
+where
+    M: Machine<SC::Val>,
+    SC: StarkConfig,
+{
     type MP = TwoRowMatrixView<'a, SC::PackedChallenge>;
 
     fn permutation(&self) -> Self::MP {
@@ -108,59 +124,66 @@ where
     }
 }
 
-impl<'a, M, F, EF, EA> AirBuilder for VerifierConstraintFolder<'a, M, F, EF, EA>
+impl<'a, M, SC> AirBuilder for VerifierConstraintFolder<'a, M, SC>
 where
-    F: Field,
-    EF: ExtensionField<F>,
-    EA: AbstractExtensionField<Res<F, EF>, F = EF>,
-    M: Machine<F>,
+    M: Machine<SC::Val>,
+    SC: StarkConfig,
 {
-    type F = F;
-    type Expr = Res<F, EF>;
-    type Var = Res<F, EF>;
-    type M = TwoRowMatrixView<'a, Res<F, EF>>;
+    type F = SC::Val;
+    type Expr = SC::Challenge;
+    type Var = SC::Challenge;
+    type M = TwoRowMatrixView<'a, SC::Challenge>;
 
     fn main(&self) -> Self::M {
         self.main
     }
 
     fn is_first_row(&self) -> Self::Expr {
-        Res::from_inner(self.is_first_row)
+        self.is_first_row
     }
 
     fn is_last_row(&self) -> Self::Expr {
-        Res::from_inner(self.is_last_row)
+        self.is_last_row
     }
 
     fn is_transition_window(&self, size: usize) -> Self::Expr {
         if size == 2 {
-            Res::from_inner(self.is_transition)
+            self.is_transition
         } else {
             panic!("uni-stark only supports a window size of 2")
         }
     }
 
     fn assert_zero<I: Into<Self::Expr>>(&mut self, x: I) {
-        let x: Res<F, EF> = x.into();
-        self.accumulator *= Self::Expr::from_inner(self.alpha);
+        let x: SC::Challenge = x.into();
+        self.accumulator *= self.alpha;
         self.accumulator += x;
     }
 }
 
-impl<'a, M, F, EF, EA> PermutationAirBuilder for VerifierConstraintFolder<'a, M, F, EF, EA>
+impl<'a, M, SC> ExtensionBuilder for VerifierConstraintFolder<'a, M, SC>
 where
-    F: Field,
-    EF: ExtensionField<F>,
-    EA: AbstractExtensionField<Res<F, EF>, F = EF> + Copy,
-    M: Machine<F>,
+    M: Machine<SC::Val>,
+    SC: StarkConfig,
 {
-    type EF = EF;
+    type EF = SC::Challenge;
+    type ExprEF = SC::Challenge;
+    type VarEF = SC::Challenge;
 
-    type ExprEF = EA;
+    fn assert_zero_ext<I>(&mut self, x: I)
+    where
+        I: Into<Self::ExprEF>,
+    {
+        self.assert_zero(x)
+    }
+}
 
-    type VarEF = EA;
-
-    type MP = TwoRowMatrixView<'a, EA>;
+impl<'a, M, SC> PermutationAirBuilder for VerifierConstraintFolder<'a, M, SC>
+where
+    M: Machine<SC::Val>,
+    SC: StarkConfig,
+{
+    type MP = TwoRowMatrixView<'a, SC::Challenge>;
 
     fn permutation(&self) -> Self::MP {
         self.perm
@@ -171,24 +194,20 @@ where
     }
 }
 
-impl<'a, M, F, EF, EA> PairBuilder for VerifierConstraintFolder<'a, M, F, EF, EA>
+impl<'a, M, SC> PairBuilder for VerifierConstraintFolder<'a, M, SC>
 where
-    F: Field,
-    EF: ExtensionField<F>,
-    EA: AbstractExtensionField<Res<F, EF>, F = EF> + Copy,
-    M: Machine<F>,
+    M: Machine<SC::Val>,
+    SC: StarkConfig,
 {
     fn preprocessed(&self) -> Self::M {
         self.preprocessed
     }
 }
 
-impl<'a, M, F, EF, EA> ValidaAirBuilder for VerifierConstraintFolder<'a, M, F, EF, EA>
+impl<'a, M, SC> ValidaAirBuilder for VerifierConstraintFolder<'a, M, SC>
 where
-    F: Field,
-    EF: ExtensionField<F>,
-    EA: AbstractExtensionField<Res<F, EF>, F = EF> + Copy,
-    M: Machine<F>,
+    M: Machine<SC::Val>,
+    SC: StarkConfig,
 {
     type Machine = M;
 

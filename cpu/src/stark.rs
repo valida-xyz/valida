@@ -79,6 +79,7 @@ impl CpuChip {
         let is_beq = local.opcode_flags.is_beq;
         let is_bne = local.opcode_flags.is_bne;
         let is_imm32 = local.opcode_flags.is_imm32;
+        let is_loadfp = local.opcode_flags.is_loadfp;
         let _is_advice = local.opcode_flags.is_advice; // TODO: unused
         let is_imm_op = local.opcode_flags.is_imm_op;
         let is_bus_op = local.opcode_flags.is_bus_op;
@@ -163,7 +164,10 @@ impl CpuChip {
                 .sum::<AB::Expr>(),
         );
         builder
-            .when(is_store + is_load + is_jal + is_jalv + is_imm32 + is_bus_op)
+            .when(is_loadfp)
+            .assert_eq(local.fp, reduce::<AB>(base, local.write_value()));
+        builder
+            .when(is_store + is_load + is_jal + is_jalv + is_imm32 + is_loadfp + is_bus_op)
             .assert_one(local.write_used());
     }
 
@@ -178,6 +182,7 @@ impl CpuChip {
     {
         let bytes_per_instr_expr = AB::Expr::from_canonical_u32(BYTES_PER_INSTR);
         let should_increment_pc = local.opcode_flags.is_imm32
+            + local.opcode_flags.is_loadfp
             + local.opcode_flags.is_bus_op
             + local.opcode_flags.is_advice;
         let incremented_pc = local.pc + AB::F::one();

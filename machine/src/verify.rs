@@ -1,5 +1,5 @@
 use p3_air::TwoRowMatrixView;
-use p3_field::{AbstractExtensionField, Res};
+use p3_field::AbstractExtensionField;
 use p3_field::{AbstractField, Field};
 use p3_util::reverse_slice_index_bits;
 
@@ -43,22 +43,16 @@ where
         .map(SC::Challenge::monomial)
         .collect::<Vec<_>>();
 
-    let embed_alg = |v: &[SC::Challenge]| {
+    let unflatten = |v: &[SC::Challenge]| {
         v.chunks_exact(SC::Challenge::D)
             .map(|chunk| {
-                let res_chunk = chunk
+                chunk
                     .iter()
-                    .map(|x| Res::from_inner(*x))
-                    .collect::<Vec<Res<SC::Val, SC::Challenge>>>();
-                SC::ChallengeAlgebra::from_base_slice(&res_chunk)
+                    .zip(monomials.iter())
+                    .map(|(x, m)| *x * *m)
+                    .sum()
             })
-            .collect::<Vec<SC::ChallengeAlgebra>>()
-    };
-
-    let res = |v: &[SC::Challenge]| {
-        v.iter()
-            .map(|x| Res::from_inner(*x))
-            .collect::<Vec<Res<SC::Val, SC::Challenge>>>()
+            .collect::<Vec<SC::Challenge>>()
     };
 
     // Recompute the quotient as extension elements.
@@ -76,26 +70,26 @@ where
     let mut folder = VerifierConstraintFolder {
         machine,
         preprocessed: TwoRowMatrixView {
-            local: &res(preprocessed_local),
-            next: &res(preprocessed_next),
+            local: &preprocessed_local,
+            next: &preprocessed_next,
         },
         main: TwoRowMatrixView {
-            local: &res(trace_local),
-            next: &res(trace_next),
+            local: &trace_local,
+            next: &trace_next,
         },
         perm: TwoRowMatrixView {
-            local: &embed_alg(permutation_local),
-            next: &embed_alg(permutation_next),
+            local: &unflatten(permutation_local),
+            next: &unflatten(permutation_next),
         },
         perm_challenges: permutation_challenges,
         is_first_row,
         is_last_row,
         is_transition,
         alpha,
-        accumulator: Res::zero(),
+        accumulator: SC::Challenge::zero(),
     };
     chip.eval(&mut folder);
-    // eval_permutation_constraints(chip, &mut folder, cumulative_sum);
+    eval_permutation_constraints(chip, &mut folder, cumulative_sum);
 
     reverse_slice_index_bits(&mut quotient_parts);
     let quotient: SC::Challenge = zeta
@@ -104,7 +98,7 @@ where
         .map(|(weight, part)| part * weight)
         .sum();
 
-    let folded_constraints = folder.accumulator.into_inner();
+    let folded_constraints = folder.accumulator;
 
     match folded_constraints == z_h * quotient {
         true => Ok(()),

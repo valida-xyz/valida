@@ -1,13 +1,13 @@
 extern crate core;
 
 use p3_baby_bear::BabyBear;
+use p3_fri::{TwoAdicFriPcs, TwoAdicFriPcsConfig};
 use valida_alu_u32::add::{Add32Instruction, MachineWithAdd32Chip};
 use valida_basic::BasicMachine;
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
     MachineWithCpuChip, StopInstruction,
 };
-
 use valida_machine::{
     FixedAdviceProvider, Instruction, InstructionWord, Machine, MachineProof, Operands, ProgramROM,
     Word,
@@ -20,10 +20,9 @@ use valida_program::MachineWithProgramChip;
 use p3_challenger::DuplexChallenger;
 use p3_dft::Radix2Bowers;
 use p3_field::extension::BinomialExtensionField;
-use p3_field::{Field, Res};
-use p3_fri::{FriBasedPcs, FriConfigImpl, FriLdt};
+use p3_field::Field;
+use p3_fri::FriConfig;
 use p3_keccak::Keccak256Hash;
-use p3_ldt::QuotientMmcs;
 use p3_mds::coset_mds::CosetMds;
 use p3_merkle_tree::FieldMerkleTreeMmcs;
 use p3_poseidon::Poseidon;
@@ -197,7 +196,6 @@ fn prove_fibonacci() {
     type Val = BabyBear;
     type Challenge = BinomialExtensionField<Val, 5>;
     type PackedChallenge = BinomialExtensionField<<Val as Field>::Packing, 5>;
-    type ChallengeAlgebra = BinomialExtensionField<Res<Val, BinomialExtensionField<Val, 5>>, 5>;
 
     type Mds16 = CosetMds<Val, 16>;
     let mds16 = Mds16::default();
@@ -222,16 +220,18 @@ fn prove_fibonacci() {
 
     type Challenger = DuplexChallenger<Val, Perm16, 16>;
 
-    type Quotient = QuotientMmcs<Val, Challenge, ValMmcs>;
-    type MyFriConfig = FriConfigImpl<Val, Challenge, Quotient, ChallengeMmcs, Challenger>;
-    let fri_config = MyFriConfig::new(1, 40, 8, challenge_mmcs);
-    let ldt = FriLdt { config: fri_config };
+    type MyFriConfig = TwoAdicFriPcsConfig<Val, Challenge, Challenger, Dft, ValMmcs, ChallengeMmcs>;
+    let fri_config = FriConfig {
+        log_blowup: 1,
+        num_queries: 40,
+        proof_of_work_bits: 8,
+        mmcs: challenge_mmcs,
+    };
 
-    type Pcs = FriBasedPcs<MyFriConfig, ValMmcs, Dft, Challenger>;
-    type MyConfig =
-        StarkConfigImpl<Val, Challenge, PackedChallenge, ChallengeAlgebra, Pcs, Challenger>;
+    type Pcs = TwoAdicFriPcs<MyFriConfig>;
+    type MyConfig = StarkConfigImpl<Val, Challenge, PackedChallenge, Pcs, Challenger>;
 
-    let pcs = Pcs::new(dft, val_mmcs, ldt);
+    let pcs = Pcs::new(fri_config, dft, val_mmcs);
 
     let challenger = Challenger::new(perm16);
     let config = MyConfig::new(pcs, challenger);

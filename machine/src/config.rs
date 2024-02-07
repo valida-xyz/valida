@@ -1,9 +1,7 @@
 use core::marker::PhantomData;
 use p3_challenger::{CanObserve, FieldChallenger};
 use p3_commit::{Pcs, UnivariatePcsWithLde};
-use p3_field::{
-    AbstractExtensionField, ExtensionField, PackedField, PrimeField32, Res, TwoAdicField,
-};
+use p3_field::{AbstractExtensionField, ExtensionField, PackedField, PrimeField32, TwoAdicField};
 use p3_matrix::dense::RowMajorMatrix;
 
 pub trait StarkConfig {
@@ -14,9 +12,6 @@ pub trait StarkConfig {
     /// The field from which most random challenges are drawn.
     type Challenge: ExtensionField<Self::Val> + TwoAdicField;
     type PackedChallenge: AbstractExtensionField<Self::PackedVal, F = Self::Challenge> + Copy;
-    /// The challenge algebra `Challenge[X]/f(X)`, where `Challenge = Val[X]/f(X)`.
-    type ChallengeAlgebra: AbstractExtensionField<Res<Self::Val, Self::Challenge>, F = Self::Challenge>
-        + Copy;
 
     /// The PCS used to commit to trace polynomials.
     type Pcs: UnivariatePcsWithLde<
@@ -35,20 +30,14 @@ pub trait StarkConfig {
     fn challenger(&self) -> Self::Challenger;
 }
 
-pub struct StarkConfigImpl<Val, Challenge, PackedChallenge, ChallengeAlgebra, Pcs, Challenger> {
+pub struct StarkConfigImpl<Val, Challenge, PackedChallenge, Pcs, Challenger> {
     pcs: Pcs,
     init_challenger: Challenger,
-    _phantom: PhantomData<(
-        Val,
-        Challenge,
-        PackedChallenge,
-        ChallengeAlgebra,
-        Challenger,
-    )>,
+    _phantom: PhantomData<(Val, Challenge, PackedChallenge, Challenger)>,
 }
 
-impl<Val, Challenge, PackedChallenge, ChallengeAlgebra, Pcs, Challenger>
-    StarkConfigImpl<Val, Challenge, PackedChallenge, ChallengeAlgebra, Pcs, Challenger>
+impl<Val, Challenge, PackedChallenge, Pcs, Challenger>
+    StarkConfigImpl<Val, Challenge, PackedChallenge, Pcs, Challenger>
 {
     pub fn new(pcs: Pcs, init_challenger: Challenger) -> Self {
         Self {
@@ -59,13 +48,12 @@ impl<Val, Challenge, PackedChallenge, ChallengeAlgebra, Pcs, Challenger>
     }
 }
 
-impl<Val, Challenge, PackedChallenge, ChallengeAlgebra, Pcs, Challenger> StarkConfig
-    for StarkConfigImpl<Val, Challenge, PackedChallenge, ChallengeAlgebra, Pcs, Challenger>
+impl<Val, Challenge, PackedChallenge, Pcs, Challenger> StarkConfig
+    for StarkConfigImpl<Val, Challenge, PackedChallenge, Pcs, Challenger>
 where
     Val: PrimeField32 + TwoAdicField, // TODO: Relax to Field?
     Challenge: ExtensionField<Val> + TwoAdicField,
     PackedChallenge: AbstractExtensionField<Val::Packing, F = Challenge> + Copy,
-    ChallengeAlgebra: AbstractExtensionField<Res<Val, Challenge>, F = Challenge> + Copy,
     Pcs: UnivariatePcsWithLde<Val, Challenge, RowMajorMatrix<Val>, Challenger>,
     Challenger: FieldChallenger<Val>
         + Clone
@@ -75,7 +63,6 @@ where
     type PackedVal = Val::Packing;
     type Challenge = Challenge;
     type PackedChallenge = PackedChallenge;
-    type ChallengeAlgebra = ChallengeAlgebra;
     type Pcs = Pcs;
     type Challenger = Challenger;
 

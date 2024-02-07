@@ -1,5 +1,5 @@
 use crate::{Machine, ValidaAirBuilder};
-use p3_air::{AirBuilder, PairBuilder, PermutationAirBuilder, TwoRowMatrixView};
+use p3_air::{AirBuilder, ExtensionBuilder, PairBuilder, PermutationAirBuilder, TwoRowMatrixView};
 use p3_field::AbstractField;
 use valida_machine::StarkConfig;
 /// An `AirBuilder` which asserts that each constraint is zero, allowing any failed constraints to
@@ -64,7 +64,7 @@ where
     }
 }
 
-impl<'a, M, SC> PermutationAirBuilder for DebugConstraintBuilder<'a, M, SC>
+impl<'a, M, SC> ExtensionBuilder for DebugConstraintBuilder<'a, M, SC>
 where
     M: Machine<SC::Val>,
     SC: StarkConfig,
@@ -72,6 +72,24 @@ where
     type EF = SC::Challenge;
     type ExprEF = SC::Challenge;
     type VarEF = SC::Challenge;
+
+    fn assert_zero_ext<I>(&mut self, x: I)
+    where
+        I: Into<Self::ExprEF>,
+    {
+        assert_eq!(
+            x.into(),
+            SC::Challenge::zero(),
+            "constraints must evaluate to zero"
+        );
+    }
+}
+
+impl<'a, M, SC> PermutationAirBuilder for DebugConstraintBuilder<'a, M, SC>
+where
+    M: Machine<SC::Val>,
+    SC: StarkConfig,
+{
     type MP = TwoRowMatrixView<'a, SC::Challenge>;
 
     fn permutation(&self) -> Self::MP {
