@@ -89,7 +89,7 @@ where
         accumulator: SC::Challenge::zero(),
     };
     chip.eval(&mut folder);
-    // eval_permutation_constraints(chip, &mut folder, cumulative_sum);
+    eval_permutation_constraints(chip, &mut folder, cumulative_sum);
 
     reverse_slice_index_bits(&mut quotient_parts);
     let quotient: SC::Challenge = zeta

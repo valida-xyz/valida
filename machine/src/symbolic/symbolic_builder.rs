@@ -21,7 +21,7 @@ where
     A: for<'a> Air<SymbolicAirBuilder<'a, M, SC>>,
 {
     // We pad to at least degree 2, since a quotient argument doesn't make sense with smaller degrees.
-    let constraint_degree = get_max_constraint_degree(machine, air).max(2);
+    let constraint_degree = get_max_constraint_degree(machine, air).max(3);
 
     // The quotient's actual degree is approximately (max_constraint_degree - 1) n,
     // where subtracting 1 comes from division by the zerofier.
