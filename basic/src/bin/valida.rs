@@ -49,12 +49,6 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    let mut action_file;
-    match File::create(args.action_file) {
-        Ok(file) => {action_file = file;},
-        Err(e) => {stdout().write(e.to_string().as_bytes()).unwrap(); return ()},
-    }
-
     let mut machine = BasicMachine::<BabyBear>::default();
     let rom = match ProgramROM::from_file(&args.program) {
         Ok(contents) => contents,
@@ -111,8 +105,18 @@ fn main() {
     let config = MyConfig::new(pcs, challenger);
 
     if args.action == "run" {
+        let mut action_file;
+        match File::create(args.action_file) {
+            Ok(file) => {action_file = file;},
+            Err(e) => {stdout().write(e.to_string().as_bytes()).unwrap(); return ()},
+        }
         action_file.write_all(&machine.output().bytes()).unwrap();
     } else if args.action == "prove" {
+        let mut action_file;
+        match File::create(args.action_file) {
+            Ok(file) => {action_file = file;},
+            Err(e) => {stdout().write(e.to_string().as_bytes()).unwrap(); return ()},
+        }
         let proof = machine.prove(&config);
         let serialized = serde_json::to_string(&proof);
         match serialized {
@@ -123,13 +127,18 @@ fn main() {
             Err(e) => {stdout().write(e.to_string().as_bytes()).unwrap();},
         }
     } else if args.action == "verify" {
+        let mut action_file;
+        match File::open(args.action_file) {
+            Ok(file) => {action_file = file;},
+            Err(e) => {stdout().write(e.to_string().as_bytes()).unwrap(); return ()},
+        }
         let mut try_read = String::new();
         action_file.read_to_string(&mut try_read).expect("File reading failed");
         let proof: MachineProof<MyConfig> = serde_json::from_str(&try_read).unwrap();
         let verification_result = machine.verify(&config, &proof);
         match verification_result {
-            Ok(_) => {stdout().write("Proof verified".as_bytes()).unwrap();},
-            Err(_) => {stdout().write("Proof verification failed".as_bytes()).unwrap();}
+            Ok(_) => {stdout().write("Proof verified\n".as_bytes()).unwrap();},
+            Err(_) => {stdout().write("Proof verification failed\n".as_bytes()).unwrap();}
         }
     } else {
         stdout().write("Action name unrecognized".as_bytes()).unwrap();
