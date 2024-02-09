@@ -32,16 +32,17 @@ p3-uni-stark = {path = "../../Plonky3/uni-stark" }
 p3-commit = { path = "../../Plonky3/commit" }
 p3-air = { path = "../../Plonky3/air" }
 p3-matrix = { path = "../../Plonky3/matrix" }
-
-[dev-dependencies]
-ciborium = "0.2.2"
-rand = "0.8.5"
 p3-challenger = { path = "../../Plonky3/challenger" }
 p3-dft = { path = "../../Plonky3/dft" }
-p3-field = { path = "../../Plonky3/field" }
 p3-fri = { path = "../../Plonky3/fri" }
 p3-keccak = { path = "../../Plonky3/keccak" }
 p3-mds = { path = "../../Plonky3/mds" }
 p3-merkle-tree = { path = "../../Plonky3/merkle-tree" }
 p3-poseidon = { path = "../../Plonky3/poseidon" }
 p3-symmetric = { path = "../../Plonky3/symmetric" }
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
+serde_json = {}
+rand = "0.8.5"
+
+[dev-dependencies]
+ciborium = "0.2.2"
