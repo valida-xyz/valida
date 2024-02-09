@@ -25,10 +25,11 @@ use p3_symmetric::{CompressionFunctionFromHasher, SerializingHasher32};
 use rand::thread_rng;
 use valida_machine::StarkConfigImpl;
 use valida_machine::__internal::p3_commit::ExtensionMmcs;
+use valida_output::MachineWithOutputChip;
 
 #[derive(Parser)]
 struct Args {
-    /// Command option either "prove" or "verify"
+    /// Command option either "run" or "prove" or "verify"
     #[arg(name = "Action Option")]
     action: String,
 
@@ -36,7 +37,7 @@ struct Args {
     #[arg(name = "PROGRAM FILE")]
     program: String,
 
-    /// The output file for prove or the input file for verify
+    /// The output file for run or prove, or the input file for verify
     #[arg(name = "ACTION FILE")]
     action_file: String,
 
@@ -109,13 +110,15 @@ fn main() {
     let challenger = Challenger::new(perm16);
     let config = MyConfig::new(pcs, challenger);
 
-    if args.action == "prove" {
+    if args.action == "run" {
+        action_file.write_all(&machine.output().bytes()).unwrap();
+    } else if args.action == "prove" {
         let proof = machine.prove(&config);
         let serialized = serde_json::to_string(&proof);
         match serialized {
             Ok(str) => {
                 action_file.write(str.as_bytes()).unwrap();
-                stdout().write("Proof successful".as_bytes()).unwrap();
+                stdout().write("Proof successful\n".as_bytes()).unwrap();
             }
             Err(e) => {stdout().write(e.to_string().as_bytes()).unwrap();},
         }
