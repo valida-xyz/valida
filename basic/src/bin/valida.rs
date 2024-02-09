@@ -118,23 +118,13 @@ fn main() {
             Err(e) => {stdout().write(e.to_string().as_bytes()).unwrap(); return ()},
         }
         let proof = machine.prove(&config);
-        let serialized = serde_json::to_string(&proof);
-        match serialized {
-            Ok(str) => {
-                action_file.write(str.as_bytes()).unwrap();
-                stdout().write("Proof successful\n".as_bytes()).unwrap();
-            }
-            Err(e) => {stdout().write(e.to_string().as_bytes()).unwrap();},
-        }
+        let mut bytes = vec![];
+        ciborium::into_writer(&proof, &mut bytes).expect("Proof serialization failed");
+        action_file.write(&bytes).expect("Writing proof failed");
+        stdout().write("Proof successful\n".as_bytes()).unwrap();
     } else if args.action == "verify" {
-        let mut action_file;
-        match File::open(args.action_file) {
-            Ok(file) => {action_file = file;},
-            Err(e) => {stdout().write(e.to_string().as_bytes()).unwrap(); return ()},
-        }
-        let mut try_read = String::new();
-        action_file.read_to_string(&mut try_read).expect("File reading failed");
-        let proof: MachineProof<MyConfig> = serde_json::from_str(&try_read).unwrap();
+        let bytes = std::fs::read(args.action_file).expect("File reading failed");
+        let proof: MachineProof<MyConfig> = ciborium::from_reader(bytes.as_slice()).expect("Proof deserialization failed");
         let verification_result = machine.verify(&config, &proof);
         match verification_result {
             Ok(_) => {stdout().write("Proof verified\n".as_bytes()).unwrap();},
