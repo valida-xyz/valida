@@ -125,6 +125,12 @@ fn main() {
     } else if args.action == "verify" {
         let bytes = std::fs::read(args.action_file).expect("File reading failed");
         let proof: MachineProof<MyConfig> = ciborium::from_reader(bytes.as_slice()).expect("Proof deserialization failed");
+        let proof2 = machine.prove(&config); // TODO: delete this line
+        machine.verify(&config, &proof2).expect("Proof 2 verification failed"); // TODO: delete this line
+        let mut bytes2 = vec![]; // TODO: delete this line
+        ciborium::into_writer(&proof, &mut bytes2).expect("Proof 2 serialization failed"); // TODO: delete this line
+        let proof3: MachineProof<MyConfig> = ciborium::from_reader(bytes2.as_slice()).expect("Proof 3 deserialization failed"); // TODO: delete this line
+        machine.verify(&config, &proof3).expect("Proof 3 verification failed"); // TODO: delete this line
         let verification_result = machine.verify(&config, &proof);
         match verification_result {
             Ok(_) => {stdout().write("Proof verified\n".as_bytes()).unwrap();},
