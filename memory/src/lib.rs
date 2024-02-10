@@ -6,11 +6,13 @@ use crate::columns::{MemoryCols, MEM_COL_MAP, NUM_MEM_COLS};
 use alloc::collections::BTreeMap;
 use alloc::vec;
 use alloc::vec::Vec;
+use core::fmt::Debug;
 use core::mem::transmute;
 use p3_air::VirtualPairCol;
 use p3_field::{Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::prelude::*;
+use proptest::prelude::Arbitrary;
 use valida_bus::MachineWithMemBus;
 use valida_machine::StarkConfig;
 use valida_machine::{BusArgument, Chip, Interaction, Machine, Word};
@@ -49,7 +51,7 @@ pub struct MemoryChip {
     pub operations: BTreeMap<u32, Vec<Operation>>,
 }
 
-pub trait MachineWithMemoryChip<F: Field>: Machine<F> {
+pub trait MachineWithMemoryChip<F: Field + Arbitrary + Debug>: Machine<F> {
     fn mem(&self) -> &MemoryChip;
     fn mem_mut(&mut self) -> &mut MemoryChip;
 }

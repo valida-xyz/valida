@@ -3,8 +3,10 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Lt32Cols, LT_COL_MAP, NUM_LT_COLS};
+use core::fmt::Debug;
 use core::iter;
 use core::mem::transmute;
+use proptest::prelude::Arbitrary;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{
@@ -77,7 +79,7 @@ where
 impl Lt32Chip {
     fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_LT_COLS]
     where
-        F: PrimeField,
+        F: PrimeField + Arbitrary + Debug,
     {
         let mut row = [F::zero(); NUM_LT_COLS];
         let cols: &mut Lt32Cols<F> = unsafe { transmute(&mut row) };
@@ -108,7 +110,7 @@ impl Lt32Chip {
     }
 }
 
-pub trait MachineWithLt32Chip<F: Field>: MachineWithCpuChip<F> {
+pub trait MachineWithLt32Chip<F: Field + Arbitrary + Debug>: MachineWithCpuChip<F> {
     fn lt_u32(&self) -> &Lt32Chip;
     fn lt_u32_mut(&mut self) -> &mut Lt32Chip;
 }
@@ -118,7 +120,7 @@ instructions!(Lt32Instruction);
 impl<M, F> Instruction<M, F> for Lt32Instruction
 where
     M: MachineWithLt32Chip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = LT32;
 

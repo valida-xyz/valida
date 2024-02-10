@@ -1,16 +1,18 @@
 use core::marker::PhantomData;
+use core::fmt::Debug;
 use p3_challenger::{CanObserve, FieldChallenger};
 use p3_commit::{Pcs, UnivariatePcsWithLde};
 use p3_field::{AbstractExtensionField, ExtensionField, PackedField, PrimeField32, TwoAdicField};
 use p3_matrix::dense::RowMajorMatrix;
+use proptest::prelude::Arbitrary;
 
 pub trait StarkConfig {
     /// The field over which trace data is encoded.
-    type Val: PrimeField32 + TwoAdicField; // TODO: Relax to Field?
+    type Val: PrimeField32 + TwoAdicField + Arbitrary + Debug; // TODO: Relax to Field?
     type PackedVal: PackedField<Scalar = Self::Val>;
 
     /// The field from which most random challenges are drawn.
-    type Challenge: ExtensionField<Self::Val> + TwoAdicField;
+    type Challenge: ExtensionField<Self::Val> + TwoAdicField + Arbitrary + Debug;
     type PackedChallenge: AbstractExtensionField<Self::PackedVal, F = Self::Challenge> + Copy;
 
     /// The PCS used to commit to trace polynomials.
@@ -51,8 +53,8 @@ impl<Val, Challenge, PackedChallenge, Pcs, Challenger>
 impl<Val, Challenge, PackedChallenge, Pcs, Challenger> StarkConfig
     for StarkConfigImpl<Val, Challenge, PackedChallenge, Pcs, Challenger>
 where
-    Val: PrimeField32 + TwoAdicField, // TODO: Relax to Field?
-    Challenge: ExtensionField<Val> + TwoAdicField,
+    Val: PrimeField32 + TwoAdicField + Arbitrary + Debug, // TODO: Relax to Field?
+    Challenge: ExtensionField<Val> + TwoAdicField + Arbitrary + Debug,
     PackedChallenge: AbstractExtensionField<Val::Packing, F = Challenge> + Copy,
     Pcs: UnivariatePcsWithLde<Val, Challenge, RowMajorMatrix<Val>, Challenger>,
     Challenger: FieldChallenger<Val>

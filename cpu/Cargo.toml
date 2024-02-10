@@ -5,6 +5,7 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
+proptest = "1.4.0"
 p3-air = { path = "../../Plonky3/air" }
 p3-baby-bear = { path = "../../Plonky3/baby-bear" }
 p3-field = { path = "../../Plonky3/field" }

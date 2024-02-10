@@ -3,7 +3,9 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Div32Cols, DIV_COL_MAP, NUM_DIV_COLS};
+use core::fmt::Debug;
 use core::mem::transmute;
+use proptest::prelude::Arbitrary;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::SDiv;
@@ -83,7 +85,7 @@ where
 impl Div32Chip {
     fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_DIV_COLS]
     where
-        F: PrimeField,
+        F: PrimeField + Arbitrary + Debug,
     {
         let mut row = [F::zero(); NUM_DIV_COLS];
         let cols: &mut Div32Cols<F> = unsafe { transmute(&mut row) };
@@ -103,7 +105,7 @@ impl Div32Chip {
     }
 }
 
-pub trait MachineWithDiv32Chip<F: Field>: MachineWithCpuChip<F> {
+pub trait MachineWithDiv32Chip<F: Field + Arbitrary + Debug>: MachineWithCpuChip<F> {
     fn div_u32(&self) -> &Div32Chip;
     fn div_u32_mut(&mut self) -> &mut Div32Chip;
 }
@@ -113,7 +115,7 @@ instructions!(Div32Instruction, SDiv32Instruction);
 impl<M, F> Instruction<M, F> for Div32Instruction
 where
     M: MachineWithDiv32Chip<F> + MachineWithRangeChip<F, 256>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = DIV32;
 
@@ -154,7 +156,7 @@ where
 impl<M, F> Instruction<M, F> for SDiv32Instruction
 where
     M: MachineWithDiv32Chip<F> + MachineWithRangeChip<F, 256>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = SDIV32;
 

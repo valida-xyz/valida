@@ -6,9 +6,11 @@ use crate::columns::{CpuCols, CPU_COL_MAP, NUM_CPU_COLS};
 use alloc::format;
 use alloc::vec;
 use alloc::vec::Vec;
+use core::fmt::Debug;
 use core::iter;
 use core::marker::Sync;
 use core::mem::transmute;
+use proptest::prelude::Arbitrary;
 use valida_bus::{MachineWithGeneralBus, MachineWithMemBus, MachineWithProgramBus};
 use valida_machine::{
     instructions, AdviceProvider, Chip, Instruction, InstructionWord, Interaction, Operands, Word,
@@ -338,7 +340,7 @@ impl CpuChip {
     }
 }
 
-pub trait MachineWithCpuChip<F: Field>: MachineWithMemoryChip<F> {
+pub trait MachineWithCpuChip<F: Field + Arbitrary + Debug>: MachineWithMemoryChip<F> {
     fn cpu(&self) -> &CpuChip;
     fn cpu_mut(&mut self) -> &mut CpuChip;
 }
@@ -361,7 +363,7 @@ instructions!(
 impl<M, F> Instruction<M, F> for ReadAdviceInstruction
 where
     M: MachineWithCpuChip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = READ_ADVICE;
 
@@ -398,7 +400,7 @@ where
 impl<M, F> Instruction<M, F> for Load32Instruction
 where
     M: MachineWithCpuChip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = LOAD32;
 
@@ -435,7 +437,7 @@ where
 impl<M, F> Instruction<M, F> for Store32Instruction
 where
     M: MachineWithCpuChip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = STORE32;
 
@@ -460,7 +462,7 @@ where
 impl<M, F> Instruction<M, F> for JalInstruction
 where
     M: MachineWithCpuChip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = JAL;
 
@@ -485,7 +487,7 @@ where
 impl<M, F> Instruction<M, F> for JalvInstruction
 where
     M: MachineWithCpuChip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = JALV;
 
@@ -520,7 +522,7 @@ where
 impl<M, F> Instruction<M, F> for BeqInstruction
 where
     M: MachineWithCpuChip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = BEQ;
 
@@ -555,7 +557,7 @@ where
 impl<M, F> Instruction<M, F> for BneInstruction
 where
     M: MachineWithCpuChip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = BNE;
 
@@ -590,7 +592,7 @@ where
 impl<M, F> Instruction<M, F> for Imm32Instruction
 where
     M: MachineWithCpuChip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = IMM32;
 
@@ -609,7 +611,7 @@ where
 impl<M, F> Instruction<M, F> for StopInstruction
 where
     M: MachineWithCpuChip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = STOP;
 
@@ -624,7 +626,7 @@ where
 impl<M, F> Instruction<M, F> for LoadFpInstruction
 where
     M: MachineWithCpuChip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = LOADFP;
 

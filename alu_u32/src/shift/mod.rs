@@ -5,7 +5,9 @@ use crate::mul::{MachineWithMul32Chip, Operation as MulOperation};
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Shift32Cols, COL_MAP, NUM_SHIFT_COLS};
+use core::fmt::Debug;
 use core::mem::transmute;
+use proptest::prelude::Arbitrary;
 use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Sra, Word};
@@ -118,7 +120,7 @@ where
 impl Shift32Chip {
     fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_SHIFT_COLS]
     where
-        F: PrimeField,
+        F: PrimeField + Arbitrary + Debug,
     {
         let mut row = [F::zero(); NUM_SHIFT_COLS];
         let cols: &mut Shift32Cols<F> = unsafe { transmute(&mut row) };
@@ -143,7 +145,7 @@ impl Shift32Chip {
 
     fn set_cols<F>(&self, cols: &mut Shift32Cols<F>, a: &Word<u8>, b: &Word<u8>, c: &Word<u8>)
     where
-        F: PrimeField,
+        F: PrimeField + Arbitrary + Debug,
     {
         // Set the input columns
         cols.input_1 = b.transform(F::from_canonical_u8);
@@ -163,7 +165,7 @@ impl Shift32Chip {
     }
 }
 
-pub trait MachineWithShift32Chip<F: Field>: MachineWithCpuChip<F> {
+pub trait MachineWithShift32Chip<F: Field + Arbitrary + Debug>: MachineWithCpuChip<F> {
     fn shift_u32(&self) -> &Shift32Chip;
     fn shift_u32_mut(&mut self) -> &mut Shift32Chip;
 }
@@ -173,7 +175,7 @@ instructions!(Shl32Instruction, Shr32Instruction, Sra32Instruction);
 impl<M, F> Instruction<M, F> for Shl32Instruction
 where
     M: MachineWithShift32Chip<F> + MachineWithMul32Chip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = SHL32;
 
@@ -220,7 +222,7 @@ where
 impl<M, F> Instruction<M, F> for Shr32Instruction
 where
     M: MachineWithShift32Chip<F> + MachineWithDiv32Chip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = SHR32;
 
@@ -267,7 +269,7 @@ where
 impl<M, F> Instruction<M, F> for Sra32Instruction
 where
     M: MachineWithShift32Chip<F> + MachineWithDiv32Chip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = SRA32;
 

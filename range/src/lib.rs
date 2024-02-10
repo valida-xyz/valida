@@ -6,7 +6,9 @@ use alloc::collections::BTreeMap;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{RangeCols, NUM_RANGE_COLS, RANGE_COL_MAP};
+use core::fmt::Debug;
 use core::mem::transmute;
+use proptest::prelude::Arbitrary;
 use valida_bus::MachineWithRangeBus8;
 use valida_machine::Interaction;
 use valida_machine::{Chip, Machine, Word};
@@ -55,7 +57,7 @@ where
     }
 }
 
-pub trait MachineWithRangeChip<F: Field, const MAX: u32>: Machine<F> {
+pub trait MachineWithRangeChip<F: Field + Arbitrary + Debug, const MAX: u32>: Machine<F> {
     fn range(&self) -> &RangeCheckerChip<MAX>;
     fn range_mut(&mut self) -> &mut RangeCheckerChip<MAX>;
 

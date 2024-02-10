@@ -1,8 +1,10 @@
 use crate::{AdviceProvider, Machine, Word, INSTRUCTION_ELEMENTS, OPERAND_ELEMENTS};
 use byteorder::{ByteOrder, LittleEndian};
+use core::fmt::Debug;
 use p3_field::Field;
+use proptest::prelude::Arbitrary;
 
-pub trait Instruction<M: Machine<F>, F: Field> {
+pub trait Instruction<M: Machine<F>, F: Field + Arbitrary + Debug> {
     const OPCODE: u32;
 
     fn execute(state: &mut M, ops: Operands<i32>);

@@ -3,7 +3,9 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Sub32Cols, NUM_SUB_COLS, SUB_COL_MAP};
+use core::fmt::Debug;
 use core::mem::transmute;
+use proptest::prelude::Arbitrary;
 use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
@@ -90,7 +92,7 @@ where
 impl Sub32Chip {
     fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_SUB_COLS]
     where
-        F: PrimeField,
+        F: PrimeField + Arbitrary + Debug,
     {
         let mut row = [F::zero(); NUM_SUB_COLS];
         let cols: &mut Sub32Cols<F> = unsafe { transmute(&mut row) };
@@ -117,7 +119,7 @@ impl Sub32Chip {
     }
 }
 
-pub trait MachineWithSub32Chip<F: Field>: MachineWithCpuChip<F> {
+pub trait MachineWithSub32Chip<F: Field + Arbitrary + Debug>: MachineWithCpuChip<F> {
     fn sub_u32(&self) -> &Sub32Chip;
     fn sub_u32_mut(&mut self) -> &mut Sub32Chip;
 }
@@ -127,7 +129,7 @@ instructions!(Sub32Instruction);
 impl<M, F> Instruction<M, F> for Sub32Instruction
 where
     M: MachineWithSub32Chip<F> + MachineWithRangeChip<F, 256>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = SUB32;
 

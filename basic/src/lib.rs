@@ -4,6 +4,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
+use core::fmt::Debug;
 use core::marker::PhantomData;
 use p3_air::Air;
 use p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
@@ -12,6 +13,7 @@ use p3_field::{extension::BinomialExtensionField, TwoAdicField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
 use p3_util::log2_ceil_usize;
+use proptest::prelude::Arbitrary;
 use valida_alu_u32::{
     add::{Add32Chip, Add32Instruction, MachineWithAdd32Chip},
     bitwise::{
@@ -53,7 +55,7 @@ use valida_machine::StarkConfig;
 
 #[derive(Machine, Default)]
 #[machine_fields(F)]
-pub struct BasicMachine<F: PrimeField32 + TwoAdicField> {
+pub struct BasicMachine<F: PrimeField32 + TwoAdicField + Arbitrary + Debug> {
     // Core instructions
     #[instruction]
     load32: Load32Instruction,
@@ -180,31 +182,36 @@ pub struct BasicMachine<F: PrimeField32 + TwoAdicField> {
     _phantom_sc: PhantomData<fn() -> F>,
 }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithGeneralBus<F> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField + Arbitrary + Debug>
+  MachineWithGeneralBus<F> for BasicMachine<F> {
     fn general_bus(&self) -> BusArgument {
         BusArgument::Global(0)
     }
 }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithProgramBus<F> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField + Arbitrary + Debug>
+  MachineWithProgramBus<F> for BasicMachine<F> {
     fn program_bus(&self) -> BusArgument {
         BusArgument::Global(1)
     }
 }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithMemBus<F> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField + Arbitrary + Debug>
+  MachineWithMemBus<F> for BasicMachine<F> {
     fn mem_bus(&self) -> BusArgument {
         BusArgument::Global(2)
     }
 }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithRangeBus8<F> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField + Arbitrary + Debug>
+  MachineWithRangeBus8<F> for BasicMachine<F> {
     fn range_bus(&self) -> BusArgument {
         BusArgument::Global(3)
     }
 }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithCpuChip<F> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField + Arbitrary + Debug>
+  MachineWithCpuChip<F> for BasicMachine<F> {
     fn cpu(&self) -> &CpuChip {
         &self.cpu
     }
@@ -214,7 +221,8 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithCpuChip<F> for BasicMachine<F> {
     }
 }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithProgramChip<F> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField + Arbitrary + Debug>
+  MachineWithProgramChip<F> for BasicMachine<F> {
     fn program(&self) -> &ProgramChip {
         &self.program
     }
@@ -224,7 +232,8 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithProgramChip<F> for BasicMachine<
     }
 }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithMemoryChip<F> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField + Arbitrary + Debug>
+  MachineWithMemoryChip<F> for BasicMachine<F> {
     fn mem(&self) -> &MemoryChip {
         &self.mem
     }
@@ -234,7 +243,8 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithMemoryChip<F> for BasicMachine<F
     }
 }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithAdd32Chip<F> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField + Arbitrary + Debug>
+  MachineWithAdd32Chip<F> for BasicMachine<F> {
     fn add_u32(&self) -> &Add32Chip {
         &self.add_u32
     }
@@ -244,7 +254,8 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithAdd32Chip<F> for BasicMachine<F>
     }
 }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithSub32Chip<F> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField + Arbitrary + Debug>
+  MachineWithSub32Chip<F> for BasicMachine<F> {
     fn sub_u32(&self) -> &Sub32Chip {
         &self.sub_u32
     }
@@ -254,7 +265,8 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithSub32Chip<F> for BasicMachine<F>
     }
 }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithMul32Chip<F> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField + Arbitrary + Debug>
+  MachineWithMul32Chip<F> for BasicMachine<F> {
     fn mul_u32(&self) -> &Mul32Chip {
         &self.mul_u32
     }
@@ -264,7 +276,8 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithMul32Chip<F> for BasicMachine<F>
     }
 }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithDiv32Chip<F> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField + Arbitrary + Debug>
+  MachineWithDiv32Chip<F> for BasicMachine<F> {
     fn div_u32(&self) -> &Div32Chip {
         &self.div_u32
     }
@@ -274,7 +287,8 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithDiv32Chip<F> for BasicMachine<F>
     }
 }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithBitwise32Chip<F> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField + Arbitrary + Debug>
+  MachineWithBitwise32Chip<F> for BasicMachine<F> {
     fn bitwise_u32(&self) -> &Bitwise32Chip {
         &self.bitwise_u32
     }
@@ -284,7 +298,8 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithBitwise32Chip<F> for BasicMachin
     }
 }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithLt32Chip<F> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField + Arbitrary + Debug>
+  MachineWithLt32Chip<F> for BasicMachine<F> {
     fn lt_u32(&self) -> &Lt32Chip {
         &self.lt_u32
     }
@@ -293,7 +308,8 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithLt32Chip<F> for BasicMachine<F> 
         &mut self.lt_u32
     }
 }
-impl<F: PrimeField32 + TwoAdicField> MachineWithCom32Chip<F> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField + Arbitrary + Debug>
+  MachineWithCom32Chip<F> for BasicMachine<F> {
     fn com_u32(&self) -> &Com32Chip {
         &self.com_u32
     }
@@ -303,7 +319,8 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithCom32Chip<F> for BasicMachine<F>
     }
 }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithShift32Chip<F> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField + Arbitrary + Debug>
+  MachineWithShift32Chip<F> for BasicMachine<F> {
     fn shift_u32(&self) -> &Shift32Chip {
         &self.shift_u32
     }
@@ -313,7 +330,8 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithShift32Chip<F> for BasicMachine<
     }
 }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithOutputChip<F> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField + Arbitrary + Debug>
+  MachineWithOutputChip<F> for BasicMachine<F> {
     fn output(&self) -> &OutputChip {
         &self.output
     }
@@ -323,7 +341,8 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithOutputChip<F> for BasicMachine<F
     }
 }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithRangeChip<F, 256> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField + Arbitrary + Debug>
+  MachineWithRangeChip<F, 256> for BasicMachine<F> {
     fn range(&self) -> &RangeCheckerChip<256> {
         &self.range
     }

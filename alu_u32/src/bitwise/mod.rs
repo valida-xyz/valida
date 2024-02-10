@@ -3,7 +3,9 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Bitwise32Cols, COL_MAP, NUM_BITWISE_COLS};
+use core::fmt::Debug;
 use core::mem::transmute;
+use proptest::prelude::Arbitrary;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
@@ -85,7 +87,7 @@ where
 impl Bitwise32Chip {
     fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_BITWISE_COLS]
     where
-        F: PrimeField,
+        F: PrimeField + Arbitrary + Debug,
     {
         let mut row = [F::zero(); NUM_BITWISE_COLS];
         let cols: &mut Bitwise32Cols<F> = unsafe { transmute(&mut row) };
@@ -110,7 +112,7 @@ impl Bitwise32Chip {
 
     fn set_cols<F>(&self, a: &Word<u8>, b: &Word<u8>, c: &Word<u8>, cols: &mut Bitwise32Cols<F>)
     where
-        F: PrimeField,
+        F: PrimeField + Arbitrary + Debug,
     {
         cols.input_1 = b.transform(F::from_canonical_u8);
         cols.input_2 = c.transform(F::from_canonical_u8);
@@ -127,7 +129,7 @@ impl Bitwise32Chip {
     }
 }
 
-pub trait MachineWithBitwise32Chip<F: Field>: MachineWithCpuChip<F> {
+pub trait MachineWithBitwise32Chip<F: Field + Arbitrary + Debug>: MachineWithCpuChip<F> {
     fn bitwise_u32(&self) -> &Bitwise32Chip;
     fn bitwise_u32_mut(&mut self) -> &mut Bitwise32Chip;
 }
@@ -137,7 +139,7 @@ instructions!(And32Instruction, Or32Instruction, Xor32Instruction);
 impl<M, F> Instruction<M, F> for Xor32Instruction
 where
     M: MachineWithBitwise32Chip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = XOR32;
 
@@ -176,7 +178,7 @@ where
 impl<M, F> Instruction<M, F> for And32Instruction
 where
     M: MachineWithBitwise32Chip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = AND32;
 
@@ -215,7 +217,7 @@ where
 impl<M, F> Instruction<M, F> for Or32Instruction
 where
     M: MachineWithBitwise32Chip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = OR32;
 

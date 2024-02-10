@@ -3,6 +3,8 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Mul32Cols, MUL_COL_MAP, NUM_MUL_COLS};
+use core::fmt::Debug;
+use proptest::prelude::Arbitrary;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Mulhs, Mulhu, Operands, Word};
@@ -104,7 +106,7 @@ where
 impl Mul32Chip {
     fn op_to_row<F>(&self, op: &Operation, cols: &mut Mul32Cols<F>)
     where
-        F: PrimeField,
+        F: PrimeField + Arbitrary + Debug,
     {
         match op {
             Operation::Mul32(a, b, c) => {
@@ -124,7 +126,7 @@ impl Mul32Chip {
 
     fn set_cols<F>(&self, a: &Word<u8>, b: &Word<u8>, c: &Word<u8>, cols: &mut Mul32Cols<F>)
     where
-        F: PrimeField,
+        F: PrimeField + Arbitrary + Debug,
     {
         cols.input_1 = b.transform(F::from_canonical_u8);
         cols.input_2 = c.transform(F::from_canonical_u8);
@@ -132,7 +134,7 @@ impl Mul32Chip {
     }
 }
 
-pub trait MachineWithMul32Chip<F: Field>: MachineWithCpuChip<F> {
+pub trait MachineWithMul32Chip<F: Field + Arbitrary + Debug>: MachineWithCpuChip<F> {
     fn mul_u32(&self) -> &Mul32Chip;
     fn mul_u32_mut(&mut self) -> &mut Mul32Chip;
 }
@@ -142,7 +144,7 @@ instructions!(Mul32Instruction, Mulhs32Instruction, Mulhu32Instruction);
 impl<M, F> Instruction<M, F> for Mul32Instruction
 where
     M: MachineWithMul32Chip<F> + MachineWithRangeChip<F, 256>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = MUL32;
 
@@ -184,7 +186,7 @@ where
 impl<M, F> Instruction<M, F> for Mulhs32Instruction
 where
     M: MachineWithMul32Chip<F> + MachineWithRangeChip<F, 256>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = MULHS32;
 
@@ -226,7 +228,7 @@ where
 impl<M, F> Instruction<M, F> for Mulhu32Instruction
 where
     M: MachineWithMul32Chip<F> + MachineWithRangeChip<F, 256>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = MULHU32;
 

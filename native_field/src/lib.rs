@@ -5,7 +5,9 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{NativeFieldCols, COL_MAP, NUM_NATIVE_FIELD_COLS};
+use core::fmt::Debug;
 use core::mem::transmute;
+use proptest::prelude::Arbitrary;
 use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
@@ -138,7 +140,7 @@ impl NativeFieldChip {
     }
 }
 
-pub trait MachineWithNativeFieldChip<F: Field>: MachineWithCpuChip<F> {
+pub trait MachineWithNativeFieldChip<F: Field + Arbitrary + Debug>: MachineWithCpuChip<F> {
     fn native_field(&self) -> NativeFieldChip;
     fn native_field_mut(&self) -> &mut NativeFieldChip;
 }
@@ -148,7 +150,7 @@ instructions!(AddInstruction, SubInstruction, MulInstruction);
 impl<M, F> Instruction<M, F> for AddInstruction
 where
     M: MachineWithNativeFieldChip<F> + MachineWithRangeChip<F, 256>,
-    F: PrimeField32,
+    F: PrimeField32 + Arbitrary + Debug,
 {
     const OPCODE: u32 = ADD;
 
@@ -190,7 +192,7 @@ where
 impl<M, F> Instruction<M, F> for SubInstruction
 where
     M: MachineWithNativeFieldChip<F> + MachineWithRangeChip<F, 256>,
-    F: PrimeField32,
+    F: PrimeField32 + Arbitrary + Debug,
 {
     const OPCODE: u32 = SUB;
 
@@ -232,7 +234,7 @@ where
 impl<M, F> Instruction<M, F> for MulInstruction
 where
     M: MachineWithNativeFieldChip<F> + MachineWithRangeChip<F, 256>,
-    F: PrimeField32,
+    F: PrimeField32 + Arbitrary + Debug,
 {
     const OPCODE: u32 = MUL;
 

@@ -3,8 +3,10 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Com32Cols, COM_COL_MAP, NUM_COM_COLS};
+use core::fmt::Debug;
 use core::iter;
 use core::mem::transmute;
+use proptest::prelude::Arbitrary;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::StarkConfig;
@@ -87,7 +89,7 @@ where
 impl Com32Chip {
     fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_COM_COLS]
     where
-        F: PrimeField,
+        F: PrimeField + Arbitrary + Debug,
     {
         let mut row = [F::zero(); NUM_COM_COLS];
         let cols: &mut Com32Cols<F> = unsafe { transmute(&mut row) };
@@ -104,7 +106,7 @@ impl Com32Chip {
     }
 }
 
-pub trait MachineWithCom32Chip<F: Field>: MachineWithCpuChip<F> {
+pub trait MachineWithCom32Chip<F: Field + Arbitrary + Debug>: MachineWithCpuChip<F> {
     fn com_u32(&self) -> &Com32Chip;
     fn com_u32_mut(&mut self) -> &mut Com32Chip;
 }
@@ -114,7 +116,7 @@ instructions!(Ne32Instruction, Eq32Instruction);
 impl<M, F> Instruction<M, F> for Ne32Instruction
 where
     M: MachineWithCom32Chip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = NE32;
 
@@ -157,7 +159,7 @@ where
 impl<M, F> Instruction<M, F> for Eq32Instruction
 where
     M: MachineWithCom32Chip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = EQ32;
 

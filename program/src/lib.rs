@@ -5,6 +5,8 @@ extern crate alloc;
 use crate::columns::{COL_MAP, NUM_PROGRAM_COLS, PREPROCESSED_COL_MAP};
 use alloc::vec;
 use alloc::vec::Vec;
+use core::fmt::Debug;
+use proptest::prelude::Arbitrary;
 use valida_bus::MachineWithProgramBus;
 use valida_machine::{Chip, Interaction, Machine, ProgramROM};
 use valida_util::pad_to_power_of_two;
@@ -69,7 +71,7 @@ where
     }
 }
 
-pub trait MachineWithProgramChip<F: Field>: Machine<F> {
+pub trait MachineWithProgramChip<F: Field + Arbitrary + Debug>: Machine<F> {
     fn program(&self) -> &ProgramChip;
 
     fn program_mut(&mut self) -> &mut ProgramChip;

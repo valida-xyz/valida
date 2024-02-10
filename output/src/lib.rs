@@ -1,6 +1,8 @@
 use crate::columns::{OutputCols, NUM_OUTPUT_COLS, OUTPUT_COL_MAP};
+use core::fmt::Debug;
 use core::iter;
 use core::mem::transmute;
+use proptest::prelude::Arbitrary;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{
@@ -136,7 +138,7 @@ where
     }
 }
 
-pub trait MachineWithOutputChip<F: Field>: MachineWithCpuChip<F> {
+pub trait MachineWithOutputChip<F: Field + Arbitrary + Debug>: MachineWithCpuChip<F> {
     fn output(&self) -> &OutputChip;
     fn output_mut(&mut self) -> &mut OutputChip;
 }
@@ -146,7 +148,7 @@ instructions!(WriteInstruction);
 impl<M, F> Instruction<M, F> for WriteInstruction
 where
     M: MachineWithOutputChip<F>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = WRITE;
 

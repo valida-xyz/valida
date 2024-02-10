@@ -3,6 +3,7 @@ extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Add32Cols, ADD_COL_MAP, NUM_ADD_COLS};
+use core::fmt::Debug;
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
@@ -14,6 +15,7 @@ use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::prelude::*;
+use proptest::prelude::Arbitrary;
 use valida_machine::StarkConfig;
 use valida_util::pad_to_power_of_two;
 
@@ -121,7 +123,7 @@ impl Add32Chip {
     }
 }
 
-pub trait MachineWithAdd32Chip<F: Field>: MachineWithCpuChip<F> {
+pub trait MachineWithAdd32Chip<F: Field + Arbitrary + Debug>: MachineWithCpuChip<F> {
     fn add_u32(&self) -> &Add32Chip;
     fn add_u32_mut(&mut self) -> &mut Add32Chip;
 }
@@ -131,7 +133,7 @@ instructions!(Add32Instruction);
 impl<M, F> Instruction<M, F> for Add32Instruction
 where
     M: MachineWithAdd32Chip<F> + MachineWithRangeChip<F, 256>,
-    F: Field,
+    F: Field + Arbitrary + Debug,
 {
     const OPCODE: u32 = ADD32;
 

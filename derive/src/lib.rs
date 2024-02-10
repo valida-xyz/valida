@@ -234,6 +234,8 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
     quote! {
         #[tracing::instrument(name = "prove machine execution", skip_all)]
         fn prove<SC: StarkConfig<Val = F>>(&self, config: &SC) -> ::valida_machine::MachineProof<SC>
+          where ::valida_machine::Com<SC> : Arbitrary + Debug,
+            ::valida_machine::PcsProof<SC> : Arbitrary + Debug
         {
             use ::valida_machine::__internal::*;
             use ::valida_machine::__internal::p3_air::{BaseAir};
@@ -455,6 +457,8 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
             config: &SC,
             proof: &::valida_machine::MachineProof<SC>,
         ) -> core::result::Result<(), ()>
+          where ::valida_machine::Com<SC> : Arbitrary + Debug,
+            ::valida_machine::PcsProof<SC> : Arbitrary + Debug
         {
             use ::valida_machine::__internal::*;
             use ::valida_machine::__internal::p3_air::{BaseAir};
