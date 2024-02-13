@@ -1,5 +1,5 @@
 use clap::Parser;
-use std::io::{stdout, Write, Read};
+use std::io::{stdout, Write};
 use std::fs::File;
 
 use valida_basic::BasicMachine;
@@ -22,7 +22,8 @@ use p3_mds::coset_mds::CosetMds;
 use p3_merkle_tree::FieldMerkleTreeMmcs;
 use p3_poseidon::Poseidon;
 use p3_symmetric::{CompressionFunctionFromHasher, SerializingHasher32};
-use rand::thread_rng;
+use rand_seeder::{Seeder};
+use rand_pcg::Pcg64;
 use valida_machine::StarkConfigImpl;
 use valida_machine::__internal::p3_commit::ExtensionMmcs;
 use valida_output::MachineWithOutputChip;
@@ -69,7 +70,8 @@ fn main() {
     let mds16 = Mds16::default();
 
     type Perm16 = Poseidon<Val, Mds16, 16, 5>;
-    let perm16 = Perm16::new_from_rng(4, 22, mds16, &mut thread_rng()); // TODO: Use deterministic RNG
+    let mut rng: Pcg64 = Seeder::from("validia seed").make_rng();
+    let perm16 = Perm16::new_from_rng(4, 22, mds16, &mut rng);
 
     type MyHash = SerializingHasher32<Keccak256Hash>;
     let hash = MyHash::new(Keccak256Hash {});
@@ -118,6 +120,7 @@ fn main() {
             Err(e) => {stdout().write(e.to_string().as_bytes()).unwrap(); return ()},
         }
         let proof = machine.prove(&config);
+        machine.verify(&config, &proof).expect("Constructed proof is invalid.");
         let mut bytes = vec![];
         ciborium::into_writer(&proof, &mut bytes).expect("Proof serialization failed");
         action_file.write(&bytes).expect("Writing proof failed");
