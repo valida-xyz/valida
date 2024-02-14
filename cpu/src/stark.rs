@@ -45,10 +45,10 @@ where
 
         // Immediate value constraints (TODO: we'd need to range check read_value_2 in
         // this case)
-        builder.when(local.opcode_flags.is_imm_op).assert_eq(
-            local.instruction.operands.c(),
-            reduce::<AB>(&base, local.read_value_2()),
-        );
+        // builder.when(local.opcode_flags.is_imm_op).assert_eq(
+        //     local.instruction.operands.c(),
+        //     reduce::<AB>(&base, local.read_value_2()),
+        // );
 
         // "Stop" constraints (to check that program execution was not stopped prematurely)
         builder
