@@ -381,10 +381,15 @@ where
         let mem_addr = fp + ops.a();
 
         // Read from the advice tape into memory
-        let advice_byte = advice.get_advice().expect("No more advice");
+        let advice_opt = advice.get_advice();
+        let advice_byte = match advice_opt {
+            Some(advice) => Word::from_u8(advice),
+            // eof
+            None => Word::from(u32::MAX),
+        };
         state
             .mem_mut()
-            .write(clk, mem_addr as u32, Word::from_u8(advice_byte), true);
+            .write(clk, mem_addr as u32, advice_byte, true);
 
         state.cpu_mut().pc += 1;
         state.cpu_mut().push_op(
