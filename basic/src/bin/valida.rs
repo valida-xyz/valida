@@ -1,15 +1,14 @@
 use clap::Parser;
-use std::io::{stdout, Write};
 use std::fs::File;
+use std::io::{stdout, Write};
 
 use valida_basic::BasicMachine;
 
 use p3_baby_bear::BabyBear;
 
-use p3_fri::{TwoAdicFriPcs, TwoAdicFriPcsConfig, FriConfig};
+use p3_fri::{FriConfig, TwoAdicFriPcs, TwoAdicFriPcsConfig};
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{ Machine, MachineProof, ProgramROM, StdinAdviceProvider,
-};
+use valida_machine::{Machine, MachineProof, ProgramROM, StdinAdviceProvider};
 
 use valida_program::MachineWithProgramChip;
 
@@ -22,8 +21,8 @@ use p3_mds::coset_mds::CosetMds;
 use p3_merkle_tree::FieldMerkleTreeMmcs;
 use p3_poseidon::Poseidon;
 use p3_symmetric::{CompressionFunctionFromHasher, SerializingHasher32};
-use rand_seeder::{Seeder};
 use rand_pcg::Pcg64;
+use rand_seeder::Seeder;
 use valida_machine::StarkConfigImpl;
 use valida_machine::__internal::p3_commit::ExtensionMmcs;
 use valida_output::MachineWithOutputChip;
@@ -109,31 +108,52 @@ fn main() {
     if args.action == "run" {
         let mut action_file;
         match File::create(args.action_file) {
-            Ok(file) => {action_file = file;},
-            Err(e) => {stdout().write(e.to_string().as_bytes()).unwrap(); return ()},
+            Ok(file) => {
+                action_file = file;
+            }
+            Err(e) => {
+                stdout().write(e.to_string().as_bytes()).unwrap();
+                return ();
+            }
         }
         action_file.write_all(&machine.output().bytes()).unwrap();
     } else if args.action == "prove" {
         let mut action_file;
         match File::create(args.action_file) {
-            Ok(file) => {action_file = file;},
-            Err(e) => {stdout().write(e.to_string().as_bytes()).unwrap(); return ()},
+            Ok(file) => {
+                action_file = file;
+            }
+            Err(e) => {
+                stdout().write(e.to_string().as_bytes()).unwrap();
+                return ();
+            }
         }
         let proof = machine.prove(&config);
-        machine.verify(&config, &proof).expect("Constructed proof is invalid.");
+        machine
+            .verify(&config, &proof)
+            .expect("Constructed proof is invalid.");
         let mut bytes = vec![];
         ciborium::into_writer(&proof, &mut bytes).expect("Proof serialization failed");
         action_file.write(&bytes).expect("Writing proof failed");
         stdout().write("Proof successful\n".as_bytes()).unwrap();
     } else if args.action == "verify" {
         let bytes = std::fs::read(args.action_file).expect("File reading failed");
-        let proof: MachineProof<MyConfig> = ciborium::from_reader(bytes.as_slice()).expect("Proof deserialization failed");
+        let proof: MachineProof<MyConfig> =
+            ciborium::from_reader(bytes.as_slice()).expect("Proof deserialization failed");
         let verification_result = machine.verify(&config, &proof);
         match verification_result {
-            Ok(_) => {stdout().write("Proof verified\n".as_bytes()).unwrap();},
-            Err(_) => {stdout().write("Proof verification failed\n".as_bytes()).unwrap();}
+            Ok(_) => {
+                stdout().write("Proof verified\n".as_bytes()).unwrap();
+            }
+            Err(_) => {
+                stdout()
+                    .write("Proof verification failed\n".as_bytes())
+                    .unwrap();
+            }
         }
     } else {
-        stdout().write("Action name unrecognized".as_bytes()).unwrap();
+        stdout()
+            .write("Action name unrecognized".as_bytes())
+            .unwrap();
     }
 }
