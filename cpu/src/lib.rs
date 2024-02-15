@@ -127,26 +127,26 @@ where
             argument_index: machine.general_bus(),
         };
 
-        // Program ROM bus channel
-        let pc = VirtualPairCol::single_main(CPU_COL_MAP.pc);
-        let opcode = VirtualPairCol::single_main(CPU_COL_MAP.instruction.opcode);
-        let mut fields = vec![pc, opcode];
-        fields.extend(
-            CPU_COL_MAP
-                .instruction
-                .operands
-                .0
-                .map(|op| VirtualPairCol::single_main(op)),
-        );
-        let send_program = Interaction {
-            fields,
-            count: VirtualPairCol::one(),
-            argument_index: machine.program_bus(),
-        };
+        // // Program ROM bus channel
+        // let pc = VirtualPairCol::single_main(CPU_COL_MAP.pc);
+        // let opcode = VirtualPairCol::single_main(CPU_COL_MAP.instruction.opcode);
+        // let mut fields = vec![pc, opcode];
+        // fields.extend(
+        //     CPU_COL_MAP
+        //         .instruction
+        //         .operands
+        //         .0
+        //         .map(|op| VirtualPairCol::single_main(op)),
+        // );
+        // let send_program = Interaction {
+        //     fields,
+        //     count: VirtualPairCol::one(),
+        //     argument_index: machine.program_bus(),
+        // };
 
         mem_sends
             .chain(iter::once(send_general))
-            .chain(iter::once(send_program))
+            // .chain(iter::once(send_program))
             .collect()
     }
 }

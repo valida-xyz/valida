@@ -243,8 +243,12 @@ fn prove_fibonacci() {
     let deserialized_proof: MachineProof<MyConfig> =
         ciborium::from_reader(bytes.as_slice()).expect("deserialization failed");
 
-    BasicMachine::verify(&config, &proof).expect("verification failed");
-    BasicMachine::verify(&config, &deserialized_proof).expect("verification failed");
+    machine
+        .verify(&config, &proof)
+        .expect("verification failed");
+    machine
+        .verify(&config, &deserialized_proof)
+        .expect("verification failed");
 
     assert_eq!(machine.cpu().clock, 192);
     assert_eq!(machine.cpu().operations.len(), 192);

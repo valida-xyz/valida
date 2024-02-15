@@ -1,9 +1,9 @@
 use crate::__internal::ProverConstraintFolder;
 use crate::config::StarkConfig;
 use crate::symbolic::symbolic_builder::get_log_quotient_degree;
-use crate::{Chip, Machine};
+use crate::{eval_permutation_constraints, Chip, Machine};
 use itertools::Itertools;
-use p3_air::{Air, TwoRowMatrixView};
+use p3_air::TwoRowMatrixView;
 use p3_commit::UnivariatePcsWithLde;
 use p3_field::{
     cyclic_subgroup_coset_known_order, AbstractExtensionField, AbstractField, Field, PackedField,
@@ -23,6 +23,7 @@ pub fn quotient<M, A, SC, PreprocessedTraceLde, MainTraceLde, PermTraceLde>(
     preprocessed_trace_lde: Option<PreprocessedTraceLde>,
     main_trace_lde: MainTraceLde,
     perm_trace_lde: PermTraceLde,
+    cumulative_sum: SC::Challenge,
     perm_challenges: &[SC::Challenge],
     alpha: SC::Challenge,
 ) -> RowMajorMatrix<SC::Val>
@@ -54,6 +55,7 @@ where
         preprocessed_trace_lde_for_quotient,
         main_trace_lde_for_quotient,
         perm_trace_lde_for_quotient,
+        cumulative_sum,
         perm_challenges,
         alpha,
     );
@@ -75,13 +77,14 @@ fn quotient_values<M, SC, A, PreprocessedTraceLde, MainTraceLde, PermTraceLde>(
     preprocessed_trace_lde: Option<PreprocessedTraceLde>,
     main_trace_lde: MainTraceLde,
     perm_trace_lde: PermTraceLde,
+    cumulative_sum: SC::Challenge,
     perm_challenges: &[SC::Challenge],
     alpha: SC::Challenge,
 ) -> Vec<SC::Challenge>
 where
     M: Machine<SC::Val>,
     SC: StarkConfig,
-    A: for<'a> Air<ProverConstraintFolder<'a, M, SC>>,
+    A: Chip<M, SC>,
     PreprocessedTraceLde: MatrixRows<SC::Val> + MatrixGet<SC::Val> + Sync,
     MainTraceLde: MatrixRows<SC::Val> + MatrixGet<SC::Val> + Sync,
     PermTraceLde: MatrixRows<SC::Val> + MatrixGet<SC::Val> + Sync,
@@ -216,6 +219,7 @@ where
                 accumulator,
             };
             air.eval(&mut folder);
+            eval_permutation_constraints(air, &mut folder, cumulative_sum);
 
             // quotient(x) = constraints(x) / Z_H(x)
             let zerofier_inv: SC::PackedVal = zerofier_on_coset.eval_inverse_packed(i_local_start);

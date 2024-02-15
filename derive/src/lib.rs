@@ -223,6 +223,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     preprocessed_trace_lde,
                     main_trace_ldes.remove(0),
                     perm_trace_ldes.remove(0),
+                    cummulative_sums[#i],
                     &perm_challenges,
                     alpha,
                 ));
@@ -239,9 +240,10 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             use ::valida_machine::__internal::p3_field::{AbstractField};
             use ::valida_machine::__internal::p3_challenger::{CanObserve, FieldChallenger};
             use ::valida_machine::__internal::p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
-            use ::valida_machine::__internal::p3_matrix::{Matrix, dense::RowMajorMatrix};
+            use ::valida_machine::__internal::p3_matrix::{Matrix, MatrixRowSlices, dense::RowMajorMatrix};
             use ::valida_machine::__internal::p3_util::log2_strict_usize;
             use ::valida_machine::{generate_permutation_trace, MachineProof, ChipProof, Commitments};
+            use ::valida_machine::OpenedValues;
             use alloc::vec;
             use alloc::vec::Vec;
             use alloc::boxed::Box;
@@ -300,6 +302,10 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     }).collect::<Vec<_>>()
                 );
 
+            let cummulative_sums = perm_traces.iter()
+                .map(|trace| trace.row_slice(trace.height() - 1).last().unwrap().clone())
+                .collect::<Vec<_>>();
+
             let (perm_commit, perm_data) = tracing::info_span!("commit to permutation traces")
                 .in_scope(|| {
                     let flattened_perm_traces = perm_traces.iter()
@@ -314,8 +320,17 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
 
             let mut quotients: Vec<RowMajorMatrix<SC::Val>> = vec![];
             #compute_quotients
+            assert_eq!(quotients.len(), #num_chips);
+            assert_eq!(log_quotient_degrees.len(), #num_chips);
+            let coset_shifts = tracing::debug_span!("coset shift").in_scope(|| {
+                let pcs_coset_shift = pcs.coset_shift();
+                log_quotient_degrees.map(|log_d| pcs_coset_shift.exp_power_of_2(log_d))
+            });
+            assert_eq!(coset_shifts.len(), #num_chips);
             let (quotient_commit, quotient_data) = tracing::info_span!("commit to quotient chunks")
-                .in_scope(|| pcs.commit_batches(quotients.to_vec()));
+                .in_scope(|| pcs.commit_shifted_batches(quotients.to_vec(), &coset_shifts));
+
+            challenger.observe(quotient_commit.clone());
 
             #[cfg(debug_assertions)]
             check_cumulative_sums(&perm_traces[..]);
@@ -335,15 +350,53 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             let (openings, opening_proof) = pcs.open_multi_batches(
                &prover_data_and_points, &mut challenger);
 
-            // let [preprocessed_openings, main_openings, perm_openings, quotient_openings] =
-            //     openings.try_into().expect("Should have 4 rounds of openings");
+
+            // TODO: add preprocessed openings
+            let [main_openings, perm_openings, quotient_openings] =
+                openings.try_into().expect("Should have 3 rounds of openings");
 
             let commitments = Commitments {
                 main_trace: main_commit,
                 perm_trace: perm_commit,
                 quotient_chunks: quotient_commit,
             };
-            let chip_proofs = vec![]; // TODO
+
+
+            // TODO: add preprocessed openings
+            let chip_proofs = log_degrees
+                .iter()
+                .zip(main_openings)
+                .zip(perm_openings)
+                .zip(quotient_openings)
+                .zip(perm_traces)
+                .map(|((((log_degree,  main), perm), quotient), perm_trace)| {
+                    // TODO: add preprocessed openings
+                    let [preprocessed_local, preprocessed_next] =
+                        [vec![], vec![]];
+
+                    let [main_local, main_next] = main.try_into().expect("Should have 2 openings");
+                    let [perm_local, perm_next] = perm.try_into().expect("Should have 2 openings");
+                    let [quotient_chunks] = quotient.try_into().expect("Should have 1 opening");
+
+                    let opened_values = OpenedValues {
+                        preprocessed_local,
+                        preprocessed_next,
+                        trace_local: main_local,
+                        trace_next: main_next,
+                        permutation_local: perm_local,
+                        permutation_next: perm_next,
+                        quotient_chunks,
+                    };
+
+                    let cumulative_sum = perm_trace.row_slice(perm_trace.height() - 1).last().unwrap().clone();
+                    ChipProof {
+                        log_degree: *log_degree,
+                        opened_values,
+                        cumulative_sum,
+                    }
+                })
+                .collect::<Vec<_>>();
+
             MachineProof {
                 commitments,
                 opening_proof,
@@ -353,14 +406,208 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
     }
 }
 
-fn verify_method(_chips: &[&Field]) -> TokenStream2 {
+fn verify_method(chips: &[&Field]) -> TokenStream2 {
+    let num_chips = chips.len();
+    let chip_list = chips
+        .iter()
+        .map(|chip| {
+            let chip_name = chip.ident.as_ref().unwrap();
+            quote! {
+                alloc::boxed::Box::new(self.#chip_name()),
+            }
+        })
+        .collect::<TokenStream2>();
+
+    let quotient_degree_calls = chips
+        .iter()
+        .map(|chip| {
+            let chip_name = chip.ident.as_ref().unwrap();
+            quote! {
+                get_log_quotient_degree::<Self, SC, _>(self, self.#chip_name()),
+            }
+        })
+        .collect::<TokenStream2>();
+
+    let verify_constraints = chips
+        .iter()
+        .enumerate()
+        .map(|(i, chip)| {
+            let chip_name = chip.ident.as_ref().unwrap();
+            quote! {
+                verify_constraints::<Self, _, SC>(
+                    self,
+                    self.#chip_name(),
+                    &proof.chip_proofs[#i].opened_values,
+                    proof.chip_proofs[#i].cumulative_sum,
+                    proof.chip_proofs[#i].log_degree,
+                    g_subgroups[#i],
+                    zeta,
+                    alpha,
+                    &perm_challenges
+                ).expect(&alloc::format!("Failed to verify constraints on chip {}", #i));
+            }
+        })
+        .collect::<TokenStream2>();
+
     quote! {
         fn verify<SC: StarkConfig<Val = F>>(
+            &self,
             config: &SC,
             proof: &::valida_machine::MachineProof<SC>,
         ) -> core::result::Result<(), ()>
         {
-            Ok(()) // TODO
+            use ::valida_machine::__internal::*;
+            use ::valida_machine::__internal::p3_air::{BaseAir};
+            use ::valida_machine::__internal::p3_field::{AbstractField, AbstractExtensionField};
+            use ::valida_machine::__internal::p3_challenger::{CanObserve, FieldChallenger};
+            use ::valida_machine::__internal::p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
+            use ::valida_machine::__internal::p3_matrix::Dimensions;
+            use ::valida_machine::__internal::p3_util::log2_strict_usize;
+            use ::valida_machine::{verify_constraints, MachineProof, ChipProof, Commitments};
+            use ::valida_machine::OpenedValues;
+            use ::valida_machine::{VerificationError, ProofShapeError, OodEvaluationMismatch};
+            use alloc::vec;
+            use alloc::vec::Vec;
+            use alloc::boxed::Box;
+
+
+            let mut chips: [Box<&dyn Chip<Self, SC>>; #num_chips] = [ #chip_list ];
+            let log_quotient_degrees: [usize; #num_chips] = [ #quotient_degree_calls ];
+            let mut challenger = config.challenger();
+            // TODO: Seed challenger with digest of all constraints & trace lengths.
+            let pcs = config.pcs();
+
+            let chips_interactions = chips
+            .iter()
+            .map(|chip| chip.all_interactions(self))
+            .collect::<Vec<_>>();
+
+            let dims = &[
+                chips
+                    .iter()
+                    .zip(proof.chip_proofs.iter())
+                    .map(|(chip, chip_proof)| Dimensions {
+                        width: chip.trace_width(),
+                        height: 1 << chip_proof.log_degree,
+                    })
+                    .collect::<Vec<_>>(),
+                chips_interactions.iter()
+                  .zip(proof.chip_proofs.iter())
+                    .map(|(interactions, chip_proof)| Dimensions {
+                        width: (interactions.len() + 1) * SC::Challenge::D,
+                        height: 1 << chip_proof.log_degree,
+                    })
+                    .collect::<Vec<_>>(),
+                proof.chip_proofs.iter()
+                    .zip(log_quotient_degrees)
+                    .map(|(chip_proof, log_quotient_deg)| Dimensions {
+                        width: log_quotient_deg << SC::Challenge::D,
+                        height: 1 << chip_proof.log_degree,
+                    })
+                    .collect::<Vec<_>>(),
+            ];
+
+            // Get the generators of the trace subgroups for each chip.
+            let g_subgroups :[SC::Val ; #num_chips] = proof.chip_proofs
+                .iter()
+                .map(|chip_proof| SC::Val::two_adic_generator(chip_proof.log_degree))
+                .collect::<Vec<_>>().try_into().unwrap();
+
+            // TODO: maybe avoid cloning opened values (not sure if possible)
+            let mut main_values = vec![];
+            let mut perm_values = vec![];
+            let mut quotient_values = vec![];
+
+            for chip_proof in proof.chip_proofs.iter() {
+                let OpenedValues {
+                    preprocessed_local,
+                    preprocessed_next,
+                    trace_local,
+                    trace_next,
+                    permutation_local,
+                    permutation_next,
+                    quotient_chunks,
+                } = &chip_proof.opened_values;
+
+                main_values.push(vec![trace_local.clone(), trace_next.clone()]);
+                perm_values.push(vec![permutation_local.clone(), permutation_next.clone()]);
+                quotient_values.push(vec![quotient_chunks.clone()]);
+            }
+
+            let chips_opening_values = vec![main_values, perm_values, quotient_values];
+
+
+            // Observe commitments and get challenges.
+            let Commitments {
+                main_trace,
+                perm_trace,
+                quotient_chunks,
+            } = &proof.commitments;
+
+
+            // Compute the commitments to preprocessed traces (TODO: avoid in the future)
+            let preprocessed_traces: Vec<RowMajorMatrix<SC::Val>> =
+            tracing::info_span!("generate preprocessed traces")
+                .in_scope(||
+                    chips.par_iter()
+                        .flat_map(|chip| chip.preprocessed_trace())
+                        .collect::<Vec<_>>()
+                );
+
+            let (preprocessed_commit, preprocessed_data) =
+                tracing::info_span!("commit to preprocessed traces")
+                    .in_scope(|| pcs.commit_batches(preprocessed_traces.to_vec()));
+
+            challenger.observe(preprocessed_commit.clone());
+
+            // challenger.observe(preprocessed_commit.clone());
+            challenger.observe(main_trace.clone());
+
+            let mut perm_challenges = Vec::new();
+            for _ in 0..3 {
+                perm_challenges.push(challenger.sample_ext_element::<SC::Challenge>());
+            }
+
+            challenger.observe(perm_trace.clone());
+
+            let alpha = challenger.sample_ext_element::<SC::Challenge>();
+
+            challenger.observe(quotient_chunks.clone());
+
+             // Verify the openning proof.
+             let zeta: SC::Challenge = challenger.sample_ext_element();
+             let zeta_and_next: [Vec<SC::Challenge>; #num_chips] =
+                 g_subgroups.map(|g| vec![zeta, zeta * g]);
+             let zeta_exp_quotient_degree: [Vec<SC::Challenge>; #num_chips] =
+                 log_quotient_degrees.map(|log_deg| vec![zeta.exp_power_of_2(log_deg)]);
+            pcs
+                .verify_multi_batches(
+                    &[
+                        (main_trace.clone(), zeta_and_next.as_slice()),
+                        (perm_trace.clone(), zeta_and_next.as_slice()),
+                        (quotient_chunks.clone(), zeta_exp_quotient_degree.as_slice()),
+                    ],
+                    dims,
+                    chips_opening_values,
+                    &proof.opening_proof,
+                    &mut challenger,
+                )
+                .map_err(|_| ())?;
+
+            // Verify the constraints.
+            #verify_constraints
+            // Verify that the cumulative_sum sums add up to zero.
+            let sum: SC::Challenge = proof
+                .chip_proofs
+                .iter()
+                .map(|chip_proof| chip_proof.cumulative_sum)
+                .sum();
+
+            if sum != SC::Challenge::zero() {
+                return Err(());
+            }
+
+            Ok(())
         }
     }
 }
