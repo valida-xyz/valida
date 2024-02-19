@@ -53,7 +53,7 @@ where
 
     fn global_sends(&self, machine: &M) -> Vec<Interaction<SC::Val>>{
 
-
+	//This function is meant to check that q < output, in the equation input_1 = input_2*output + q
 	let input_1:[VirtualPairCol<SC::Val>;4] = DIV_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
 	let input_2 = DIV_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
 	let output:[VirtualPairCol<SC::Val>;4] = DIV_COL_MAP.output.0.map(VirtualPairCol::single_main);
