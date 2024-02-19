@@ -52,15 +52,46 @@ where
     }
 
     fn global_sends(&self, machine: &M) -> Vec<Interaction<SC::Val>>{
-	let mul_opcode = VirtualPairCol::constant(SC::Val::from_canonical_u32(MUL32));
+
 
 	let input_1:[VirtualPairCol<SC::Val>;4] = DIV_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
 	let input_2 = DIV_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
-	let output = DIV_COL_MAP.output.0.map(VirtualPairCol::single_main);
+	let output:[VirtualPairCol<SC::Val>;4] = DIV_COL_MAP.output.0.map(VirtualPairCol::single_main);
 	let intermediate_output = DIV_COL_MAP.intermediate_output.0.map(VirtualPairCol::single_main);
 	let q:[VirtualPairCol<SC::Val>;4] = DIV_COL_MAP.q.0.map(VirtualPairCol::single_main);
-	
+
+	//check for overflow in input_1 = input_2*output + q by checking that input_1 < q == 0
+	let overflow_opcode = VirtualPairCol::constant(SC::Val::from_canonical_u32(LT32));
+	let mut add_overflow_fields = vec![overflow_opcode];
+	add_overflow_fields.extend(input_1);
+	add_overflow_fields.extend(q);
+	add_overflow_fields.push(VirtualPairCol::constant(SC::Val::from_canonical_u32(0u32)));	
+	let is_real = VirtualPairCol::constant(SC::Val::from_canonical_u32(1u32));
+	let overflow_interaction = Interaction {
+	    fields: add_overflow_fields,
+	    count: is_real,
+	    argument_index: machine.general_bus()
+	};
+
+	//check for overflow in input_2*output = intermediate_product by checing that intermediate_product < input_2 == 0
+	let overflow_opcode = VirtualPairCol::constant(SC::Val::from_canonical_u32(LT32));
+	let mut mul_overflow_fields = vec![overflow_opcode];
+	mul_overflow_fields.extend(intermediate_output);
+	mul_overflow_fields.extend(input_2);
+	mul_overflow_fields.push(VirtualPairCol::constant(SC::Val::from_canonical_u32(0u32)));	
+	let is_real = VirtualPairCol::constant(SC::Val::from_canonical_u32(1u32));
+	let mul_overflow_interaction = Interaction {
+	    fields: mul_overflow_fields,
+	    count: is_real,
+	    argument_index: machine.general_bus()
+	};		
+
 	//intermediate_output = input_2*output
+	//in the future implement this as mulhs to account for overflow
+	let mul_opcode = VirtualPairCol::constant(SC::Val::from_canonical_u32(MUL32));
+	let input_2 = DIV_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
+	let output = DIV_COL_MAP.output.0.map(VirtualPairCol::single_main);
+	let intermediate_output = DIV_COL_MAP.intermediate_output.0.map(VirtualPairCol::single_main);	
 	let mut mul_fields = vec![mul_opcode];
 	mul_fields.extend(input_2);
 	mul_fields.extend(output);
@@ -76,6 +107,8 @@ where
 	//input_1 - intermediate_output = q
 	let sub_opcode = VirtualPairCol::constant(SC::Val::from_canonical_u32(SUB32));
 	let intermediate_output = DIV_COL_MAP.intermediate_output.0.map(VirtualPairCol::single_main);
+	let input_1:[VirtualPairCol<SC::Val>;4] = DIV_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
+	let q:[VirtualPairCol<SC::Val>;4] = DIV_COL_MAP.q.0.map(VirtualPairCol::single_main);		
 	let is_real = VirtualPairCol::constant(SC::Val::from_canonical_u32(1u32));		
 	let mut sub_fields = vec![sub_opcode];
 	sub_fields.extend(input_1);
@@ -101,8 +134,7 @@ where
 	    count: is_real,
 	    argument_index: machine.general_bus()
 	};
-	vec![mul_interaction]
-//	vec![mul_interaction, sub_interaction, lt_interaction]
+	vec![overflow_interaction, mul_overflow_interaction, mul_interaction, sub_interaction, lt_interaction]
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
