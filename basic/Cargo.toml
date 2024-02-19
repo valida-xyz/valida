@@ -26,7 +26,7 @@ valida-program = { path = "../program" }
 valida-range = { path = "../range" }
 p3-baby-bear = { path = "../../Plonky3/baby-bear" }
 p3-field = { path = "../../Plonky3/field" }
-p3-maybe-rayon = { path = "../../Plonky3/maybe-rayon" }
+p3-maybe-rayon = { path = "../../Plonky3/maybe-rayon", features = ["parallel"] }
 p3-util = { path = "../../Plonky3/util" }
 p3-goldilocks = {path = "../../Plonky3/goldilocks" }
 p3-uni-stark = {path = "../../Plonky3/uni-stark" }
