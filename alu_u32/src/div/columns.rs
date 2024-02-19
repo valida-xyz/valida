@@ -6,12 +6,15 @@ use valida_util::indices_arr;
 
 #[derive(AlignedBorrow, Default)]
 pub struct Div32Cols<T> {
+    //input_1 = input_2*output + q
+    //intermediate_output = input_2*output
     pub input_1: Word<T>,
     pub input_2: Word<T>,
 
     /// Witnessed output
     pub output: Word<T>,
-
+    pub intermediate_output: Word<T>,
+    pub q: Word<T>,
     pub is_div: T,
     pub is_sdiv: T,
 }

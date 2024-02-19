@@ -1,5 +1,4 @@
 extern crate alloc;
-
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{Mul32Cols, MUL_COL_MAP, NUM_MUL_COLS};

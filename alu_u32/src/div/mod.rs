@@ -9,10 +9,9 @@ use valida_cpu::MachineWithCpuChip;
 use valida_machine::SDiv;
 use valida_machine::StarkConfig;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
-use valida_opcodes::{DIV32, SDIV32};
+use valida_opcodes::{DIV32, SDIV32, MUL32, SUB32, LT32};
 use valida_range::MachineWithRangeChip;
 use valida_util::pad_to_power_of_two;
-
 use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
@@ -52,6 +51,60 @@ where
         trace
     }
 
+    fn global_sends(&self, machine: &M) -> Vec<Interaction<SC::Val>>{
+	let mul_opcode = VirtualPairCol::constant(SC::Val::from_canonical_u32(MUL32));
+
+	let input_1:[VirtualPairCol<SC::Val>;4] = DIV_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
+	let input_2 = DIV_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
+	let output = DIV_COL_MAP.output.0.map(VirtualPairCol::single_main);
+	let intermediate_output = DIV_COL_MAP.intermediate_output.0.map(VirtualPairCol::single_main);
+	let q:[VirtualPairCol<SC::Val>;4] = DIV_COL_MAP.q.0.map(VirtualPairCol::single_main);
+	
+	//intermediate_output = input_2*output
+	let mut mul_fields = vec![mul_opcode];
+	mul_fields.extend(input_2);
+	mul_fields.extend(output);
+	mul_fields.extend(intermediate_output);
+	let is_real = VirtualPairCol::constant(SC::Val::from_canonical_u32(1u32));
+	let mul_interaction = Interaction {
+	    fields: mul_fields,
+	    count: is_real,
+	    argument_index: machine.general_bus()
+	};
+
+
+	//input_1 - intermediate_output = q
+	let sub_opcode = VirtualPairCol::constant(SC::Val::from_canonical_u32(SUB32));
+	let intermediate_output = DIV_COL_MAP.intermediate_output.0.map(VirtualPairCol::single_main);
+	let is_real = VirtualPairCol::constant(SC::Val::from_canonical_u32(1u32));		
+	let mut sub_fields = vec![sub_opcode];
+	sub_fields.extend(input_1);
+	sub_fields.extend(intermediate_output);
+	sub_fields.extend(q);
+	let sub_interaction= Interaction {
+	    fields: sub_fields,
+	    count: is_real,
+	    argument_index: machine.general_bus()
+	};
+
+	//q < output == 1
+	let lt_opcode = VirtualPairCol::constant(SC::Val::from_canonical_u32(LT32));
+	let q: [VirtualPairCol<SC::Val>;4] = DIV_COL_MAP.q.0.map(VirtualPairCol::single_main);	
+	let output = DIV_COL_MAP.output.0.map(VirtualPairCol::single_main);
+	let is_real = VirtualPairCol::constant(SC::Val::from_canonical_u32(1u32));	
+	let mut lt_fields = vec![lt_opcode];
+	lt_fields.extend(q);
+	lt_fields.extend(output);
+	lt_fields.push(VirtualPairCol::constant(SC::Val::from_canonical_u32(1u32)));
+	let lt_interaction= Interaction {
+	    fields: lt_fields,
+	    count: is_real,
+	    argument_index: machine.general_bus()
+	};
+	vec![mul_interaction]
+//	vec![mul_interaction, sub_interaction, lt_interaction]
+    }
+
     fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
         let opcode = VirtualPairCol::new_main(
             vec![
@@ -79,6 +132,8 @@ where
         vec![receive]
     }
 }
+
+
 
 impl Div32Chip {
     fn op_to_row<F>(&self, op: &Operation) -> [F; NUM_DIV_COLS]

@@ -14,20 +14,11 @@ impl<F> BaseAir<F> for Mul32Chip {
         NUM_MUL_COLS
     }
 }
-
-impl<F, AB> Air<AB> for Mul32Chip
+pub fn mul_builder<F,AB>(local: &Mul32Cols<AB::Var>, next: &Mul32Cols<AB::Var>, builder:&mut AB)
 where
-    F: PrimeField,
-    AB: AirBuilder<F = F>,
+    F: AbstractField,
+    AB: AirBuilder<F = F>
 {
-    fn eval(&self, builder: &mut AB) {
-        // TODO: Assumes original mul, doesn't work for mulhu or mulhs.
-
-        let main = builder.main();
-        let local: &Mul32Cols<AB::Var> = main.row_slice(0).borrow();
-        let next: &Mul32Cols<AB::Var> = main.row_slice(1).borrow();
-
-        // Limb weights modulo 2^32
         let base_m = [1, 1 << 8, 1 << 16, 1 << 24].map(AB::Expr::from_canonical_u32);
 
         // Partially reduced summation of input product limbs (mod 2^32)
@@ -57,6 +48,19 @@ where
         builder
             .when_last_row()
             .assert_eq(local.counter, AB::Expr::from_canonical_u32(1 << 10));
+
+}
+impl<F, AB> Air<AB> for Mul32Chip
+where
+    F: PrimeField,
+    AB: AirBuilder<F = F>,
+{
+    fn eval(&self, builder: &mut AB) {
+        // TODO: Assumes original mul, doesn't work for mulhu or mulhs.
+        let main = builder.main();
+        let local: &Mul32Cols<AB::Var> = main.row_slice(0).borrow();
+        let next: &Mul32Cols<AB::Var> = main.row_slice(1).borrow();
+	mul_builder(local, next, builder);
     }
 }
 
@@ -71,7 +75,7 @@ fn pi_m<const N: usize, AB: AirBuilder>(
         .sum()
 }
 
-fn sigma_m<const N: usize, AB: AirBuilder>(base: &[AB::Expr], input: Word<AB::Var>) -> AB::Expr {
+pub fn sigma_m<const N: usize, AB: AirBuilder>(base: &[AB::Expr], input: Word<AB::Var>) -> AB::Expr {
     input
         .into_iter()
         .rev()

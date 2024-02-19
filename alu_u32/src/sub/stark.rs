@@ -12,16 +12,11 @@ impl<F> BaseAir<F> for Sub32Chip {
         NUM_SUB_COLS
     }
 }
-
-impl<F, AB> Air<AB> for Sub32Chip
+pub fn sub_builder<F,AB>(local: &Sub32Cols<AB::Var>, builder:&mut AB)
 where
-    F: PrimeField,
-    AB: AirBuilder<F = F>,
+    F: AbstractField,
+    AB: AirBuilder<F = F>
 {
-    fn eval(&self, builder: &mut AB) {
-        let main = builder.main();
-        let local: &Sub32Cols<AB::Var> = main.row_slice(0).borrow();
-
         let base = AB::Expr::from_canonical_u32(1 << 8);
 
         let borrow_1 = local.borrow[0];
@@ -47,6 +42,16 @@ where
 
         builder.assert_bool(borrow_1);
         builder.assert_bool(borrow_2);
-        builder.assert_bool(borrow_3);
+        builder.assert_bool(borrow_3);    
+}
+impl<F, AB> Air<AB> for Sub32Chip
+where
+    F: PrimeField,
+    AB: AirBuilder<F = F>,
+{
+    fn eval(&self, builder: &mut AB) {
+        let main = builder.main();
+        let local: &Sub32Cols<AB::Var> = main.row_slice(0).borrow();
+	sub_builder(local, builder);
     }
 }

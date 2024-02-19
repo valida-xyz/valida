@@ -13,15 +13,11 @@ impl<F> BaseAir<F> for Lt32Chip {
     }
 }
 
-impl<F, AB> Air<AB> for Lt32Chip
+pub fn lt_builder<F,AB>(local: &Lt32Cols<AB::Var>, builder:&mut AB)
 where
     F: AbstractField,
-    AB: AirBuilder<F = F>,
+    AB: AirBuilder<F = F>
 {
-    fn eval(&self, builder: &mut AB) {
-        let main = builder.main();
-        let local: &Lt32Cols<AB::Var> = main.row_slice(0).borrow();
-
         let base_2 = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512].map(AB::Expr::from_canonical_u32);
 
         let bit_comp: AB::Expr = local
@@ -68,5 +64,17 @@ where
         for bit in local.bits.into_iter() {
             builder.assert_bool(bit);
         }
+}
+
+impl<F, AB> Air<AB> for Lt32Chip
+where
+    F: AbstractField,
+    AB: AirBuilder<F = F>,
+{
+    fn eval(&self, builder: &mut AB) {
+        let main = builder.main();
+        let local: &Lt32Cols<AB::Var> = main.row_slice(0).borrow();
+        lt_builder(local, builder);
+
     }
 }
