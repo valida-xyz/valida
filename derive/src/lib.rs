@@ -247,7 +247,9 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             use alloc::vec;
             use alloc::vec::Vec;
             use alloc::boxed::Box;
+            use std::time::Instant;
 
+            let prove_begin = Instant::now();
             let mut chips: [Box<&dyn Chip<Self, SC>>; #num_chips] = [ #chip_list ];
             let log_quotient_degrees: [usize; #num_chips] = [ #quotient_degree_calls ];
 
@@ -255,6 +257,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             // TODO: Seed challenger with digest of all constraints & trace lengths.
             let pcs = config.pcs();
 
+            let preprocessed_trace_begin = Instant::now();
             let preprocessed_traces: Vec<RowMajorMatrix<SC::Val>> =
                 tracing::info_span!("generate preprocessed traces")
                     .in_scope(||
@@ -262,13 +265,17 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                             .flat_map(|chip| chip.preprocessed_trace())
                             .collect::<Vec<_>>()
                     );
+            std::println!("preprocessed traces: {:?}", preprocessed_trace_begin.elapsed());
 
+            let commit_preprocessed_trace_begin = Instant::now();
             let (preprocessed_commit, preprocessed_data) =
                 tracing::info_span!("commit to preprocessed traces")
                     .in_scope(|| pcs.commit_batches(preprocessed_traces.to_vec()));
             challenger.observe(preprocessed_commit.clone());
             let mut preprocessed_trace_ldes = pcs.get_ldes(&preprocessed_data);
+            std::println!("commit preprocessed traces: {:?}", commit_preprocessed_trace_begin.elapsed());
 
+            let main_traces_begin = Instant::now();
             let main_traces: [RowMajorMatrix<SC::Val>; #num_chips] =
                 tracing::info_span!("generate main traces")
                     .in_scope(||
@@ -277,6 +284,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                             .collect::<Vec<_>>()
                             .try_into().unwrap()
                     );
+            std::println!("main traces: {:?}", main_traces_begin.elapsed());
 
             let degrees: [usize; #num_chips] = main_traces.iter()
                 .map(|trace| trace.height())
@@ -285,11 +293,18 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             let log_degrees = degrees.map(|d| log2_strict_usize(d));
             let g_subgroups = log_degrees.map(|log_deg| SC::Val::two_adic_generator(log_deg));
 
+            let commit_main_traces_begin = Instant::now();
             let (main_commit, main_data) = tracing::info_span!("commit to main traces")
                 .in_scope(|| pcs.commit_batches(main_traces.to_vec()));
+            std::println!("commit main traces: {:?}", commit_main_traces_begin.elapsed());
+            let observe_main_traces_begin = Instant::now();
             challenger.observe(main_commit.clone());
+            std::println!("observe main traces: {:?}", observe_main_traces_begin.elapsed());
+            let main_trace_ldes_begin = Instant::now();
             let mut main_trace_ldes = pcs.get_ldes(&main_data);
+            std::println!("main trace ldes: {:?}", main_trace_ldes_begin.elapsed());
 
+            let perm_traces_begin = Instant::now();
             let mut perm_challenges = Vec::new();
             for _ in 0..3 {
                 perm_challenges.push(challenger.sample_ext_element());
@@ -301,11 +316,15 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                         generate_permutation_trace(self, *chip, &main_traces[i], perm_challenges.clone())
                     }).collect::<Vec<_>>()
                 );
+            std::println!("perm traces: {:?}", perm_traces_begin.elapsed());
 
+            let cum_sums_begin = Instant::now();
             let cummulative_sums = perm_traces.iter()
                 .map(|trace| trace.row_slice(trace.height() - 1).last().unwrap().clone())
                 .collect::<Vec<_>>();
+            std::println!("cumulative sums: {:?}", cum_sums_begin.elapsed());
 
+            let commit_perm_traces_begin = Instant::now();
             let (perm_commit, perm_data) = tracing::info_span!("commit to permutation traces")
                 .in_scope(|| {
                     let flattened_perm_traces = perm_traces.iter()
@@ -315,7 +334,9 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                 });
             challenger.observe(perm_commit.clone());
             let mut perm_trace_ldes = pcs.get_ldes(&perm_data);
+            std::println!("commit perm traces: {:?}", commit_perm_traces_begin.elapsed());
 
+            let quotients_begin = Instant::now();
             let alpha: SC::Challenge = challenger.sample_ext_element();
 
             let mut quotients: Vec<RowMajorMatrix<SC::Val>> = vec![];
@@ -326,15 +347,21 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                 let pcs_coset_shift = pcs.coset_shift();
                 log_quotient_degrees.map(|log_d| pcs_coset_shift.exp_power_of_2(log_d))
             });
+            println!("quotients: {:?}", quotients_begin.elapsed());
+            let commit_quotients_begin = Instant::now();
             assert_eq!(coset_shifts.len(), #num_chips);
             let (quotient_commit, quotient_data) = tracing::info_span!("commit to quotient chunks")
                 .in_scope(|| pcs.commit_shifted_batches(quotients.to_vec(), &coset_shifts));
 
             challenger.observe(quotient_commit.clone());
+            println!("commit quotients: {:?}", commit_quotients_begin.elapsed());
 
+            let check_cum_sums_begin = Instant::now();
             #[cfg(debug_assertions)]
             check_cumulative_sums(&perm_traces[..]);
+            println!("check cumulative sums: {:?}", check_cum_sums_begin.elapsed());
 
+            let prover_data_and_points_begin = Instant::now();
             let zeta: SC::Challenge = challenger.sample_ext_element();
             let zeta_and_next: [Vec<SC::Challenge>; #num_chips] =
                 g_subgroups.map(|g| vec![zeta, zeta * g]);
@@ -347,10 +374,13 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                 (&perm_data, zeta_and_next.as_slice()),
                 (&quotient_data, zeta_exp_quotient_degree.as_slice()),
             ];
+            println!("prover data and points: {:?}", prover_data_and_points_begin.elapsed());
+            let opening_proof_begin = Instant::now();
             let (openings, opening_proof) = pcs.open_multi_batches(
                &prover_data_and_points, &mut challenger);
+            println!("multi-opening proof: {:?}", opening_proof_begin.elapsed());
 
-
+            let chip_proofs_begin = Instant::now();
             // TODO: add preprocessed openings
             let [main_openings, perm_openings, quotient_openings] =
                 openings.try_into().expect("Should have 3 rounds of openings");
@@ -360,7 +390,6 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                 perm_trace: perm_commit,
                 quotient_chunks: quotient_commit,
             };
-
 
             // TODO: add preprocessed openings
             let chip_proofs = log_degrees
@@ -396,6 +425,9 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     }
                 })
                 .collect::<Vec<_>>();
+
+            std::println!("chip proofs: {:?}", chip_proofs_begin.elapsed());
+            std::println!("prover: {:?}", prove_begin.elapsed());
 
             MachineProof {
                 commitments,

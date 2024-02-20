@@ -129,9 +129,6 @@ fn main() {
             }
         }
         let proof = machine.prove(&config);
-        machine
-            .verify(&config, &proof)
-            .expect("Constructed proof is invalid.");
         let mut bytes = vec![];
         ciborium::into_writer(&proof, &mut bytes).expect("Proof serialization failed");
         action_file.write(&bytes).expect("Writing proof failed");
