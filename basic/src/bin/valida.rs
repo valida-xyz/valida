@@ -13,7 +13,7 @@ use valida_machine::{Machine, MachineProof, ProgramROM, StdinAdviceProvider};
 use valida_program::MachineWithProgramChip;
 
 use p3_challenger::DuplexChallenger;
-use p3_dft::Radix2Bowers;
+use p3_dft::Radix2DitParallel;
 use p3_field::extension::BinomialExtensionField;
 use p3_field::Field;
 use p3_keccak::Keccak256Hash;
@@ -84,7 +84,7 @@ fn main() {
     type ChallengeMmcs = ExtensionMmcs<Val, Challenge, ValMmcs>;
     let challenge_mmcs = ChallengeMmcs::new(val_mmcs.clone());
 
-    type Dft = Radix2Bowers;
+    type Dft = Radix2DitParallel;
     let dft = Dft::default();
 
     type Challenger = DuplexChallenger<Val, Perm16, 16>;
@@ -129,9 +129,7 @@ fn main() {
             }
         }
         let proof = machine.prove(&config);
-        machine
-            .verify(&config, &proof)
-            .expect("Constructed proof is invalid.");
+        debug_assert!(machine.verify(&config, &proof).is_ok());
         let mut bytes = vec![];
         ciborium::into_writer(&proof, &mut bytes).expect("Proof serialization failed");
         action_file.write(&bytes).expect("Writing proof failed");

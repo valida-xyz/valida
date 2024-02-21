@@ -350,7 +350,6 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             let (openings, opening_proof) = pcs.open_multi_batches(
                &prover_data_and_points, &mut challenger);
 
-
             // TODO: add preprocessed openings
             let [main_openings, perm_openings, quotient_openings] =
                 openings.try_into().expect("Should have 3 rounds of openings");
