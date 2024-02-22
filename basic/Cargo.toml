@@ -8,6 +8,10 @@ license = "MIT OR Apache-2.0"
 name = "valida"
 path = "src/bin/valida.rs"
 
+[[bin]]
+name = "test_prover"
+path = "src/bin/test_prover.rs"
+
 [dependencies]
 byteorder = "1.4.3"
 ciborium = "0.2.2"
