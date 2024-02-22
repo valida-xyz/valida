@@ -1,5 +1,3 @@
-#![no_std]
-
 extern crate alloc;
 
 use alloc::format;
@@ -153,6 +151,7 @@ fn run_method(machine: &syn::DeriveInput, instructions: &[&Field], val: &Ident) 
                 let ops = instruction.operands;
 
                 // Execute
+                std::println!("trace: pc = {:?}, instruction = {:?}, ops = {:?}", pc, instruction, ops);
                 match opcode {
                     #opcode_arms
                     _ => panic!("Unrecognized opcode: {}", opcode),
