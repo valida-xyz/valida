@@ -21,6 +21,18 @@ The Valida compiler is hosted separately, and can be found [here](https://github
 ## Backend
 Valida uses the [Plonky3](https://github.com/Plonky3/Plonky3) toolkit to implement the STARK IOP, and to handle all field and cryptographic operations.
 
+To use a local copy of Plonky3 instead of the pinned version of Plonky3, you can run:
+
+```bash
+mkdir -p .cargo
+for lib in air baby-bear commit challenger dft field fri goldilocks keccak matrix maybe-rayon mds merkle-tree poseidon symmetric uni-stark util
+do
+echo "patch.\"https://github.com/valida-xyz/Plonky3.git\".p3-$lib.path = \"../Plonky3/$lib\"" >> .cargo/config.toml
+done
+```
+
+After adding this configuration, just run `cargo build` and other `cargo` commands normally, and they will use your local copy of Plonky3. To revert this configuration change, you can just `rm .cargo/config.toml` (assuming you have no other configuration in that file that you want to keep).
+
 ## Contributing
 Valida is a community-driven project, and we encourage contributions to both the VM and compiler.
 
