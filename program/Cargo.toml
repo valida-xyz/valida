@@ -5,10 +5,10 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-p3-air = { path = "../../Plonky3/air" }
-p3-field = { path = "../../Plonky3/field" }
-p3-matrix = { path = "../../Plonky3/matrix" }
-p3-uni-stark = {path = "../../Plonky3/uni-stark"}
+p3-air = { workspace = true }
+p3-field = { workspace = true }
+p3-matrix = { workspace = true }
+p3-uni-stark = { workspace = true }
 valida-bus = { path = "../bus" }
 valida-derive = { path = "../derive" }
 valida-machine = { path = "../machine" }

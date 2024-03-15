@@ -15,12 +15,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Plonky3
-        uses: actions/checkout@v4
-        with:
-          repository: Plonky3/Plonky3
-          path: Plonky3
-   
       - name: Checkout Valida
         uses: actions/checkout@v4
         with:
@@ -45,12 +39,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Plonky3
-        uses: actions/checkout@v4
-        with:
-          repository: Plonky3/Plonky3
-          path: Plonky3
-
       - name: Checkout Valida
         uses: actions/checkout@v4
         with:
