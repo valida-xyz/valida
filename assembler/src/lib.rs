@@ -77,7 +77,8 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
                     "mulhu" | "mulhui" => MULHU32,
                     "div" | "divi" => DIV32,
                     "sdiv" | "sdivi" => SDIV32,
-                    "lt" | "lti" => LT32,
+                    "ilt" | "lt" | "lti" => LT32,
+                    "ilte" | "lte" | "ltei" => LTE32,
                     "shl" | "shli" => SHL32,
                     "shr" | "shri" => SHR32,
                     "sra" | "srai" => SRA32,
@@ -117,16 +118,20 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
                         // (0, 0, 0, 0, 0)
                         operands.extend(vec![0; 5]);
                     }
-                    "add" | "sub" | "mul" | "mulhs" | "mulhu" | "div" | "lt" | "shl" | "shr"
-                    | "sra" | "beq" | "bne" | "and" | "or" | "xor" | "ne" | "eq" | "jal"
-                    | "jalv" => {
+                    "add" | "sub" | "mul" | "mulhs" | "mulhu" | "div" | "lt" | "lte" | "shl"
+                    | "shr" | "sra" | "beq" | "bne" | "and" | "or" | "xor" | "ne" | "eq"
+                    | "jal" | "jalv" => {
                         // (a, b, c, 0, 0)
                         operands.extend(vec![0; 2]);
                     }
                     "addi" | "subi" | "muli" | "mulhsi" | "mulhui" | "divi" | "sdivi" | "lti"
-                    | "shli" | "shri" | "srai" | "beqi" | "bnei" | "andi" | "ori" | "xori"
-                    | "nei" | "eqi" => {
+                    | "ltei" | "shli" | "shri" | "srai" | "beqi" | "bnei" | "andi" | "ori"
+                    | "xori" | "nei" | "eqi" => {
                         // (a, b, c, 0, 1)
+                        operands.extend(vec![0, 1]);
+                    }
+                    "ilt" | "ilte" => {
+                        // (a, b, c, 1, 0)
                         operands.extend(vec![0, 1]);
                     }
                     "advread" => {

@@ -20,7 +20,7 @@ use valida_alu_u32::{
     },
     com::{Com32Chip, Eq32Instruction, MachineWithCom32Chip, Ne32Instruction},
     div::{Div32Chip, Div32Instruction, MachineWithDiv32Chip, SDiv32Instruction},
-    lt::{Lt32Chip, Lt32Instruction, MachineWithLt32Chip},
+    lt::{Lt32Chip, Lt32Instruction, Lte32Instruction, MachineWithLt32Chip},
     mul::{
         MachineWithMul32Chip, Mul32Chip, Mul32Instruction, Mulhs32Instruction, Mulhu32Instruction,
     },
@@ -115,6 +115,9 @@ pub struct BasicMachine<F: PrimeField32 + TwoAdicField> {
 
     #[instruction(lt_u32)]
     lt32: Lt32Instruction,
+
+    #[instruction(lt_u32)]
+    lte32: Lte32Instruction,
 
     #[instruction(bitwise_u32)]
     and32: And32Instruction,

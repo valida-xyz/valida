@@ -18,6 +18,9 @@ pub struct Lt32Cols<T> {
     pub output: T,
 
     pub multiplicity: T,
+
+    pub is_lt: T,
+    pub is_lte: T,
 }
 
 pub const NUM_LT_COLS: usize = size_of::<Lt32Cols<u8>>();
