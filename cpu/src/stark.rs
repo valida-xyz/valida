@@ -267,6 +267,10 @@ impl CpuChip {
         );
         builder.assert_bool(local.not_equal);
         builder.assert_eq(local.not_equal, local.diff * local.diff_inv);
+        builder.assert_eq(
+            AB::Expr::zero(),
+            (AB::Expr::one() - local.not_equal) * local.diff,
+        );
     }
 }
 
