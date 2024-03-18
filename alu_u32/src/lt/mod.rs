@@ -121,7 +121,7 @@ impl Lt32Chip {
             for i in 0..10 {
                 cols.bits[i] = F::from_canonical_u16(z >> i & 1);
             }
-            if n < 3 {
+            if n < 4 {
                 cols.byte_flag[n] = F::one();
             }
         }

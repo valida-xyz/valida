@@ -68,13 +68,10 @@ where
             .when_ne(local.bits[8], AB::Expr::one())
             .assert_one(local.output);
         // output should be 1 if is_lte & input_1 == input_2
+        let all_flag_sum = flag_sum + local.byte_flag[3];
         builder
             .when(local.is_lte)
-            .when_ne(flag_sum, AB::Expr::one())
-            .when_ne(
-                AB::Expr::from_canonical_u32(256) + local.input_1[3] - local.input_2[3],
-                AB::Expr::one(),
-            )
+            .when_ne(all_flag_sum, AB::Expr::one())
             .assert_one(local.output);
 
         // Check bit decomposition

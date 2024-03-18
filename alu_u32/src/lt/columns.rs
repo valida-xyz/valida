@@ -10,7 +10,7 @@ pub struct Lt32Cols<T> {
     pub input_2: Word<T>,
 
     /// Boolean flags indicating which byte pair differs
-    pub byte_flag: [T; 3],
+    pub byte_flag: [T; 4],
 
     /// Bit decomposition of 256 + input_1 - input_2
     pub bits: [T; 10],
