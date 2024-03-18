@@ -10,7 +10,7 @@ use valida_cpu::MachineWithCpuChip;
 use valida_machine::{
     instructions, Chip, Instruction, Interaction, Operands, Word, MEMORY_CELL_BYTES,
 };
-use valida_opcodes::LT32;
+use valida_opcodes::{LT32, LTE32};
 
 use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field, PrimeField};
@@ -24,7 +24,8 @@ pub mod stark;
 
 #[derive(Clone)]
 pub enum Operation {
-    Lt32(Word<u8>, Word<u8>, Word<u8>), // (dst, src1, src2)
+    Lt32(Word<u8>, Word<u8>, Word<u8>),  // (dst, src1, src2)
+    Lte32(Word<u8>, Word<u8>, Word<u8>), // (dst, src1, src2)
 }
 
 #[derive(Default)]
@@ -53,7 +54,13 @@ where
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
-        let opcode = VirtualPairCol::constant(SC::Val::from_canonical_u32(LT32));
+        let opcode = VirtualPairCol::new_main(
+            vec![
+                (LT_COL_MAP.is_lt, SC::Val::from_canonical_u32(LT32)),
+                (LT_COL_MAP.is_lte, SC::Val::from_canonical_u32(LTE32)),
+            ],
+            SC::Val::zero(),
+        );
         let input_1 = LT_COL_MAP.input_1.0.map(VirtualPairCol::single_main);
         let input_2 = LT_COL_MAP.input_2.0.map(VirtualPairCol::single_main);
         let output = (0..MEMORY_CELL_BYTES - 1)
@@ -83,28 +90,42 @@ impl Lt32Chip {
         let cols: &mut Lt32Cols<F> = unsafe { transmute(&mut row) };
 
         match op {
-            Operation::Lt32(dst, src1, src2) => {
-                if let Some(n) = src1
-                    .into_iter()
-                    .zip(src2.into_iter())
-                    .enumerate()
-                    .find_map(|(n, (x, y))| if x == y { Some(n) } else { None })
-                {
-                    let z = 256u16 + src1[n] as u16 - src2[n] as u16;
-                    for i in 0..10 {
-                        cols.bits[i] = F::from_canonical_u16(z >> i & 1);
-                    }
-                    if n < 3 {
-                        cols.byte_flag[n] = F::one();
-                    }
-                }
-                cols.input_1 = src1.transform(F::from_canonical_u8);
-                cols.input_2 = src2.transform(F::from_canonical_u8);
-                cols.output = F::from_canonical_u8(dst[3]);
-                cols.multiplicity = F::one();
+            Operation::Lt32(a, b, c) => {
+                cols.is_lt = F::one();
+                self.set_cols(cols, a, b, c);
+            }
+            Operation::Lte32(a, b, c) => {
+                cols.is_lte = F::one();
+                self.set_cols(cols, a, b, c);
             }
         }
         row
+    }
+
+    fn set_cols<F>(&self, cols: &mut Lt32Cols<F>, a: &Word<u8>, b: &Word<u8>, c: &Word<u8>)
+    where
+        F: PrimeField,
+    {
+        // Set the input columns
+        cols.input_1 = b.transform(F::from_canonical_u8);
+        cols.input_2 = c.transform(F::from_canonical_u8);
+        cols.output = F::from_canonical_u8(a[3]);
+
+        if let Some(n) = b
+            .into_iter()
+            .zip(c.into_iter())
+            .enumerate()
+            .find_map(|(n, (x, y))| if x == y { Some(n) } else { None })
+        {
+            let z = 256u16 + b[n] as u16 - c[n] as u16;
+            for i in 0..10 {
+                cols.bits[i] = F::from_canonical_u16(z >> i & 1);
+            }
+            if n < 4 {
+                cols.byte_flag[n] = F::one();
+            }
+        }
+        cols.multiplicity = F::one();
     }
 }
 
@@ -113,7 +134,7 @@ pub trait MachineWithLt32Chip<F: Field>: MachineWithCpuChip<F> {
     fn lt_u32_mut(&mut self) -> &mut Lt32Chip;
 }
 
-instructions!(Lt32Instruction);
+instructions!(Lt32Instruction, Lte32Instruction);
 
 impl<M, F> Instruction<M, F> for Lt32Instruction
 where
@@ -160,6 +181,55 @@ where
             .lt_u32_mut()
             .operations
             .push(Operation::Lt32(dst, src1, src2));
+        state.cpu_mut().push_bus_op(imm, opcode, ops);
+    }
+}
+
+impl<M, F> Instruction<M, F> for Lte32Instruction
+where
+    M: MachineWithLt32Chip<F>,
+    F: Field,
+{
+    const OPCODE: u32 = LTE32;
+
+    fn execute(state: &mut M, ops: Operands<i32>) {
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
+        let clk = state.cpu().clock;
+        let pc = state.cpu().pc;
+        let mut imm: Option<Word<u8>> = None;
+        let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
+        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
+        let src1 = if ops.d() == 1 {
+            let b = (ops.b() as u32).into();
+            imm = Some(b);
+            b
+        } else {
+            state
+                .mem_mut()
+                .read(clk, read_addr_1, true, pc, opcode, 0, "")
+        };
+        let src2 = if ops.is_imm() == 1 {
+            let c = (ops.c() as u32).into();
+            imm = Some(c);
+            c
+        } else {
+            let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
+            state
+                .mem_mut()
+                .read(clk, read_addr_2, true, pc, opcode, 1, "")
+        };
+
+        let dst = if src1 <= src2 {
+            Word::from(1)
+        } else {
+            Word::from(0)
+        };
+        state.mem_mut().write(clk, write_addr, dst, true);
+
+        state
+            .lt_u32_mut()
+            .operations
+            .push(Operation::Lte32(dst, src1, src2));
         state.cpu_mut().push_bus_op(imm, opcode, ops);
     }
 }

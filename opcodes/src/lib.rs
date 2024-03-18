@@ -30,7 +30,7 @@ pub const NE32: u32 = 111;
 pub const MULHU32: u32 = 112;
 pub const SRA32: u32 = 113;
 pub const MULHS32: u32 = 114;
-pub const LTE32: u32 = 115; //TODO
+pub const LTE32: u32 = 115;
 pub const EQ32: u32 = 116;
 
 /// NATIVE FIELD
