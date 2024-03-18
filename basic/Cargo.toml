@@ -16,6 +16,9 @@ path = "src/bin/test_prover.rs"
 byteorder = "1.4.3"
 ciborium = "0.2.2"
 clap = { version = "4.3.19", features = ["derive"] }
+rand = "0.8.5"
+rand_pcg = "0.3.1"
+rand_seeder = "0.2.3"
 tracing = "0.1.37"
 valida-alu-u32 = { path = "../alu_u32" }
 valida-assembler = { path = "../assembler" }
@@ -28,25 +31,32 @@ valida-opcodes = { path = "../opcodes" }
 valida-output = { path = "../output" }
 valida-program = { path = "../program" }
 valida-range = { path = "../range" }
-p3-baby-bear = { path = "../../Plonky3/baby-bear" }
-p3-field = { path = "../../Plonky3/field" }
-p3-maybe-rayon = { path = "../../Plonky3/maybe-rayon", features = ["parallel"] }
-p3-util = { path = "../../Plonky3/util" }
-p3-goldilocks = {path = "../../Plonky3/goldilocks" }
-p3-uni-stark = {path = "../../Plonky3/uni-stark" }
-p3-commit = { path = "../../Plonky3/commit" }
-p3-air = { path = "../../Plonky3/air" }
-p3-matrix = { path = "../../Plonky3/matrix" }
-p3-challenger = { path = "../../Plonky3/challenger" }
-p3-dft = { path = "../../Plonky3/dft" }
-p3-fri = { path = "../../Plonky3/fri" }
-p3-keccak = { path = "../../Plonky3/keccak" }
-p3-mds = { path = "../../Plonky3/mds" }
-p3-merkle-tree = { path = "../../Plonky3/merkle-tree" }
-p3-poseidon = { path = "../../Plonky3/poseidon" }
-p3-symmetric = { path = "../../Plonky3/symmetric" }
-serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
-serde_json = {}
-rand = "0.8.5"
-rand_pcg = "0.3.1"
-rand_seeder = "0.2.3"
+p3-baby-bear = { workspace = true }
+p3-field = { workspace = true }
+p3-maybe-rayon = { workspace = true }
+p3-util = { workspace = true }
+p3-goldilocks = { workspace = true }
+p3-uni-stark = { workspace = true }
+p3-commit = { workspace = true }
+p3-air = { workspace = true }
+p3-matrix = { workspace = true }
+p3-challenger = { workspace = true }
+p3-dft = { workspace = true }
+p3-fri = { workspace = true }
+p3-keccak = { workspace = true }
+p3-mds = { workspace = true }
+p3-merkle-tree = { workspace = true }
+p3-poseidon = { workspace = true }
+p3-symmetric = { workspace = true }
+
+[dev-dependencies]
+ciborium = "0.2.2"
+p3-challenger = { workspace = true }
+p3-dft = { workspace = true }
+p3-field = { workspace = true }
+p3-fri = { workspace = true }
+p3-keccak = { workspace = true }
+p3-mds = { workspace = true }
+p3-merkle-tree = { workspace = true }
+p3-poseidon = { workspace = true }
+p3-symmetric = { workspace = true }
