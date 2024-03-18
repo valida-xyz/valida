@@ -31,8 +31,8 @@ use rand::thread_rng;
 use valida_machine::StarkConfigImpl;
 use valida_machine::__internal::p3_commit::ExtensionMmcs;
 
-fn main () {
-  prove_fibonacci()
+fn main() {
+    prove_fibonacci()
 }
 
 fn prove_fibonacci() {
