@@ -8,9 +8,17 @@ license = "MIT OR Apache-2.0"
 name = "valida"
 path = "src/bin/valida.rs"
 
+[[bin]]
+name = "test_prover"
+path = "src/bin/test_prover.rs"
+
 [dependencies]
 byteorder = "1.4.3"
+ciborium = "0.2.2"
 clap = { version = "4.3.19", features = ["derive"] }
+rand = "0.8.5"
+rand_pcg = "0.3.1"
+rand_seeder = "0.2.3"
 tracing = "0.1.37"
 valida-alu-u32 = { path = "../alu_u32" }
 valida-assembler = { path = "../assembler" }
@@ -32,10 +40,17 @@ p3-uni-stark = { workspace = true }
 p3-commit = { workspace = true }
 p3-air = { workspace = true }
 p3-matrix = { workspace = true }
+p3-challenger = { workspace = true }
+p3-dft = { workspace = true }
+p3-fri = { workspace = true }
+p3-keccak = { workspace = true }
+p3-mds = { workspace = true }
+p3-merkle-tree = { workspace = true }
+p3-poseidon = { workspace = true }
+p3-symmetric = { workspace = true }
 
 [dev-dependencies]
 ciborium = "0.2.2"
-rand = "0.8.5"
 p3-challenger = { workspace = true }
 p3-dft = { workspace = true }
 p3-field = { workspace = true }

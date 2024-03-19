@@ -330,10 +330,12 @@ impl CpuChip {
             });
     }
 
-    fn set_imm_value<F: Field>(&self, cols: &mut CpuCols<F>, imm: Option<Word<u8>>) {
+    fn set_imm_value<F: PrimeField>(&self, cols: &mut CpuCols<F>, imm: Option<Word<u8>>) {
         if let Some(imm) = imm {
             cols.opcode_flags.is_imm_op = F::one();
-            cols.mem_channels[1].value = imm.transform(F::from_canonical_u8);
+            let imm = imm.transform(F::from_canonical_u8);
+            cols.mem_channels[1].value = imm;
+            cols.instruction.operands.0[2] = imm.reduce();
         }
     }
 }
