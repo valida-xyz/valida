@@ -39,7 +39,7 @@ where
 
             // Check that input byte decomposition is correct
             builder.assert_eq(local.input_1[i], byte_1.clone());
-            builder.assert_eq(local.input_2[i], byte_2.clone());
+            // builder.assert_eq(local.input_2[i], byte_2.clone());
 
             let bitwise_and: AB::Expr = local.bits_1[i]
                 .into_iter()

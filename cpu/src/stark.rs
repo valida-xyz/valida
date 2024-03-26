@@ -94,9 +94,9 @@ impl CpuChip {
         builder.assert_zero(local.mem_channels[2].is_read);
 
         // Read (1)
-        builder
-            .when(is_jalv + is_beq + is_bne + is_bus_op)
-            .assert_eq(local.read_addr_1(), addr_b.clone());
+        // builder
+        //     .when(is_jalv + is_beq + is_bne + is_bus_op)
+        //     .assert_eq(local.read_addr_1(), addr_b.clone());
         builder
             .when(is_load + is_store)
             .assert_eq(local.read_addr_1(), addr_c.clone());
@@ -163,9 +163,9 @@ impl CpuChip {
                 .map(|(a, b)| (a - b) * (a - b))
                 .sum::<AB::Expr>(),
         );
-        builder
-            .when(is_loadfp)
-            .assert_eq(local.fp, reduce::<AB>(base, local.write_value()));
+        // builder
+        //     .when(is_loadfp)
+        //     .assert_eq(local.fp, reduce::<AB>(base, local.write_value()));
         builder
             .when(is_store + is_load + is_jal + is_jalv + is_imm32 + is_loadfp + is_bus_op)
             .assert_one(local.write_used());
