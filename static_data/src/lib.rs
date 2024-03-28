@@ -42,9 +42,17 @@ where
     M: MachineWithMemBus<SC::Val>,
     SC: StarkConfig,
 {
-    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
-        // TODO
-        RowMajorMatrix::new(vec![], NUM_STATIC_DATA_COLS)
+    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<SC::Val> {
+        let mut rows = self.cells.iter()
+            .map(|(addr, value)| {
+                let mut row: Vec<SC::Val> = vec![SC::Val::from_canonical_u32(*addr)];
+                row.extend(value.0.into_iter().map(SC::Val::from_canonical_u8).collect::<Vec<_>>());
+                row
+            })
+            .flatten()
+            .collect::<Vec<_>>();
+        rows.resize(rows.len().next_power_of_two() * NUM_STATIC_DATA_COLS, SC::Val::zero());
+        RowMajorMatrix::new(rows, NUM_STATIC_DATA_COLS)
     }
 
     fn global_sends(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
