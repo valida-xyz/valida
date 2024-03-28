@@ -47,7 +47,7 @@ use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_output::{MachineWithOutputChip, OutputChip, WriteInstruction};
 use valida_program::{MachineWithProgramChip, ProgramChip};
 use valida_range::{MachineWithRangeChip, RangeCheckerChip};
-use valida_static_data::{StaticDataChip};
+use valida_static_data::{MachineWithStaticDataChip, StaticDataChip};
 
 use p3_maybe_rayon::prelude::*;
 use valida_machine::StarkConfig;
@@ -340,7 +340,7 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithRangeChip<F, 256> for BasicMachi
     }
 }
 
-impl<F: PrimeField32 + TwoAdicField> MachineWithStaticDataChip<F, 256> for BasicMachine<F> {
+impl<F: PrimeField32 + TwoAdicField> MachineWithStaticDataChip<F> for BasicMachine<F> {
     fn static_data(&self) -> &StaticDataChip {
         &self.static_data
     }
