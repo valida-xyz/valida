@@ -182,6 +182,7 @@ pub struct BasicMachine<F: PrimeField32 + TwoAdicField> {
     range: RangeCheckerChip<256>,
 
     #[chip]
+    #[static_data_chip]
     static_data: StaticDataChip,
 
     _phantom_sc: PhantomData<fn() -> F>,

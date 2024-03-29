@@ -11,6 +11,7 @@ use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
 use valida_bus::MachineWithMemBus;
 use valida_machine::{BusArgument, Chip, Interaction, Machine, StarkConfig, Word};
+use valida_memory::{MachineWithMemoryChip, MemoryChip};
 
 pub mod columns;
 pub mod stark;
@@ -34,6 +35,13 @@ impl StaticDataChip {
 
     pub fn write(&mut self, address: u32, value: Word<u8>) {
         self.cells.insert(address, value);
+    }
+
+    pub fn initialize_memory<F: Field, M: MachineWithMemoryChip<F>>(&self, machine: &mut M) {
+        let mut mem = machine.mem_mut();
+        for (addr, value) in self.cells.iter() {
+            mem.write(0, *addr, *value, true);
+        }
     }
 }
 

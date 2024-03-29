@@ -13,5 +13,6 @@ p3-maybe-rayon = { workspace = true }
 p3-uni-stark = { workspace = true }
 valida-bus = { path = "../bus" }
 valida-machine = { path = "../machine" }
+valida-memory = { path = "../memory" }
 valida-derive = { path = "../derive" }
 valida-util = { path = "../util" }
