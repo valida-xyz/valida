@@ -296,6 +296,7 @@ impl CpuChip {
         let len = values.len();
         let n_real_rows = values.len() / NUM_CPU_COLS;
 
+        debug_assert!(len > 0);
         let last_row = &values[len - NUM_CPU_COLS..];
         let pc = last_row[CPU_COL_MAP.pc];
         let fp = last_row[CPU_COL_MAP.fp];
