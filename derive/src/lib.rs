@@ -153,7 +153,7 @@ fn run_method(machine: &syn::DeriveInput, instructions: &[&Field], val: &Ident, 
     let init_static_data: TokenStream2 =
         match static_data_chip {
             Some(static_data_chip) => quote!{
-                todo!("initialize static data");
+                self.initialize_memory();
             },
             None => quote!{},
         };

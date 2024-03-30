@@ -21,9 +21,14 @@ pub struct StaticDataChip {
     pub cells: BTreeMap<u32, Word<u8>>,
 }
 
-pub trait MachineWithStaticDataChip<F: Field>: Machine<F> {
+pub trait MachineWithStaticDataChip<F: Field>: MachineWithMemoryChip<F> {
     fn static_data(&self) -> &StaticDataChip;
     fn static_data_mut(&mut self) -> &mut StaticDataChip;
+    fn initialize_memory(&mut self) {
+        for (addr, value) in self.static_data().get_cells().iter() {
+            self.mem_mut().write(0, *addr, *value, true);
+        }
+    }
 }
 
 impl StaticDataChip {
@@ -37,11 +42,8 @@ impl StaticDataChip {
         self.cells.insert(address, value);
     }
 
-    pub fn initialize_memory<F: Field, M: MachineWithMemoryChip<F>>(&self, machine: &mut M) {
-        let mut mem = machine.mem_mut();
-        for (addr, value) in self.cells.iter() {
-            mem.write(0, *addr, *value, true);
-        }
+    pub fn get_cells(&self) -> BTreeMap<u32, Word<u8>> {
+        self.cells.clone()
     }
 }
 
