@@ -29,6 +29,7 @@ impl StaticDataChip {
         let next: &StaticDataCols<AB::Var> = main.row_slice(1).borrow();
         builder
             .when_transition()
+            .when(local.is_real * next.is_real)
             .assert_eq(next.addr, local.addr + AB::Expr::one());
     }
 }

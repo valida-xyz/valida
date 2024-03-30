@@ -66,18 +66,19 @@ where
     }
 
     fn global_sends(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
-        let addr = VirtualPairCol::single_main(STATIC_DATA_COL_MAP.addr);
-        let value = STATIC_DATA_COL_MAP.value.0.map(VirtualPairCol::single_main);
-        let is_real_0 = VirtualPairCol::single_main(STATIC_DATA_COL_MAP.is_real);
-        let is_real_1 = VirtualPairCol::single_main(STATIC_DATA_COL_MAP.is_real);
-        let clk = VirtualPairCol::constant(SC::Val::zero());
-        let mut fields = vec![is_real_0, clk, addr];
-        fields.extend(value);
-        let send = Interaction {
-            fields,
-            count: is_real_1,
-            argument_index: machine.mem_bus(),
-        };
-        vec![send]
+        // let addr = VirtualPairCol::single_main(STATIC_DATA_COL_MAP.addr);
+        // let value = STATIC_DATA_COL_MAP.value.0.map(VirtualPairCol::single_main);
+        // let is_real_0 = VirtualPairCol::single_main(STATIC_DATA_COL_MAP.is_real);
+        // let is_real_1 = VirtualPairCol::single_main(STATIC_DATA_COL_MAP.is_real);
+        // let clk = VirtualPairCol::constant(SC::Val::zero());
+        // let mut fields = vec![is_real_0, clk, addr];
+        // fields.extend(value);
+        // let send = Interaction {
+        //     fields,
+        //     count: is_real_1,
+        //     argument_index: machine.mem_bus(),
+        // };
+        // vec![send]
+        vec![]
     }
 }

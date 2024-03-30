@@ -136,6 +136,7 @@ where
     }
 
     fn local_sends(&self) -> Vec<Interaction<SC::Val>> {
+        return vec![]; // TODO
         let sends = Interaction {
             fields: vec![VirtualPairCol::single_main(MEM_COL_MAP.diff)],
             count: VirtualPairCol::one(),
@@ -145,6 +146,7 @@ where
     }
 
     fn local_receives(&self) -> Vec<Interaction<SC::Val>> {
+        return vec![]; // TODO
         let receives = Interaction {
             fields: vec![VirtualPairCol::single_main(MEM_COL_MAP.counter)],
             count: VirtualPairCol::single_main(MEM_COL_MAP.counter_mult),
@@ -154,6 +156,7 @@ where
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
+        return vec![]; // TODO
         let is_read: VirtualPairCol<SC::Val> = VirtualPairCol::single_main(MEM_COL_MAP.is_read);
         let clk = VirtualPairCol::single_main(MEM_COL_MAP.clk);
         let addr = VirtualPairCol::single_main(MEM_COL_MAP.addr);
