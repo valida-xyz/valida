@@ -8,7 +8,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::mem::transmute;
 use p3_air::VirtualPairCol;
-use p3_field::{Field, PrimeField};
+use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::prelude::*;
 use valida_bus::MachineWithMemBus;
@@ -47,6 +47,7 @@ impl Operation {
 pub struct MemoryChip {
     pub cells: BTreeMap<u32, Word<u8>>,
     pub operations: BTreeMap<u32, Vec<Operation>>,
+    pub static_data: BTreeMap<u32, Word<u8>>,
 }
 
 pub trait MachineWithMemoryChip<F: Field>: Machine<F> {
@@ -59,6 +60,7 @@ impl MemoryChip {
         Self {
             cells: BTreeMap::new(),
             operations: BTreeMap::new(),
+            static_data: BTreeMap::new(),
         }
     }
 
@@ -92,6 +94,11 @@ impl MemoryChip {
         }
         self.cells.insert(address, value.into());
     }
+
+    pub fn write_static(&mut self, address: u32, value: Word<u8>) {
+        self.cells.insert(address, value.clone());
+        self.static_data.insert(address, value);
+    }
 }
 
 impl<M, SC> Chip<M, SC> for MemoryChip
@@ -120,14 +127,23 @@ where
         // than the length of the table (capped at 2^29)
         Self::insert_dummy_reads(&mut ops);
 
-        let mut rows = ops
+        let mut rows = self.static_data
+            .iter()
+            .map(|(addr, value)| self.static_data_to_row(*addr, *value))
+            .collect::<Vec<_>>();
+
+        let ops_rows = ops
             .par_iter()
             .enumerate()
             .map(|(n, (clk, op))| self.op_to_row(n, *clk as usize, *op))
             .collect::<Vec<_>>();
+        rows.extend(ops_rows);
 
         // Compute address difference values
-        Self::compute_address_diffs(ops, &mut rows);
+        self.compute_address_diffs(ops, &mut rows);
+
+        // Make sure the table length is a power of two
+        rows.resize(rows.len().next_power_of_two(), [SC::Val::zero(); NUM_MEM_COLS]);
 
         let trace =
             RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_MEM_COLS);
@@ -156,7 +172,6 @@ where
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
-        return vec![]; // TODO
         let is_read: VirtualPairCol<SC::Val> = VirtualPairCol::single_main(MEM_COL_MAP.is_read);
         let clk = VirtualPairCol::single_main(MEM_COL_MAP.clk);
         let addr = VirtualPairCol::single_main(MEM_COL_MAP.addr);
@@ -200,6 +215,18 @@ impl MemoryChip {
             }
         }
 
+        row
+    }
+
+    fn static_data_to_row<F: PrimeField>(&self, addr: u32, value: Word<u8>) -> [F; NUM_MEM_COLS] {
+        let mut row = [F::zero(); NUM_MEM_COLS];
+        let cols: &mut MemoryCols<F> = unsafe { transmute(&mut row) };
+        // TODO: maybe an is_static_data column?
+        cols.clk = F::zero();
+        cols.counter = F::zero();
+        cols.addr = F::from_canonical_u32(addr);
+        cols.value = value.transform(F::from_canonical_u8);
+        cols.is_write = F::one();
         row
     }
 
@@ -282,6 +309,7 @@ impl MemoryChip {
     }
 
     fn compute_address_diffs<F: PrimeField>(
+        &self,
         ops: Vec<(u32, Operation)>,
         rows: &mut Vec<[F; NUM_MEM_COLS]>,
     ) {
@@ -289,10 +317,12 @@ impl MemoryChip {
             return;
         }
 
+        let i0 = self.static_data.len();
+
         // Compute `diff` and `counter_mult`
         let mut diff = vec![F::zero(); rows.len()];
         let mut mult = vec![F::zero(); rows.len()];
-        for i in 0..(rows.len() - 1) {
+        for i in 0..(ops.len() - 1) {
             let addr = ops[i].1.get_address();
             let addr_next = ops[i + 1].1.get_address();
             let value = if addr_next != addr {
@@ -310,15 +340,15 @@ impl MemoryChip {
         let diff_inv = batch_multiplicative_inverse_allowing_zero(diff.clone());
 
         // Set trace values
-        for i in 0..(rows.len() - 1) {
-            rows[i][MEM_COL_MAP.diff] = diff[i];
-            rows[i][MEM_COL_MAP.diff_inv] = diff_inv[i];
-            rows[i][MEM_COL_MAP.counter_mult] = mult[i];
+        for i in 0..(ops.len() - 1) {
+            rows[i0+i][MEM_COL_MAP.diff] = diff[i];
+            rows[i0+i][MEM_COL_MAP.diff_inv] = diff_inv[i];
+            rows[i0+i][MEM_COL_MAP.counter_mult] = mult[i];
 
             let addr = ops[i].1.get_address();
             let addr_next = ops[i + 1].1.get_address();
             if addr_next - addr != 0 {
-                rows[i][MEM_COL_MAP.addr_not_equal] = F::one();
+                rows[i0+i][MEM_COL_MAP.addr_not_equal] = F::one();
             }
         }
 

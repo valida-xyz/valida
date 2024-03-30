@@ -26,7 +26,7 @@ pub trait MachineWithStaticDataChip<F: Field>: MachineWithMemoryChip<F> {
     fn static_data_mut(&mut self) -> &mut StaticDataChip;
     fn initialize_memory(&mut self) {
         for (addr, value) in self.static_data().get_cells().iter() {
-            self.mem_mut().write(0, *addr, *value, true);
+            self.mem_mut().write_static(*addr, *value);
         }
     }
 }
@@ -66,19 +66,18 @@ where
     }
 
     fn global_sends(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
-        // let addr = VirtualPairCol::single_main(STATIC_DATA_COL_MAP.addr);
-        // let value = STATIC_DATA_COL_MAP.value.0.map(VirtualPairCol::single_main);
-        // let is_real_0 = VirtualPairCol::single_main(STATIC_DATA_COL_MAP.is_real);
-        // let is_real_1 = VirtualPairCol::single_main(STATIC_DATA_COL_MAP.is_real);
-        // let clk = VirtualPairCol::constant(SC::Val::zero());
-        // let mut fields = vec![is_real_0, clk, addr];
-        // fields.extend(value);
-        // let send = Interaction {
-        //     fields,
-        //     count: is_real_1,
-        //     argument_index: machine.mem_bus(),
-        // };
-        // vec![send]
-        vec![]
+        let addr = VirtualPairCol::single_main(STATIC_DATA_COL_MAP.addr);
+        let value = STATIC_DATA_COL_MAP.value.0.map(VirtualPairCol::single_main);
+        let is_read = VirtualPairCol::constant(SC::Val::zero());
+        let is_real = VirtualPairCol::single_main(STATIC_DATA_COL_MAP.is_real);
+        let clk = VirtualPairCol::constant(SC::Val::zero());
+        let mut fields = vec![is_read, clk, addr];
+        fields.extend(value);
+        let send = Interaction {
+            fields,
+            count: is_real,
+            argument_index: machine.mem_bus(),
+        };
+        vec![send]
     }
 }
