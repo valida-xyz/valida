@@ -66,12 +66,14 @@ where
     }
 
     fn global_sends(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
+        // return vec![]; // TODO
         let addr = VirtualPairCol::single_main(STATIC_DATA_COL_MAP.addr);
         let value = STATIC_DATA_COL_MAP.value.0.map(VirtualPairCol::single_main);
         let is_read = VirtualPairCol::constant(SC::Val::zero());
         let is_real = VirtualPairCol::single_main(STATIC_DATA_COL_MAP.is_real);
+        let is_static_initial = VirtualPairCol::constant(SC::Val::one());
         let clk = VirtualPairCol::constant(SC::Val::zero());
-        let mut fields = vec![is_read, clk, addr];
+        let mut fields = vec![is_read, clk, addr, is_static_initial];
         fields.extend(value);
         let send = Interaction {
             fields,

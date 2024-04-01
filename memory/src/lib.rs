@@ -129,13 +129,16 @@ where
 
         let mut rows = self.static_data
             .iter()
-            .map(|(addr, value)| self.static_data_to_row(*addr, *value))
+            .enumerate()
+            .map(|(n, (addr, value))| self.static_data_to_row(n, *addr, *value))
             .collect::<Vec<_>>();
+
+        let n0 = rows.len();
 
         let ops_rows = ops
             .par_iter()
             .enumerate()
-            .map(|(n, (clk, op))| self.op_to_row(n, *clk as usize, *op))
+            .map(|(n, (clk, op))| self.op_to_row(n0+n, *clk as usize, *op))
             .collect::<Vec<_>>();
         rows.extend(ops_rows);
 
@@ -172,12 +175,14 @@ where
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
+        // return vec![]; // TODO
         let is_read: VirtualPairCol<SC::Val> = VirtualPairCol::single_main(MEM_COL_MAP.is_read);
         let clk = VirtualPairCol::single_main(MEM_COL_MAP.clk);
         let addr = VirtualPairCol::single_main(MEM_COL_MAP.addr);
+        let is_static_initial = VirtualPairCol::single_main(MEM_COL_MAP.is_static_initial);
         let value = MEM_COL_MAP.value.0.map(VirtualPairCol::single_main);
 
-        let mut fields = vec![is_read, clk, addr];
+        let mut fields = vec![is_read, clk, addr, is_static_initial];
         fields.extend(value);
 
         let is_real = VirtualPairCol::sum_main(vec![MEM_COL_MAP.is_read, MEM_COL_MAP.is_write]);
@@ -197,6 +202,7 @@ impl MemoryChip {
 
         cols.clk = F::from_canonical_usize(clk);
         cols.counter = F::from_canonical_usize(n);
+        cols.is_static_initial = F::zero();
 
         match op {
             Operation::Read(addr, value) => {
@@ -218,12 +224,12 @@ impl MemoryChip {
         row
     }
 
-    fn static_data_to_row<F: PrimeField>(&self, addr: u32, value: Word<u8>) -> [F; NUM_MEM_COLS] {
+    fn static_data_to_row<F: PrimeField>(&self, n: usize, addr: u32, value: Word<u8>) -> [F; NUM_MEM_COLS] {
         let mut row = [F::zero(); NUM_MEM_COLS];
         let cols: &mut MemoryCols<F> = unsafe { transmute(&mut row) };
-        // TODO: maybe an is_static_data column?
+        cols.is_static_initial = F::one();
         cols.clk = F::zero();
-        cols.counter = F::zero();
+        cols.counter = F::from_canonical_usize(n);
         cols.addr = F::from_canonical_u32(addr);
         cols.value = value.transform(F::from_canonical_u8);
         cols.is_write = F::one();

@@ -15,6 +15,9 @@ pub struct MemoryCols<T> {
     /// Main CPU clock cycle
     pub clk: T,
 
+    /// Flag indicating if this is an initial static data value or not
+    pub is_static_initial: T,
+
     /// Whether memory operation is a read
     pub is_read: T,
 
