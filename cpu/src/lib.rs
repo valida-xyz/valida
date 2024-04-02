@@ -1,3 +1,4 @@
+#![no_std]
 
 extern crate alloc;
 
@@ -90,23 +91,23 @@ where
 
     fn global_sends(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
         // Memory bus channels
-        // let mem_sends = (0..3).map(|i| {
-        //     let channel = &CPU_COL_MAP.mem_channels[i];
-        //     let is_read = VirtualPairCol::single_main(channel.is_read);
-        //     let clk = VirtualPairCol::single_main(CPU_COL_MAP.clk);
-        //     let addr = VirtualPairCol::single_main(channel.addr);
-        //     let is_static_initial = VirtualPairCol::constant(SC::Val::zero());
-        //     let value = channel.value.0.map(VirtualPairCol::single_main);
+        let mem_sends = (0..3).map(|i| {
+            let channel = &CPU_COL_MAP.mem_channels[i];
+            let is_read = VirtualPairCol::single_main(channel.is_read);
+            let clk = VirtualPairCol::single_main(CPU_COL_MAP.clk);
+            let addr = VirtualPairCol::single_main(channel.addr);
+            let is_static_initial = VirtualPairCol::constant(SC::Val::zero());
+            let value = channel.value.0.map(VirtualPairCol::single_main);
 
-        //     let mut fields = vec![is_read, clk, addr, is_static_initial];
-        //     fields.extend(value);
+            let mut fields = vec![is_read, clk, addr, is_static_initial];
+            fields.extend(value);
 
-        //     Interaction {
-        //         fields,
-        //         count: VirtualPairCol::single_main(channel.used),
-        //         argument_index: machine.mem_bus(),
-        //     }
-        // });
+            Interaction {
+                fields,
+                count: VirtualPairCol::single_main(channel.used),
+                argument_index: machine.mem_bus(),
+            }
+        });
 
         // General bus channel
         let mut fields = vec![VirtualPairCol::single_main(CPU_COL_MAP.instruction.opcode)];
@@ -144,11 +145,10 @@ where
         //     argument_index: machine.program_bus(),
         // };
 
-        vec![send_general]
-        //mem_sends
-        //    .chain(iter::once(send_general))
-        //    // .chain(iter::once(send_program))
-        //    .collect()
+        mem_sends
+            .chain(iter::once(send_general))
+            // .chain(iter::once(send_program))
+            .collect()
     }
 }
 
@@ -211,8 +211,6 @@ impl CpuChip {
                 cols.opcode_flags.is_loadfp = SC::Val::one();
             }
         }
-
-        std::println!("cpu row: {:?}", row.clone());
 
         row
     }

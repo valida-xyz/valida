@@ -1,3 +1,5 @@
+#![no_std]
+
 extern crate alloc;
 
 use crate::columns::{MemoryCols, MEM_COL_MAP, NUM_MEM_COLS};
@@ -105,21 +107,21 @@ where
     SC: StarkConfig,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
-        // let mut ops = self
-        //     .operations
-        //     .par_iter()
-        //     .map(|(clk, ops)| {
-        //         ops.iter()
-        //             .map(|op| (*clk, *op))
-        //             .collect::<Vec<(u32, Operation)>>()
-        //     })
-        //     .collect::<Vec<_>>()
-        //     .into_iter()
-        //     .flatten()
-        //     .collect::<Vec<_>>();
+        let mut ops = self
+            .operations
+            .par_iter()
+            .map(|(clk, ops)| {
+                ops.iter()
+                    .map(|op| (*clk, *op))
+                    .collect::<Vec<(u32, Operation)>>()
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
 
-        // // Sort first by addr, then by clk
-        // ops.sort_by_key(|(clk, op)| (op.get_address(), *clk));
+        // Sort first by addr, then by clk
+        ops.sort_by_key(|(clk, op)| (op.get_address(), *clk));
 
         // // Consecutive sorted clock cycles for an address should differ no more
         // // than the length of the table (capped at 2^29)
@@ -135,14 +137,14 @@ where
 
         let n0 = rows.len();
 
-        // let ops_rows = ops
-        //     .par_iter()
-        //     .enumerate()
-        //     .map(|(n, (clk, op))| self.op_to_row(n0+n, *clk as usize, *op))
-        //     .collect::<Vec<_>>();
-        // rows.extend(ops_rows.clone());
+        let ops_rows = ops
+            .par_iter()
+            .enumerate()
+            .map(|(n, (clk, op))| self.op_to_row(n0+n, *clk as usize, *op))
+            .collect::<Vec<_>>();
+        rows.extend(ops_rows.clone());
 
-        // Compute address difference values
+        // // Compute address difference values
         // self.compute_address_diffs(ops, &mut rows);
 
         // Make sure the table length is a power of two
@@ -151,10 +153,6 @@ where
         let trace =
             RowMajorMatrix::new(rows.clone().into_iter().flatten().collect::<Vec<_>>(), NUM_MEM_COLS);
 
-        std::println!("static data = {:?}\nmemory trace rows = {:?}",
-            self.static_data,
-            rows);
-        // std::println!("static data = {:?}\nops = {:?}\nops rows = {:?}\nmemory trace = {:?}", self.static_data, ops, ops_rows, trace);
         trace
     }
 
@@ -179,7 +177,6 @@ where
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
-        // return vec![]; // TODO
         let is_read: VirtualPairCol<SC::Val> = VirtualPairCol::single_main(MEM_COL_MAP.is_read);
         let clk = VirtualPairCol::single_main(MEM_COL_MAP.clk);
         let addr = VirtualPairCol::single_main(MEM_COL_MAP.addr);
