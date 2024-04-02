@@ -34,14 +34,14 @@ use valida_machine::__internal::p3_commit::ExtensionMmcs;
 #[test]
 fn prove_static_data() {
     // _start:
-    //  imm32 0(fp), 0, 0, 0, 0x13
+    //  imm32 0(fp), 0, 0, 0, 0x10
     //  load32 -4(fp), 0(fp), 0, 0, 0
     //  bnei _start, 0(fp), 0x25, 0, 1        // infinite loop unless static value is loaded
     //  stop
     let program = vec![
         InstructionWord {
             opcode: <Imm32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
-            operands: Operands([0, 0, 0, 0, 0x13]),
+            operands: Operands([0, 0, 0, 0, 0x10]),
         },
         InstructionWord {
             opcode: <Load32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
@@ -59,7 +59,8 @@ fn prove_static_data() {
 
     let mut machine = BasicMachine::<Val>::default();
     let rom = ProgramROM::new(program);
-    machine.static_data_mut().write(0x13, Word([0, 0, 0, 0x25]));
+    machine.static_data_mut().write(0x10, Word([0, 0, 0, 0x25]));
+    machine.static_data_mut().write(0x14, Word([0, 0, 0, 0x32]));
     machine.program_mut().set_program_rom(&rom);
     machine.cpu_mut().fp = 0x1000;
     machine.cpu_mut().save_register_state(); // TODO: Initial register state should be saved

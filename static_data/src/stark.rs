@@ -30,6 +30,9 @@ impl StaticDataChip {
         builder
             .when_transition()
             .when(local.is_real * next.is_real)
-            .assert_eq(next.addr, local.addr + AB::Expr::one());
+            .assert_eq(
+                next.addr,
+                local.addr + AB::Expr::one() + AB::Expr::one() + AB::Expr::one() + AB::Expr::one(),
+            );
     }
 }
