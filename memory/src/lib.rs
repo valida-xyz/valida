@@ -1,5 +1,3 @@
-#![no_std]
-
 extern crate alloc;
 
 use crate::columns::{MemoryCols, MEM_COL_MAP, NUM_MEM_COLS};
@@ -107,25 +105,25 @@ where
     SC: StarkConfig,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
-        let mut ops = self
-            .operations
-            .par_iter()
-            .map(|(clk, ops)| {
-                ops.iter()
-                    .map(|op| (*clk, *op))
-                    .collect::<Vec<(u32, Operation)>>()
-            })
-            .collect::<Vec<_>>()
-            .into_iter()
-            .flatten()
-            .collect::<Vec<_>>();
+        // let mut ops = self
+        //     .operations
+        //     .par_iter()
+        //     .map(|(clk, ops)| {
+        //         ops.iter()
+        //             .map(|op| (*clk, *op))
+        //             .collect::<Vec<(u32, Operation)>>()
+        //     })
+        //     .collect::<Vec<_>>()
+        //     .into_iter()
+        //     .flatten()
+        //     .collect::<Vec<_>>();
 
-        // Sort first by addr, then by clk
-        ops.sort_by_key(|(clk, op)| (op.get_address(), *clk));
+        // // Sort first by addr, then by clk
+        // ops.sort_by_key(|(clk, op)| (op.get_address(), *clk));
 
-        // Consecutive sorted clock cycles for an address should differ no more
-        // than the length of the table (capped at 2^29)
-        Self::insert_dummy_reads(&mut ops);
+        // // Consecutive sorted clock cycles for an address should differ no more
+        // // than the length of the table (capped at 2^29)
+        // Self::insert_dummy_reads(&mut ops);
 
         let mut rows = self.static_data
             .iter()
@@ -133,24 +131,30 @@ where
             .map(|(n, (addr, value))| self.static_data_to_row(n, *addr, *value))
             .collect::<Vec<_>>();
 
+        let padding_row = [SC::Val::zero(); NUM_MEM_COLS];
+
         let n0 = rows.len();
 
-        let ops_rows = ops
-            .par_iter()
-            .enumerate()
-            .map(|(n, (clk, op))| self.op_to_row(n0+n, *clk as usize, *op))
-            .collect::<Vec<_>>();
-        rows.extend(ops_rows);
+        // let ops_rows = ops
+        //     .par_iter()
+        //     .enumerate()
+        //     .map(|(n, (clk, op))| self.op_to_row(n0+n, *clk as usize, *op))
+        //     .collect::<Vec<_>>();
+        // rows.extend(ops_rows.clone());
 
         // Compute address difference values
-        self.compute_address_diffs(ops, &mut rows);
+        // self.compute_address_diffs(ops, &mut rows);
 
         // Make sure the table length is a power of two
-        rows.resize(rows.len().next_power_of_two(), [SC::Val::zero(); NUM_MEM_COLS]);
+        rows.resize(rows.len().next_power_of_two(), padding_row);
 
         let trace =
-            RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_MEM_COLS);
+            RowMajorMatrix::new(rows.clone().into_iter().flatten().collect::<Vec<_>>(), NUM_MEM_COLS);
 
+        std::println!("static data = {:?}\nmemory trace rows = {:?}",
+            self.static_data,
+            rows);
+        // std::println!("static data = {:?}\nops = {:?}\nops rows = {:?}\nmemory trace = {:?}", self.static_data, ops, ops_rows, trace);
         trace
     }
 
@@ -233,6 +237,10 @@ impl MemoryChip {
         cols.addr = F::from_canonical_u32(addr);
         cols.value = value.transform(F::from_canonical_u8);
         cols.is_write = F::one();
+        cols.is_read = F::zero();
+        cols.diff = F::zero();
+        cols.diff_inv = F::zero();
+        cols.addr_not_equal = F::zero();
         row
     }
 

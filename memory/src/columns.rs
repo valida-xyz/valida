@@ -4,7 +4,7 @@ use valida_derive::AlignedBorrow;
 use valida_machine::Word;
 use valida_util::indices_arr;
 
-#[derive(AlignedBorrow, Default)]
+#[derive(AlignedBorrow, Default, Debug)]
 pub struct MemoryCols<T> {
     /// Memory address
     pub addr: T,
