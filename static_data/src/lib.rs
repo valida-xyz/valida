@@ -11,8 +11,8 @@ use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
 use valida_bus::MachineWithMemBus;
-use valida_machine::{BusArgument, Chip, Interaction, Machine, StarkConfig, Word};
-use valida_memory::{MachineWithMemoryChip, MemoryChip};
+use valida_machine::{Chip, Interaction, StarkConfig, Word};
+use valida_memory::MachineWithMemoryChip;
 
 pub mod columns;
 pub mod stark;
@@ -53,7 +53,7 @@ where
     M: MachineWithMemBus<SC::Val>,
     SC: StarkConfig,
 {
-    fn generate_trace(&self, machine: &M) -> RowMajorMatrix<SC::Val> {
+    fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let mut rows = self
             .cells
             .iter()
