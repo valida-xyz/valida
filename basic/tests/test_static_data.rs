@@ -7,8 +7,7 @@ use valida_cpu::{
     BneInstruction, Imm32Instruction, Load32Instruction, MachineWithCpuChip, StopInstruction,
 };
 use valida_machine::{
-    FixedAdviceProvider, Instruction, InstructionWord, Machine, Operands, ProgramROM,
-    Word,
+    FixedAdviceProvider, Instruction, InstructionWord, Machine, Operands, ProgramROM, Word,
 };
 
 use valida_program::MachineWithProgramChip;
