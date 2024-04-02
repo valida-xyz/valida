@@ -1,4 +1,3 @@
-
 extern crate alloc;
 
 use crate::columns::{StaticDataCols, NUM_STATIC_DATA_COLS, STATIC_DATA_COL_MAP};
@@ -53,7 +52,9 @@ where
     SC: StarkConfig,
 {
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<SC::Val> {
-        let mut rows = self.cells.iter()
+        let mut rows = self
+            .cells
+            .iter()
             .map(|(addr, value)| {
                 let mut row = [SC::Val::zero(); NUM_STATIC_DATA_COLS];
                 let cols: &mut StaticDataCols<SC::Val> = unsafe { transmute(&mut row) };
@@ -65,7 +66,10 @@ where
             })
             .flatten()
             .collect::<Vec<_>>();
-        rows.resize(rows.len().next_power_of_two() * NUM_STATIC_DATA_COLS, SC::Val::zero());
+        rows.resize(
+            rows.len().next_power_of_two() * NUM_STATIC_DATA_COLS,
+            SC::Val::zero(),
+        );
         RowMajorMatrix::new(rows, NUM_STATIC_DATA_COLS)
     }
 

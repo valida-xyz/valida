@@ -127,7 +127,8 @@ where
         // // than the length of the table (capped at 2^29)
         // Self::insert_dummy_reads(&mut ops);
 
-        let mut rows = self.static_data
+        let mut rows = self
+            .static_data
             .iter()
             .enumerate()
             .map(|(n, (addr, value))| self.static_data_to_row(n, *addr, *value))
@@ -140,7 +141,7 @@ where
         let ops_rows = ops
             .par_iter()
             .enumerate()
-            .map(|(n, (clk, op))| self.op_to_row(n0+n, *clk as usize, *op))
+            .map(|(n, (clk, op))| self.op_to_row(n0 + n, *clk as usize, *op))
             .collect::<Vec<_>>();
         rows.extend(ops_rows.clone());
 
@@ -150,8 +151,10 @@ where
         // Make sure the table length is a power of two
         rows.resize(rows.len().next_power_of_two(), padding_row);
 
-        let trace =
-            RowMajorMatrix::new(rows.clone().into_iter().flatten().collect::<Vec<_>>(), NUM_MEM_COLS);
+        let trace = RowMajorMatrix::new(
+            rows.clone().into_iter().flatten().collect::<Vec<_>>(),
+            NUM_MEM_COLS,
+        );
 
         trace
     }
@@ -225,7 +228,12 @@ impl MemoryChip {
         row
     }
 
-    fn static_data_to_row<F: PrimeField>(&self, n: usize, addr: u32, value: Word<u8>) -> [F; NUM_MEM_COLS] {
+    fn static_data_to_row<F: PrimeField>(
+        &self,
+        n: usize,
+        addr: u32,
+        value: Word<u8>,
+    ) -> [F; NUM_MEM_COLS] {
         let mut row = [F::zero(); NUM_MEM_COLS];
         let cols: &mut MemoryCols<F> = unsafe { transmute(&mut row) };
         cols.is_static_initial = F::one();
@@ -352,14 +360,14 @@ impl MemoryChip {
 
         // Set trace values
         for i in 0..(ops.len() - 1) {
-            rows[i0+i][MEM_COL_MAP.diff] = diff[i];
-            rows[i0+i][MEM_COL_MAP.diff_inv] = diff_inv[i];
-            rows[i0+i][MEM_COL_MAP.counter_mult] = mult[i];
+            rows[i0 + i][MEM_COL_MAP.diff] = diff[i];
+            rows[i0 + i][MEM_COL_MAP.diff_inv] = diff_inv[i];
+            rows[i0 + i][MEM_COL_MAP.counter_mult] = mult[i];
 
             let addr = ops[i].1.get_address();
             let addr_next = ops[i + 1].1.get_address();
             if addr_next - addr != 0 {
-                rows[i0+i][MEM_COL_MAP.addr_not_equal] = F::one();
+                rows[i0 + i][MEM_COL_MAP.addr_not_equal] = F::one();
             }
         }
 

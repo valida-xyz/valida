@@ -5,8 +5,7 @@ use p3_fri::{TwoAdicFriPcs, TwoAdicFriPcsConfig};
 use valida_alu_u32::add::{Add32Instruction, MachineWithAdd32Chip};
 use valida_basic::BasicMachine;
 use valida_cpu::{
-    BneInstruction, Imm32Instruction, Load32Instruction,
-    MachineWithCpuChip, StopInstruction,
+    BneInstruction, Imm32Instruction, Load32Instruction, MachineWithCpuChip, StopInstruction,
 };
 use valida_machine::{
     FixedAdviceProvider, Instruction, InstructionWord, Machine, MachineProof, Operands, ProgramROM,
@@ -31,7 +30,6 @@ use p3_symmetric::{CompressionFunctionFromHasher, SerializingHasher32};
 use rand::thread_rng;
 use valida_machine::StarkConfigImpl;
 use valida_machine::__internal::p3_commit::ExtensionMmcs;
-
 
 #[test]
 fn prove_static_data() {
