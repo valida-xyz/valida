@@ -1,3 +1,5 @@
+#![no_std]
+
 extern crate alloc;
 
 use crate::columns::{StaticDataCols, NUM_STATIC_DATA_COLS, STATIC_DATA_COL_MAP};
@@ -61,7 +63,6 @@ where
                 cols.addr = SC::Val::from_canonical_u32(*addr);
                 cols.value = value.transform(SC::Val::from_canonical_u8);
                 cols.is_real = SC::Val::one();
-                std::println!("static data row: {:?}\n", row.clone());
                 row
             })
             .flatten()
