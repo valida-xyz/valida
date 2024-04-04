@@ -75,7 +75,8 @@ pub fn load_elf_object_file(file: Vec<u8>) -> Program {
     let mut data: BTreeMap<u32, Word<u8>> = BTreeMap::new();
     for (section_header, section_data) in data_sections {
         for i in 0 .. (section_header.sh_size / 4) as usize {
-            data.insert(section_header.sh_addr.try_into().unwrap(),
+            data.insert(<u64 as TryInto<u32>>::try_into(section_header.sh_addr).unwrap()
+                          + <usize as TryInto<u32>>::try_into(i*4).unwrap(),
                         Word([section_data[i*4], section_data[i*4+1], section_data[i*4+2], section_data[i*4+3]]));
         }
     }
