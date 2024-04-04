@@ -12,8 +12,20 @@ use elf::section::SectionHeader;
 use valida_machine::{ProgramROM, Word};
 
 pub struct Program {
-    code: ProgramROM<i32>,
-    data: BTreeMap<u32, Word<u8>>,
+    pub code: ProgramROM<i32>,
+    pub data: BTreeMap<u32, Word<u8>>,
+}
+
+pub fn load_executable_file(file: Vec<u8>) -> Program {
+    if file[0] == 0x7F && file[1] == 0x45
+        && file[2] == 0x4C && file[3] == 0x46 {
+        load_elf_object_file(file)
+    } else {
+        Program {
+            code: ProgramROM::from_machine_code(file.as_slice()),
+            data: BTreeMap::new(),
+        }
+    }
 }
 
 pub fn load_elf_object_file(file: Vec<u8>) -> Program {

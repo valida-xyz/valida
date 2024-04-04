@@ -25,6 +25,7 @@ valida-assembler = { path = "../assembler" }
 valida-bus = { path = "../bus" }
 valida-cpu = { path = "../cpu" }
 valida-derive = { path = "../derive" }
+valida-elf = { path = "../elf" }
 valida-machine = { path = "../machine" }
 valida-memory = { path = "../memory" }
 valida-opcodes = { path = "../opcodes" }

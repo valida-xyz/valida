@@ -1,5 +1,6 @@
 use clap::Parser;
 use std::fs::File;
+use std::fs;
 use std::io::{stdout, Write};
 
 use valida_basic::BasicMachine;
@@ -10,7 +11,9 @@ use p3_fri::{FriConfig, TwoAdicFriPcs, TwoAdicFriPcsConfig};
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{Machine, MachineProof, ProgramROM, StdinAdviceProvider};
 
+use valida_elf::{load_executable_file, Program};
 use valida_program::MachineWithProgramChip;
+use valida_static_data::MachineWithStaticDataChip;
 
 use p3_challenger::DuplexChallenger;
 use p3_dft::Radix2DitParallel;
@@ -50,16 +53,14 @@ fn main() {
     let args = Args::parse();
 
     let mut machine = BasicMachine::<BabyBear>::default();
-    let rom = match ProgramROM::from_file(&args.program) {
-        Ok(contents) => contents,
-        Err(e) => panic!("Failure to load file: {}. {}", &args.program, e),
-    };
-    machine.program_mut().set_program_rom(&rom);
+    let Program { code, data } = load_executable_file(fs::read(&args.program).expect("Failed to read executable file"));
+    machine.program_mut().set_program_rom(&code);
     machine.cpu_mut().fp = args.stack_height;
     machine.cpu_mut().save_register_state();
+    machine.static_data_mut().load(data);
 
     // Run the program
-    machine.run(&rom, &mut StdinAdviceProvider);
+    machine.run(&code, &mut StdinAdviceProvider);
 
     type Val = BabyBear;
     type Challenge = BinomialExtensionField<Val, 5>;
