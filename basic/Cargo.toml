@@ -20,6 +20,7 @@ rand = "0.8.5"
 rand_pcg = "0.3.1"
 rand_seeder = "0.2.3"
 tracing = "0.1.37"
+reedline-repl-rs = "1.1.1"
 valida-alu-u32 = { path = "../alu_u32" }
 valida-assembler = { path = "../assembler" }
 valida-bus = { path = "../bus" }
@@ -49,6 +50,7 @@ p3-mds = { workspace = true }
 p3-merkle-tree = { workspace = true }
 p3-poseidon = { workspace = true }
 p3-symmetric = { workspace = true }
+
 
 [dev-dependencies]
 ciborium = "0.2.2"

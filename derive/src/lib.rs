@@ -74,6 +74,7 @@ fn impl_machine(machine: &syn::DeriveInput) -> TokenStream {
 
         let name = &machine.ident;
         let run = run_method(machine, &instructions, &val, &static_data_chip);
+        let step = step_method(machine, &instructions, &val);
         let prove = prove_method(&chips);
         let verify = verify_method(&chips);
 
@@ -81,6 +82,7 @@ fn impl_machine(machine: &syn::DeriveInput) -> TokenStream {
 
         let stream = quote! {
             impl #impl_generics Machine<#val> for #name #ty_generics #where_clause {
+                #step
                 #run
                 #prove
                 #verify
@@ -171,24 +173,25 @@ fn run_method(
             #init_static_data
 
             loop {
-                // Fetch
-                let pc = self.cpu().pc;
-                let instruction = program.get_instruction(pc);
-                let opcode = instruction.opcode;
-                let ops = instruction.operands;
+               // Fetch
+               let pc = self.cpu().pc;
+               let instruction = program.get_instruction(pc);
+               let opcode = instruction.opcode;
+               let ops = instruction.operands;
 
-                // Execute
-                std::println!("trace: pc = {:?}, instruction = {:?}, ops = {:?}", pc, instruction, ops);
-                match opcode {
-                    #opcode_arms
-                    _ => panic!("Unrecognized opcode: {}", opcode),
-                };
-                self.read_word(pc as usize);
+               // Execute
+               std::println!("trace: pc = {:?}, instruction = {:?}, ops = {:?}", pc, instruction, ops);
+               match opcode {
+                   #opcode_arms
+                   _ => panic!("Unrecognized opcode: {}", opcode),
+               };
+               self.read_word(pc as usize);
 
-                // A STOP instruction signals the end of the program
-                if opcode == <StopInstruction as Instruction<Self, #val>>::OPCODE {
-                    break;
-                }
+               //let stop = self.step<Adv>(&program, &mut advice);
+               // A STOP instruction signals the end of the program
+               if opcode == <StopInstruction as Instruction<Self, #val>>::OPCODE {
+                   break;
+               }
             }
 
             // Record padded STOP instructions
@@ -198,6 +201,42 @@ fn run_method(
             }
         }
     }
+}
+
+fn step_method(machine: &syn::DeriveInput, instructions: &[&Field], val: &Ident) -> TokenStream2 {
+    // TODO: combine this with run
+    let name = &machine.ident;
+    let (_, ty_generics, _) = machine.generics.split_for_impl();
+
+    let opcode_arms = instructions
+        .iter()
+        .map(|inst| {
+            let ty = &inst.ty;
+            quote! {
+                // TODO: Self instead of #name #ty_generics?
+                <#ty as Instruction<#name #ty_generics, #val>>::OPCODE =>
+                    #ty::execute_with_advice::<Adv>(self, ops, advice),
+            }
+        })
+        .collect::<TokenStream2>();
+
+     quote! {
+        fn step<Adv: ::valida_machine::AdviceProvider>(&mut self, advice: &mut Adv) -> bool {
+            let pc = self.cpu().pc;
+            let instruction = self.program.program_rom.get_instruction(pc);
+            let opcode = instruction.opcode;
+            let ops = instruction.operands;
+
+            std::println!("step: pc = {:?}, instruction = {:?}", pc, instruction);
+            match opcode {
+                #opcode_arms
+                _ => panic!("Unrecognized opcode: {}", opcode),
+            };
+            self.read_word(pc as usize);
+
+            opcode == <StopInstruction as Instruction<Self, #val>>::OPCODE
+        }
+     }
 }
 
 fn prove_method(chips: &[&Field]) -> TokenStream2 {
