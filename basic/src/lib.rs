@@ -47,6 +47,7 @@ use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_output::{MachineWithOutputChip, OutputChip, WriteInstruction};
 use valida_program::{MachineWithProgramChip, ProgramChip};
 use valida_range::{MachineWithRangeChip, RangeCheckerChip};
+use valida_static_data::{MachineWithStaticDataChip, StaticDataChip};
 
 use p3_maybe_rayon::prelude::*;
 use valida_machine::StarkConfig;
@@ -179,6 +180,10 @@ pub struct BasicMachine<F: PrimeField32 + TwoAdicField> {
 
     #[chip]
     range: RangeCheckerChip<256>,
+
+    #[chip]
+    #[static_data_chip]
+    static_data: StaticDataChip,
 
     _phantom_sc: PhantomData<fn() -> F>,
 }
@@ -333,5 +338,15 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithRangeChip<F, 256> for BasicMachi
 
     fn range_mut(&mut self) -> &mut RangeCheckerChip<256> {
         &mut self.range
+    }
+}
+
+impl<F: PrimeField32 + TwoAdicField> MachineWithStaticDataChip<F> for BasicMachine<F> {
+    fn static_data(&self) -> &StaticDataChip {
+        &self.static_data
+    }
+
+    fn static_data_mut(&mut self) -> &mut StaticDataChip {
+        &mut self.static_data
     }
 }

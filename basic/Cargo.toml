@@ -31,6 +31,7 @@ valida-opcodes = { path = "../opcodes" }
 valida-output = { path = "../output" }
 valida-program = { path = "../program" }
 valida-range = { path = "../range" }
+valida-static-data = { path = "../static_data" }
 p3-baby-bear = { workspace = true }
 p3-field = { workspace = true }
 p3-maybe-rayon = { workspace = true }

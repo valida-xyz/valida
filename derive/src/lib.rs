@@ -26,7 +26,10 @@ impl Parse for MachineFields {
     }
 }
 
-#[proc_macro_derive(Machine, attributes(machine_fields, bus, chip, instruction))]
+#[proc_macro_derive(
+    Machine,
+    attributes(machine_fields, bus, chip, static_data_chip, instruction)
+)]
 pub fn machine_derive(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).unwrap();
     impl_machine(&ast)
@@ -61,8 +64,18 @@ fn impl_machine(machine: &syn::DeriveInput) -> TokenStream {
             .expect("Invalid machine_fields attribute, expected #[machine_fields(<Val>)]");
         let val = &machine_fields.val;
 
+        let static_data_chip: Option<Ident> = chips
+            .iter()
+            .filter(|f| f.attrs.iter().any(|a| a.path.is_ident("static_data_chip")))
+            .map(|f| {
+                f.ident
+                    .clone()
+                    .expect("static data chip requires an identifier")
+            })
+            .next();
+
         let name = &machine.ident;
-        let run = run_method(machine, &instructions, &val);
+        let run = run_method(machine, &instructions, &val, &static_data_chip);
         let prove = prove_method(&chips);
         let verify = verify_method(&chips);
 
@@ -127,7 +140,12 @@ fn chip_methods(chip: &Field) -> TokenStream2 {
     }
 }
 
-fn run_method(machine: &syn::DeriveInput, instructions: &[&Field], val: &Ident) -> TokenStream2 {
+fn run_method(
+    machine: &syn::DeriveInput,
+    instructions: &[&Field],
+    val: &Ident,
+    static_data_chip: &Option<Ident>,
+) -> TokenStream2 {
     let name = &machine.ident;
     let (_, ty_generics, _) = machine.generics.split_for_impl();
 
@@ -143,8 +161,17 @@ fn run_method(machine: &syn::DeriveInput, instructions: &[&Field], val: &Ident) 
         })
         .collect::<TokenStream2>();
 
+    let init_static_data: TokenStream2 = match static_data_chip {
+        Some(_static_data_chip) => quote! {
+            self.initialize_memory();
+        },
+        None => quote! {},
+    };
+
     quote! {
         fn run<Adv: ::valida_machine::AdviceProvider>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv) {
+            #init_static_data
+
             loop {
                 // Fetch
                 let pc = self.cpu().pc;

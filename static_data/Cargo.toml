@@ -1,0 +1,18 @@
+[package]
+name = "valida-static-data"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+p3-air = { workspace = true }
+p3-baby-bear = { workspace = true }
+p3-field = { workspace = true }
+p3-matrix = { workspace = true }
+p3-maybe-rayon = { workspace = true }
+p3-uni-stark = { workspace = true }
+valida-bus = { path = "../bus" }
+valida-machine = { path = "../machine" }
+valida-memory = { path = "../memory" }
+valida-derive = { path = "../derive" }
+valida-util = { path = "../util" }

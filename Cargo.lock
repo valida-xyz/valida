@@ -1079,6 +1079,7 @@ dependencies = [
  "valida-output",
  "valida-program",
  "valida-range",
+ "valida-static-data",
 ]
 
 [[package]]
@@ -1226,6 +1227,23 @@ dependencies = [
  "p3-uni-stark",
  "valida-bus",
  "valida-machine",
+ "valida-util",
+]
+
+[[package]]
+name = "valida-static-data"
+version = "0.1.0"
+dependencies = [
+ "p3-air",
+ "p3-baby-bear",
+ "p3-field",
+ "p3-matrix",
+ "p3-maybe-rayon",
+ "p3-uni-stark",
+ "valida-bus",
+ "valida-derive",
+ "valida-machine",
+ "valida-memory",
  "valida-util",
 ]
 

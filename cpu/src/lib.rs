@@ -96,9 +96,10 @@ where
             let is_read = VirtualPairCol::single_main(channel.is_read);
             let clk = VirtualPairCol::single_main(CPU_COL_MAP.clk);
             let addr = VirtualPairCol::single_main(channel.addr);
+            let is_static_initial = VirtualPairCol::constant(SC::Val::zero());
             let value = channel.value.0.map(VirtualPairCol::single_main);
 
-            let mut fields = vec![is_read, clk, addr];
+            let mut fields = vec![is_read, clk, addr, is_static_initial];
             fields.extend(value);
 
             Interaction {
@@ -296,6 +297,7 @@ impl CpuChip {
         let len = values.len();
         let n_real_rows = values.len() / NUM_CPU_COLS;
 
+        debug_assert!(len > 0);
         let last_row = &values[len - NUM_CPU_COLS..];
         let pc = last_row[CPU_COL_MAP.pc];
         let fp = last_row[CPU_COL_MAP.fp];
