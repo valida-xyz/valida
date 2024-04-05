@@ -13,7 +13,7 @@ use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::prelude::*;
 use valida_bus::MachineWithMemBus;
 use valida_machine::StarkConfig;
-use valida_machine::{BusArgument, Chip, Interaction, Machine, Word};
+use valida_machine::{Chip, Interaction, Machine, Word};
 use valida_util::batch_multiplicative_inverse_allowing_zero;
 
 pub mod columns;
@@ -123,59 +123,63 @@ where
         // Sort first by addr, then by clk
         ops.sort_by_key(|(clk, op)| (op.get_address(), *clk));
 
-        // Consecutive sorted clock cycles for an address should differ no more
-        // than the length of the table (capped at 2^29)
-        Self::insert_dummy_reads(&mut ops);
+        // // Consecutive sorted clock cycles for an address should differ no more
+        // // than the length of the table (capped at 2^29)
+        // Self::insert_dummy_reads(&mut ops);
 
-        let mut rows = self.static_data
+        let mut rows = self
+            .static_data
             .iter()
             .enumerate()
             .map(|(n, (addr, value))| self.static_data_to_row(n, *addr, *value))
             .collect::<Vec<_>>();
+
+        let padding_row = [SC::Val::zero(); NUM_MEM_COLS];
 
         let n0 = rows.len();
 
         let ops_rows = ops
             .par_iter()
             .enumerate()
-            .map(|(n, (clk, op))| self.op_to_row(n0+n, *clk as usize, *op))
+            .map(|(n, (clk, op))| self.op_to_row(n0 + n, *clk as usize, *op))
             .collect::<Vec<_>>();
-        rows.extend(ops_rows);
+        rows.extend(ops_rows.clone());
 
-        // Compute address difference values
-        self.compute_address_diffs(ops, &mut rows);
+        // // Compute address difference values
+        // self.compute_address_diffs(ops, &mut rows);
 
         // Make sure the table length is a power of two
-        rows.resize(rows.len().next_power_of_two(), [SC::Val::zero(); NUM_MEM_COLS]);
+        rows.resize(rows.len().next_power_of_two(), padding_row);
 
-        let trace =
-            RowMajorMatrix::new(rows.into_iter().flatten().collect::<Vec<_>>(), NUM_MEM_COLS);
+        let trace = RowMajorMatrix::new(
+            rows.clone().into_iter().flatten().collect::<Vec<_>>(),
+            NUM_MEM_COLS,
+        );
 
         trace
     }
 
     fn local_sends(&self) -> Vec<Interaction<SC::Val>> {
         return vec![]; // TODO
-        let sends = Interaction {
-            fields: vec![VirtualPairCol::single_main(MEM_COL_MAP.diff)],
-            count: VirtualPairCol::one(),
-            argument_index: BusArgument::Local(0),
-        };
-        vec![sends]
+                       // let sends = Interaction {
+                       //     fields: vec![VirtualPairCol::single_main(MEM_COL_MAP.diff)],
+                       //     count: VirtualPairCol::one(),
+                       //     argument_index: BusArgument::Local(0),
+                       // };
+                       // vec![sends]
     }
 
     fn local_receives(&self) -> Vec<Interaction<SC::Val>> {
         return vec![]; // TODO
-        let receives = Interaction {
-            fields: vec![VirtualPairCol::single_main(MEM_COL_MAP.counter)],
-            count: VirtualPairCol::single_main(MEM_COL_MAP.counter_mult),
-            argument_index: BusArgument::Local(0),
-        };
-        vec![receives]
+                       // let receives = Interaction {
+                       //     fields: vec![VirtualPairCol::single_main(MEM_COL_MAP.counter)],
+                       //     count: VirtualPairCol::single_main(MEM_COL_MAP.counter_mult),
+                       //     argument_index: BusArgument::Local(0),
+                       // };
+                       // vec![receives]
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
-        // return vec![]; // TODO
         let is_read: VirtualPairCol<SC::Val> = VirtualPairCol::single_main(MEM_COL_MAP.is_read);
         let clk = VirtualPairCol::single_main(MEM_COL_MAP.clk);
         let addr = VirtualPairCol::single_main(MEM_COL_MAP.addr);
@@ -224,7 +228,12 @@ impl MemoryChip {
         row
     }
 
-    fn static_data_to_row<F: PrimeField>(&self, n: usize, addr: u32, value: Word<u8>) -> [F; NUM_MEM_COLS] {
+    fn static_data_to_row<F: PrimeField>(
+        &self,
+        n: usize,
+        addr: u32,
+        value: Word<u8>,
+    ) -> [F; NUM_MEM_COLS] {
         let mut row = [F::zero(); NUM_MEM_COLS];
         let cols: &mut MemoryCols<F> = unsafe { transmute(&mut row) };
         cols.is_static_initial = F::one();
@@ -233,6 +242,10 @@ impl MemoryChip {
         cols.addr = F::from_canonical_u32(addr);
         cols.value = value.transform(F::from_canonical_u8);
         cols.is_write = F::one();
+        cols.is_read = F::zero();
+        cols.diff = F::zero();
+        cols.diff_inv = F::zero();
+        cols.addr_not_equal = F::zero();
         row
     }
 
@@ -347,14 +360,14 @@ impl MemoryChip {
 
         // Set trace values
         for i in 0..(ops.len() - 1) {
-            rows[i0+i][MEM_COL_MAP.diff] = diff[i];
-            rows[i0+i][MEM_COL_MAP.diff_inv] = diff_inv[i];
-            rows[i0+i][MEM_COL_MAP.counter_mult] = mult[i];
+            rows[i0 + i][MEM_COL_MAP.diff] = diff[i];
+            rows[i0 + i][MEM_COL_MAP.diff_inv] = diff_inv[i];
+            rows[i0 + i][MEM_COL_MAP.counter_mult] = mult[i];
 
             let addr = ops[i].1.get_address();
             let addr_next = ops[i + 1].1.get_address();
             if addr_next - addr != 0 {
-                rows[i0+i][MEM_COL_MAP.addr_not_equal] = F::one();
+                rows[i0 + i][MEM_COL_MAP.addr_not_equal] = F::one();
             }
         }
 

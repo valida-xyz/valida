@@ -2,14 +2,13 @@
 
 extern crate alloc;
 
-use crate::columns::{COL_MAP, NUM_PROGRAM_COLS, PREPROCESSED_COL_MAP};
+use crate::columns::NUM_PROGRAM_COLS;
 use alloc::vec;
 use alloc::vec::Vec;
 use valida_bus::MachineWithProgramBus;
 use valida_machine::{Chip, Interaction, Machine, ProgramROM};
 use valida_util::pad_to_power_of_two;
 
-use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
 use valida_machine::StarkConfig;
@@ -48,7 +47,7 @@ where
         RowMajorMatrix::new(values, NUM_PROGRAM_COLS)
     }
 
-    fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
+    fn global_receives(&self, _machine: &M) -> Vec<Interaction<SC::Val>> {
         // let pc = VirtualPairCol::single_preprocessed(PREPROCESSED_COL_MAP.pc);
         // let opcode = VirtualPairCol::single_preprocessed(PREPROCESSED_COL_MAP.opcode);
         // let mut fields = vec![pc, opcode];

@@ -2,19 +2,14 @@ extern crate core;
 
 use p3_baby_bear::BabyBear;
 use p3_fri::{TwoAdicFriPcs, TwoAdicFriPcsConfig};
-use valida_alu_u32::add::{Add32Instruction, MachineWithAdd32Chip};
 use valida_basic::BasicMachine;
 use valida_cpu::{
-    BneInstruction, Imm32Instruction, Load32Instruction,
-    MachineWithCpuChip, StopInstruction,
+    BneInstruction, Imm32Instruction, Load32Instruction, MachineWithCpuChip, StopInstruction,
 };
 use valida_machine::{
-    FixedAdviceProvider, Instruction, InstructionWord, Machine, MachineProof, Operands, ProgramROM,
-    Word,
+    FixedAdviceProvider, Instruction, InstructionWord, Machine, Operands, ProgramROM, Word,
 };
 
-use valida_memory::MachineWithMemoryChip;
-use valida_opcodes::BYTES_PER_INSTR;
 use valida_program::MachineWithProgramChip;
 use valida_static_data::MachineWithStaticDataChip;
 
@@ -32,18 +27,17 @@ use rand::thread_rng;
 use valida_machine::StarkConfigImpl;
 use valida_machine::__internal::p3_commit::ExtensionMmcs;
 
-
 #[test]
 fn prove_static_data() {
     // _start:
-    //  imm32 0(fp), 0, 0, 0, 0
+    //  imm32 0(fp), 0, 0, 0, 0x10
     //  load32 -4(fp), 0(fp), 0, 0, 0
     //  bnei _start, 0(fp), 0x25, 0, 1        // infinite loop unless static value is loaded
     //  stop
     let program = vec![
         InstructionWord {
             opcode: <Imm32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
-            operands: Operands([0, 0, 0, 0, 0]),
+            operands: Operands([0, 0, 0, 0, 0x10]),
         },
         InstructionWord {
             opcode: <Load32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
@@ -61,7 +55,8 @@ fn prove_static_data() {
 
     let mut machine = BasicMachine::<Val>::default();
     let rom = ProgramROM::new(program);
-    machine.static_data_mut().write(0, Word([0, 0, 0, 0x25]));
+    machine.static_data_mut().write(0x10, Word([0, 0, 0, 0x25]));
+    machine.static_data_mut().write(0x14, Word([0, 0, 0, 0x32]));
     machine.program_mut().set_program_rom(&rom);
     machine.cpu_mut().fp = 0x1000;
     machine.cpu_mut().save_register_state(); // TODO: Initial register state should be saved
