@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use columns::{Mul32Cols, MUL_COL_MAP, NUM_MUL_COLS};
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Chip, Instruction, Interaction, Mulhs, Mulhu, Operands, Word};
+use valida_machine::{instructions, Chip, Instruction, Interaction, Mulhs, Mulhu, Operands, StarkConfig, Word};
 use valida_opcodes::{MUL32, MULHS32, MULHU32};
 use valida_range::MachineWithRangeChip;
 
@@ -13,7 +13,6 @@ use core::borrow::BorrowMut;
 use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
-use valida_machine::StarkConfig;
 
 pub mod columns;
 pub mod stark;
