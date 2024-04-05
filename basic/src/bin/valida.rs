@@ -28,7 +28,6 @@ use valida_machine::StarkConfigImpl;
 use valida_machine::__internal::p3_commit::ExtensionMmcs;
 use valida_output::MachineWithOutputChip;
 
-
 use reedline_repl_rs::clap::{Arg, ArgMatches, Command};
 use reedline_repl_rs::{Repl, Result};
 
@@ -51,27 +50,26 @@ struct Args {
     stack_height: u32,
 }
 
-
 struct Context<'a> {
-    machine_ : BasicMachine::<BabyBear>,
-    args_ : &'a Args,
-    breakpoints_ : Vec<u32>,
-    stopped_ : bool,
-    last_fp_ : u32,
-    recorded_current_fp_ : u32,
-    last_fp_size_ : u32,
+    machine_: BasicMachine<BabyBear>,
+    args_: &'a Args,
+    breakpoints_: Vec<u32>,
+    stopped_: bool,
+    last_fp_: u32,
+    recorded_current_fp_: u32,
+    last_fp_size_: u32,
 }
 
 impl Context<'_> {
-    fn new(args : &Args) -> Context {
+    fn new(args: &Args) -> Context {
         let mut context = Context {
-           machine_ : BasicMachine::<BabyBear>::default(),
-           args_ : args.clone(),
-           breakpoints_ : Vec::new(),
-           stopped_ : false,
-           last_fp_ : args.stack_height,
-           recorded_current_fp_ : args.stack_height,
-           last_fp_size_ : 0,
+            machine_: BasicMachine::<BabyBear>::default(),
+            args_: args.clone(),
+            breakpoints_: Vec::new(),
+            stopped_: false,
+            last_fp_: args.stack_height,
+            recorded_current_fp_: args.stack_height,
+            last_fp_size_: 0,
         };
 
         let rom = match ProgramROM::from_file(&args.program) {
@@ -87,29 +85,29 @@ impl Context<'_> {
     }
 
     fn step(&mut self) -> (bool, u32) {
-      // do not execute if already stopped
-      if self.stopped_ {
-          return (true, 0);
-      }
-      let state = self.machine_.step(&mut StdinAdviceProvider);
-      let pc = self.machine_.cpu().pc;
-      let fp = self.machine_.cpu().fp;
+        // do not execute if already stopped
+        if self.stopped_ {
+            return (true, 0);
+        }
+        let state = self.machine_.step(&mut StdinAdviceProvider);
+        let pc = self.machine_.cpu().pc;
+        let fp = self.machine_.cpu().fp;
 
-      // check if fp is changed
-      if fp != self.recorded_current_fp_ {
-           self.last_fp_size_ = self.recorded_current_fp_ - fp;
-           self.last_fp_ = self.recorded_current_fp_;
-      } else if fp == self.last_fp_ {
-          self.last_fp_size_ = 0;
-      }
+        // check if fp is changed
+        if fp != self.recorded_current_fp_ {
+            self.last_fp_size_ = self.recorded_current_fp_ - fp;
+            self.last_fp_ = self.recorded_current_fp_;
+        } else if fp == self.last_fp_ {
+            self.last_fp_size_ = 0;
+        }
         self.recorded_current_fp_ = fp;
 
-      (state, pc)
+        (state, pc)
     }
 }
 
 fn init_context(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
-   Ok(Some(String::from("created machine")))
+    Ok(Some(String::from("created machine")))
 }
 
 fn status(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
@@ -119,32 +117,40 @@ fn status(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     status.push_str(&context.machine_.cpu().fp.to_string());
     status.push_str(", PC: ");
     status.push_str(&context.machine_.cpu().pc.to_string());
-    status.push_str(if context.stopped_ { ", Stopped" } else { ", Running" });
+    status.push_str(if context.stopped_ {
+        ", Stopped"
+    } else {
+        ", Running"
+    });
     Ok(Some(status))
 }
 
 fn show_frame(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
-   let size : i32 = match args.contains_id("size") {
-       true => args.get_one::<String>("size").unwrap().parse::<i32>().unwrap(),
-       false => 6,
-   };
-   let mut frame = String::new();
-   let fp = context.machine_.cpu().fp as i32;
-   frame.push_str(format!("FP: {:x}\n", fp).as_str());
-   for i in 0..size {
-       let offset = i * -4;
-       let read_addr = (fp + offset) as u32;
-       let string_val = context.machine_.mem().examine(read_addr);
-       let frameslot_addr = format!("{}(fp)", offset);
-       let frameslot = format!("{:>7}", frameslot_addr);
-       let frame_str = format!("\n{} : {}", frameslot, string_val); 
-       frame += &frame_str;
-   }
+    let size: i32 = match args.contains_id("size") {
+        true => args
+            .get_one::<String>("size")
+            .unwrap()
+            .parse::<i32>()
+            .unwrap(),
+        false => 6,
+    };
+    let mut frame = String::new();
+    let fp = context.machine_.cpu().fp as i32;
+    frame.push_str(format!("FP: {:x}\n", fp).as_str());
+    for i in 0..size {
+        let offset = i * -4;
+        let read_addr = (fp + offset) as u32;
+        let string_val = context.machine_.mem().examine(read_addr);
+        let frameslot_addr = format!("{}(fp)", offset);
+        let frameslot = format!("{:>7}", frameslot_addr);
+        let frame_str = format!("\n{} : {}", frameslot, string_val);
+        frame += &frame_str;
+    }
 
-   Ok(Some(frame))
+    Ok(Some(frame))
 }
 
-fn last_frame(_ : ArgMatches, context: &mut Context) -> Result<Option<String>> {
+fn last_frame(_: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     let mut frame = String::new();
 
     let lfp = context.last_fp_;
@@ -152,7 +158,7 @@ fn last_frame(_ : ArgMatches, context: &mut Context) -> Result<Option<String>> {
     let last_size = context.last_fp_size_ as i32;
     frame += &format!("Last FP   : 0x{:x}, Frame size: {}\n", lfp, last_size).as_str();
     frame += &format!("Current FP: 0x{:x}\n", fp).as_str();
-    
+
     // print last frame
     for i in (-5..(last_size / 4) + 1).rev() {
         let offset = (i * 4) as i32;
@@ -160,13 +166,13 @@ fn last_frame(_ : ArgMatches, context: &mut Context) -> Result<Option<String>> {
         let string_val = context.machine_.mem().examine(read_addr);
         let frameslot_addr = format!("{}(fp)", offset);
         let frameslot = format!("0x{:<7x} | {:>7}", read_addr, frameslot_addr);
-        let frame_str = format!("\n{} : {}", frameslot, string_val); 
+        let frame_str = format!("\n{} : {}", frameslot, string_val);
         frame += &frame_str;
     }
     Ok(Some(frame))
 }
 
-fn list_instrs(_ : ArgMatches, context: &mut Context) -> Result<Option<String>> {
+fn list_instrs(_: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     let pc = context.machine_.cpu().pc;
 
     let program_rom = &context.machine_.program().program_rom;
@@ -181,11 +187,15 @@ fn list_instrs(_ : ArgMatches, context: &mut Context) -> Result<Option<String>> 
         let instruction = program_rom.get_instruction(cur_pc);
         formatted.push_str(format!("{:?} : {:?}\n", cur_pc, instruction).as_str());
     }
-  Ok(Some(formatted))
+    Ok(Some(formatted))
 }
 
 fn set_bp(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
-    let pc =  args.get_one::<String>("pc").unwrap().parse::<u32>().unwrap();
+    let pc = args
+        .get_one::<String>("pc")
+        .unwrap()
+        .parse::<u32>()
+        .unwrap();
     context.breakpoints_.push(pc);
     let message = format!("Breakpoint set at pc: {}", pc);
     Ok(Some(message))
@@ -205,60 +215,59 @@ fn run_until(args: ArgMatches, context: &mut Context) -> Result<Option<String>> 
             break;
         }
     }
-  Ok(Some(message))
+    Ok(Some(message))
 }
 
 fn step(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
-   let (stop, _) = context.step();
-   if stop {
-         context.stopped_ = true;
-         Ok(Some(String::from("Execution stopped")))
-   } else {
-         Ok(None)
-   }
+    let (stop, _) = context.step();
+    if stop {
+        context.stopped_ = true;
+        Ok(Some(String::from("Execution stopped")))
+    } else {
+        Ok(None)
+    }
 }
 
-fn repl_run(args : &Args) {
+fn repl_run(args: &Args) {
     // instantiate repl
     let mut repl = Repl::new(Context::new(args))
         .with_name("REPL")
         .with_version("v0.1.0")
         .with_description("Valida VM REPL")
         .with_banner("Start by using keywords")
-        .with_command(
-            Command::new("x")
-                .about("read machine state"),
-            status)
+        .with_command(Command::new("x").about("read machine state"), status)
         .with_command(
             Command::new("s")
                 .arg(Arg::new("num_steps").required(false))
                 .about("step assembly"),
-            step)
+            step,
+        )
         .with_command(
             Command::new("f")
                 .arg(Arg::new("size").required(false))
                 .about("show frame"),
-            show_frame)
+            show_frame,
+        )
         .with_command(
-            Command::new("lf")
-                .about("show last frame and current frame"),
-            last_frame)
+            Command::new("lf").about("show last frame and current frame"),
+            last_frame,
+        )
         .with_command(
             Command::new("b")
                 .arg(Arg::new("pc").required(false))
                 .about("set break point at"),
-            set_bp)
+            set_bp,
+        )
         .with_command(
-            Command::new("r")
-                .about("run until stop or breakpoint"),
-            run_until)
+            Command::new("r").about("run until stop or breakpoint"),
+            run_until,
+        )
         .with_command(
-            Command::new("l")
-                .about("list instruction at current PC"),
-            list_instrs)
+            Command::new("l").about("list instruction at current PC"),
+            list_instrs,
+        )
         .with_command(
-            Command::new("reset")
-                .about("reset machine state!"),
+            Command::new("reset").about("reset machine state!"),
             init_context,
         );
 
@@ -281,7 +290,6 @@ fn main() {
     machine.program_mut().set_program_rom(&rom);
     machine.cpu_mut().fp = args.stack_height;
     machine.cpu_mut().save_register_state();
-
 
     // Run the program
     machine.run(&rom, &mut StdinAdviceProvider);

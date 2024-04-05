@@ -220,23 +220,23 @@ fn step_method(machine: &syn::DeriveInput, instructions: &[&Field], val: &Ident)
         })
         .collect::<TokenStream2>();
 
-     quote! {
-        fn step<Adv: ::valida_machine::AdviceProvider>(&mut self, advice: &mut Adv) -> bool {
-            let pc = self.cpu().pc;
-            let instruction = self.program.program_rom.get_instruction(pc);
-            let opcode = instruction.opcode;
-            let ops = instruction.operands;
+    quote! {
+       fn step<Adv: ::valida_machine::AdviceProvider>(&mut self, advice: &mut Adv) -> bool {
+           let pc = self.cpu().pc;
+           let instruction = self.program.program_rom.get_instruction(pc);
+           let opcode = instruction.opcode;
+           let ops = instruction.operands;
 
-            std::println!("step: pc = {:?}, instruction = {:?}", pc, instruction);
-            match opcode {
-                #opcode_arms
-                _ => panic!("Unrecognized opcode: {}", opcode),
-            };
-            self.read_word(pc as usize);
+           std::println!("step: pc = {:?}, instruction = {:?}", pc, instruction);
+           match opcode {
+               #opcode_arms
+               _ => panic!("Unrecognized opcode: {}", opcode),
+           };
+           self.read_word(pc as usize);
 
-            opcode == <StopInstruction as Instruction<Self, #val>>::OPCODE
-        }
-     }
+           opcode == <StopInstruction as Instruction<Self, #val>>::OPCODE
+       }
+    }
 }
 
 fn prove_method(chips: &[&Field]) -> TokenStream2 {
