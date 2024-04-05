@@ -1,6 +1,6 @@
 use clap::Parser;
-use std::fs::File;
 use std::fs;
+use std::fs::File;
 use std::io::{stdout, Write};
 
 use valida_basic::BasicMachine;
@@ -53,7 +53,8 @@ fn main() {
     let args = Args::parse();
 
     let mut machine = BasicMachine::<BabyBear>::default();
-    let Program { code, data } = load_executable_file(fs::read(&args.program).expect("Failed to read executable file"));
+    let Program { code, data } =
+        load_executable_file(fs::read(&args.program).expect("Failed to read executable file"));
     machine.program_mut().set_program_rom(&code);
     machine.cpu_mut().fp = args.stack_height;
     machine.cpu_mut().save_register_state();
