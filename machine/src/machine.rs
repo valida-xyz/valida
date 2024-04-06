@@ -9,6 +9,10 @@ pub trait Machine<F: Field>: Sync {
     where
         Adv: AdviceProvider;
 
+    fn step<Adv>(&mut self, advice: &mut Adv) -> bool
+    where
+        Adv: AdviceProvider;
+
     fn prove<SC>(&self, config: &SC) -> MachineProof<SC>
     where
         SC: StarkConfig<Val = F>;
