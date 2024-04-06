@@ -2,11 +2,10 @@
 
 extern crate alloc;
 
-use crate::columns::{NUM_STATIC_DATA_COLS, NUM_STATIC_DATA_PREPROCESSED_COLS, STATIC_DATA_PREPROCESSED_COL_MAP};
+use crate::columns::{NUM_STATIC_DATA_COLS, STATIC_DATA_PREPROCESSED_COL_MAP};
 use alloc::collections::BTreeMap;
 use alloc::vec;
 use alloc::vec::Vec;
-use core::mem::transmute;
 use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;

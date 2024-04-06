@@ -1,5 +1,4 @@
 use crate::config::StarkConfig;
-use alloc::vec::Vec;
 use p3_commit::Pcs;
 use p3_matrix::dense::RowMajorMatrix;
 use serde::de::DeserializeOwned;
@@ -20,6 +19,7 @@ pub struct MachineProof<SC: StarkConfig> {
 
 #[derive(Serialize, Deserialize)]
 pub struct Commitments<Com> {
+    pub preprocessed_trace: Com,
     pub main_trace: Com,
     pub perm_trace: Com,
     pub quotient_chunks: Com,

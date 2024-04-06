@@ -2,7 +2,6 @@ use crate::folding_builder::VerifierConstraintFolder;
 use crate::Machine;
 use crate::__internal::{DebugConstraintBuilder, ProverConstraintFolder};
 use alloc::vec;
-use alloc::vec::Vec;
 
 use crate::config::StarkConfig;
 use crate::symbolic::symbolic_builder::SymbolicAirBuilder;

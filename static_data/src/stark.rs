@@ -1,12 +1,10 @@
-use crate::columns::{StaticDataPreprocessedCols, NUM_STATIC_DATA_PREPROCESSED_COLS, NUM_STATIC_DATA_COLS};
+use crate::columns::{NUM_STATIC_DATA_PREPROCESSED_COLS, NUM_STATIC_DATA_COLS};
 use crate::StaticDataChip;
 
 use alloc::vec::Vec;
 use alloc::vec;
-use core::borrow::Borrow;
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::AbstractField;
-use p3_matrix::MatrixRowSlices;
 use p3_matrix::dense::RowMajorMatrix;
 
 impl<F: AbstractField> BaseAir<F> for StaticDataChip {
