@@ -3,15 +3,18 @@
 
 extern crate alloc;
 
+use alloc::boxed::Box;
+use alloc::vec;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use p3_air::Air;
 use p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
-use p3_field::PrimeField32;
+use p3_field::{AbstractField, PrimeField32};
 use p3_field::{extension::BinomialExtensionField, TwoAdicField};
+use p3_matrix::{Matrix, MatrixRowSlices};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
-use p3_util::log2_ceil_usize;
+use p3_util::{log2_ceil_usize, log2_strict_usize};
 use valida_alu_u32::{
     add::{Add32Chip, Add32Instruction, MachineWithAdd32Chip},
     bitwise::{
@@ -39,9 +42,11 @@ use valida_cpu::{
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_machine::{
-    AdviceProvider, BusArgument, Chip, ChipProof, Instruction, Machine, MachineProof, ProgramROM,
-    ValidaAirBuilder,
+    AdviceProvider, BusArgument, Commitments, Chip, ChipProof, Instruction, Machine, MachineProof, OpenedValues, ProgramROM,
+    ValidaAirBuilder, generate_permutation_trace
 };
+use valida_machine::__internal::{get_log_quotient_degree, quotient, check_constraints, check_cumulative_sums};
+use valida_machine::__internal::p3_challenger::{CanObserve, FieldChallenger};
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_output::{MachineWithOutputChip, OutputChip, WriteInstruction};
 use valida_program::{MachineWithProgramChip, ProgramChip};
@@ -105,6 +110,8 @@ pub struct BasicMachine<F: PrimeField32 + TwoAdicField> {
 
     _phantom_sc: PhantomData<fn() -> F>,
 }
+
+const NUM_CHIPS: usize = 14;
 
 impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
     fn run<Adv>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv)
@@ -195,7 +202,429 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
     where
         SC: StarkConfig<Val = F>
     {
-        todo!()
+        let mut chips: [Box<&dyn Chip<Self, SC>>; NUM_CHIPS] = [
+            Box::new(self.cpu()),
+            Box::new(self.program()),
+            Box::new(self.mem()),
+            Box::new(self.add_u32()),
+            Box::new(self.sub_u32()),
+            Box::new(self.mul_u32()),
+            Box::new(self.div_u32()),
+            Box::new(self.shift_u32()),
+            Box::new(self.lt_u32()),
+            Box::new(self.com_u32()),
+            Box::new(self.bitwise_u32()),
+            Box::new(self.output()),
+            Box::new(self.range()),
+            Box::new(self.static_data()),
+        ];
+
+        let log_quotient_degrees: [usize; NUM_CHIPS] = [
+            get_log_quotient_degree::<Self, SC, _>(self, self.cpu()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.program()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.mem()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.add_u32()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.sub_u32()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.mul_u32()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.div_u32()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.shift_u32()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.lt_u32()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.com_u32()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.bitwise_u32()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.output()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.range()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.static_data()),
+        ];
+
+        let mut challenger = config.challenger();
+        // TODO: Seed challenger with digest of all constraints & trace lengths.
+        let pcs = config.pcs();
+
+        let preprocessed_traces: Vec<RowMajorMatrix<SC::Val>> =
+            tracing::info_span!("generate preprocessed traces")
+                .in_scope(||
+                    chips.par_iter()
+                        .flat_map(|chip| chip.preprocessed_trace())
+                        .collect::<Vec<_>>()
+                );
+
+        let (preprocessed_commit, preprocessed_data) =
+            tracing::info_span!("commit to preprocessed traces")
+                .in_scope(|| pcs.commit_batches(preprocessed_traces.to_vec()));
+        challenger.observe(preprocessed_commit.clone());
+        let mut preprocessed_trace_ldes = pcs.get_ldes(&preprocessed_data);
+
+        let main_traces: [RowMajorMatrix<SC::Val>; NUM_CHIPS] =
+            tracing::info_span!("generate main trace")
+                .in_scope(||
+                    chips.par_iter()
+                        .map(|chip| chip.generate_trace(self))
+                        .collect::<Vec<_>>()
+                        .try_into().unwrap()
+                );
+
+        let degrees: [usize; NUM_CHIPS] = main_traces.iter()
+            .map(|trace| trace.height())
+            .collect::<Vec<_>>()
+            .try_into().unwrap();
+        let log_degrees = degrees.map(|d| log2_strict_usize(d));
+        let g_subgroups = log_degrees.map(|log_deg| SC::Val::two_adic_generator(log_deg));
+
+        let (main_commit, main_data) = tracing::info_span!("commit to main traces")
+            .in_scope(|| pcs.commit_batches(main_traces.to_vec()));
+        challenger.observe(main_commit.clone());
+        let mut main_trace_ldes = pcs.get_ldes(&main_data);
+
+        let mut perm_challenges = Vec::new();
+        for _ in 0..3 {
+            perm_challenges.push(challenger.sample_ext_element());
+        }
+
+        let perm_traces = tracing::info_span!("generate permutation traces")
+            .in_scope(||
+                chips.into_par_iter().enumerate().map(|(i, chip)| {
+                    generate_permutation_trace(self, *chip, &main_traces[i], perm_challenges.clone())
+                }).collect::<Vec<_>>()
+            );
+
+        let cumulative_sums = perm_traces.iter()
+            .map(|trace| trace.row_slice(trace.height() - 1).last().unwrap().clone())
+            .collect::<Vec<_>>();
+
+        let (perm_commit, perm_data) = tracing::info_span!("commit to permutation traces")
+            .in_scope(|| {
+                let flattened_perm_traces = perm_traces.iter()
+                    .map(|trace| trace.flatten_to_base())
+                    .collect::<Vec<_>>();
+                pcs.commit_batches(flattened_perm_traces)
+            });
+        challenger.observe(perm_commit.clone());
+        let mut perm_trace_ldes = pcs.get_ldes(&perm_data);
+
+        let alpha: SC::Challenge = challenger.sample_ext_element();
+
+        let mut quotients: Vec<RowMajorMatrix<SC::Val>> = vec![];
+
+        let mut i: usize = 0;
+
+        let chip = self.cpu();
+        #[cfg(debug_assertions)]
+        check_constraints::<Self, _, SC>(self, chip, &main_traces[i], &perm_traces[i], &perm_challenges);
+        quotients.push(quotient(
+            self,
+            config,
+            chip,
+            log_degrees[i],
+            None::<RowMajorMatrix<SC::Val>>,
+            main_trace_ldes.remove(0),
+            perm_trace_ldes.remove(0),
+            cumulative_sums[i],
+            &perm_challenges,
+            alpha
+        ));
+        i += 1;
+
+        let chip = self.program();
+        #[cfg(debug_assertions)]
+        check_constraints::<Self, _, SC>(self, chip, &main_traces[i], &perm_traces[i], &perm_challenges);
+        quotients.push(quotient(
+            self,
+            config,
+            chip,
+            log_degrees[i],
+            Some(preprocessed_trace_ldes.remove(0)),
+            main_trace_ldes.remove(0),
+            perm_trace_ldes.remove(0),
+            cumulative_sums[i],
+            &perm_challenges,
+            alpha
+        ));
+        i += 1;
+
+        let chip = self.mem();
+        #[cfg(debug_assertions)]
+        check_constraints::<Self, _, SC>(self, chip, &main_traces[i], &perm_traces[i], &perm_challenges);
+        quotients.push(quotient(
+            self,
+            config,
+            chip,
+            log_degrees[i],
+            None::<RowMajorMatrix<SC::Val>>,
+            main_trace_ldes.remove(0),
+            perm_trace_ldes.remove(0),
+            cumulative_sums[i],
+            &perm_challenges,
+            alpha
+        ));
+        i += 1;
+
+        let chip = self.add_u32();
+        #[cfg(debug_assertions)]
+        check_constraints::<Self, _, SC>(self, chip, &main_traces[i], &perm_traces[i], &perm_challenges);
+        quotients.push(quotient(
+            self,
+            config,
+            chip,
+            log_degrees[i],
+            None::<RowMajorMatrix<SC::Val>>,
+            main_trace_ldes.remove(0),
+            perm_trace_ldes.remove(0),
+            cumulative_sums[i],
+            &perm_challenges,
+            alpha
+        ));
+        i += 1;
+
+        let chip = self.sub_u32();
+        #[cfg(debug_assertions)]
+        check_constraints::<Self, _, SC>(self, chip, &main_traces[i], &perm_traces[i], &perm_challenges);
+        quotients.push(quotient(
+            self,
+            config,
+            chip,
+            log_degrees[i],
+            None::<RowMajorMatrix<SC::Val>>,
+            main_trace_ldes.remove(0),
+            perm_trace_ldes.remove(0),
+            cumulative_sums[i],
+            &perm_challenges,
+            alpha
+        ));
+        i += 1;
+
+        let chip = self.mul_u32();
+        #[cfg(debug_assertions)]
+        check_constraints::<Self, _, SC>(self, chip, &main_traces[i], &perm_traces[i], &perm_challenges);
+        quotients.push(quotient(
+            self,
+            config,
+            chip,
+            log_degrees[i],
+            None::<RowMajorMatrix<SC::Val>>,
+            main_trace_ldes.remove(0),
+            perm_trace_ldes.remove(0),
+            cumulative_sums[i],
+            &perm_challenges,
+            alpha
+        ));
+        i += 1;
+
+        let chip = self.div_u32();
+        #[cfg(debug_assertions)]
+        check_constraints::<Self, _, SC>(self, chip, &main_traces[i], &perm_traces[i], &perm_challenges);
+        quotients.push(quotient(
+            self,
+            config,
+            chip,
+            log_degrees[i],
+            None::<RowMajorMatrix<SC::Val>>,
+            main_trace_ldes.remove(0),
+            perm_trace_ldes.remove(0),
+            cumulative_sums[i],
+            &perm_challenges,
+            alpha
+        ));
+        i += 1;
+
+        let chip = self.shift_u32();
+        #[cfg(debug_assertions)]
+        check_constraints::<Self, _, SC>(self, chip, &main_traces[i], &perm_traces[i], &perm_challenges);
+        quotients.push(quotient(
+            self,
+            config,
+            chip,
+            log_degrees[i],
+            None::<RowMajorMatrix<SC::Val>>,
+            main_trace_ldes.remove(0),
+            perm_trace_ldes.remove(0),
+            cumulative_sums[i],
+            &perm_challenges,
+            alpha
+        ));
+        i += 1;
+
+        let chip = self.lt_u32();
+        #[cfg(debug_assertions)]
+        check_constraints::<Self, _, SC>(self, chip, &main_traces[i], &perm_traces[i], &perm_challenges);
+        quotients.push(quotient(
+            self,
+            config,
+            chip,
+            log_degrees[i],
+            None::<RowMajorMatrix<SC::Val>>,
+            main_trace_ldes.remove(0),
+            perm_trace_ldes.remove(0),
+            cumulative_sums[i],
+            &perm_challenges,
+            alpha
+        ));
+        i += 1;
+
+        let chip = self.com_u32();
+        #[cfg(debug_assertions)]
+        check_constraints::<Self, _, SC>(self, chip, &main_traces[i], &perm_traces[i], &perm_challenges);
+        quotients.push(quotient(
+            self,
+            config,
+            chip,
+            log_degrees[i],
+            None::<RowMajorMatrix<SC::Val>>,
+            main_trace_ldes.remove(0),
+            perm_trace_ldes.remove(0),
+            cumulative_sums[i],
+            &perm_challenges,
+            alpha
+        ));
+        i += 1;
+
+        let chip = self.bitwise_u32();
+        #[cfg(debug_assertions)]
+        check_constraints::<Self, _, SC>(self, chip, &main_traces[i], &perm_traces[i], &perm_challenges);
+        quotients.push(quotient(
+            self,
+            config,
+            chip,
+            log_degrees[i],
+            None::<RowMajorMatrix<SC::Val>>,
+            main_trace_ldes.remove(0),
+            perm_trace_ldes.remove(0),
+            cumulative_sums[i],
+            &perm_challenges,
+            alpha
+        ));
+        i += 1;
+
+        let chip = self.output();
+        #[cfg(debug_assertions)]
+        check_constraints::<Self, _, SC>(self, chip, &main_traces[i], &perm_traces[i], &perm_challenges);
+        quotients.push(quotient(
+            self,
+            config,
+            chip,
+            log_degrees[i],
+            None::<RowMajorMatrix<SC::Val>>,
+            main_trace_ldes.remove(0),
+            perm_trace_ldes.remove(0),
+            cumulative_sums[i],
+            &perm_challenges,
+            alpha
+        ));
+        i += 1;
+
+        let chip = self.range();
+        #[cfg(debug_assertions)]
+        check_constraints::<Self, _, SC>(self, chip, &main_traces[i], &perm_traces[i], &perm_challenges);
+        quotients.push(quotient(
+            self,
+            config,
+            chip,
+            log_degrees[i],
+            Some(preprocessed_trace_ldes.remove(0)),
+            main_trace_ldes.remove(0),
+            perm_trace_ldes.remove(0),
+            cumulative_sums[i],
+            &perm_challenges,
+            alpha
+        ));
+        i += 1;
+
+        let chip = self.static_data();
+        #[cfg(debug_assertions)]
+        check_constraints::<Self, _, SC>(self, chip, &main_traces[i], &perm_traces[i], &perm_challenges);
+        quotients.push(quotient(
+            self,
+            config,
+            chip,
+            log_degrees[i],
+            Some(preprocessed_trace_ldes.remove(0)),
+            main_trace_ldes.remove(0),
+            perm_trace_ldes.remove(0),
+            cumulative_sums[i],
+            &perm_challenges,
+            alpha
+        ));
+        i += 1;
+
+        assert_eq!(quotients.len(), NUM_CHIPS);
+        assert_eq!(log_quotient_degrees.len(), NUM_CHIPS);
+        let coset_shifts = tracing::debug_span!("coset shift").in_scope(|| {
+            let pcs_coset_shift = pcs.coset_shift();
+            log_quotient_degrees.map(|log_d| pcs_coset_shift.exp_power_of_2(log_d))
+        });
+        assert_eq!(coset_shifts.len(), NUM_CHIPS);
+        let (quotient_commit, quotient_data) = tracing::info_span!("commit to quotient chunks")
+            .in_scope(|| pcs.commit_shifted_batches(quotients.to_vec(), &coset_shifts));
+
+        challenger.observe(quotient_commit.clone());
+
+        #[cfg(debug_assertions)]
+        check_cumulative_sums(&perm_traces[..]);
+
+        let zeta: SC::Challenge = challenger.sample_ext_element();
+        let zeta_and_next: [Vec<SC::Challenge>; NUM_CHIPS] =
+            g_subgroups.map(|g| vec![zeta, zeta * g]);
+        let zeta_exp_quotient_degree: [Vec<SC::Challenge>; NUM_CHIPS] =
+            log_quotient_degrees.map(|log_deg| vec![zeta.exp_power_of_2(log_deg)]);
+        let prover_data_and_points = [
+            // TODO: Causes some errors, probably related to the fact that not all chips have preprocessed traces?
+            // (&preprocessed_data, zeta_and_next.as_slice()),
+            (&main_data, zeta_and_next.as_slice()),
+            (&perm_data, zeta_and_next.as_slice()),
+            (&quotient_data, zeta_exp_quotient_degree.as_slice()),
+        ];
+        let (openings, opening_proof) = pcs.open_multi_batches(
+           &prover_data_and_points, &mut challenger);
+
+        // TODO: add preprocessed openings
+        let [main_openings, perm_openings, quotient_openings] =
+            openings.try_into().expect("Should have 3 rounds of openings");
+
+        let commitments = Commitments {
+            main_trace: main_commit,
+            perm_trace: perm_commit,
+            quotient_chunks: quotient_commit,
+        };
+
+        // TODO: add preprocessed openings
+        let chip_proofs = log_degrees
+            .iter()
+            .zip(main_openings)
+            .zip(perm_openings)
+            .zip(quotient_openings)
+            .zip(perm_traces)
+            .map(|((((log_degree,  main), perm), quotient), perm_trace)| {
+                // TODO: add preprocessed openings
+                let [preprocessed_local, preprocessed_next] =
+                    [vec![], vec![]];
+
+                let [main_local, main_next] = main.try_into().expect("Should have 2 openings");
+                let [perm_local, perm_next] = perm.try_into().expect("Should have 2 openings");
+                let [quotient_chunks] = quotient.try_into().expect("Should have 1 opening");
+
+                let opened_values = OpenedValues {
+                    preprocessed_local,
+                    preprocessed_next,
+                    trace_local: main_local,
+                    trace_next: main_next,
+                    permutation_local: perm_local,
+                    permutation_next: perm_next,
+                    quotient_chunks,
+                };
+
+                let cumulative_sum = perm_trace.row_slice(perm_trace.height() - 1).last().unwrap().clone();
+                ChipProof {
+                    log_degree: *log_degree,
+                    opened_values,
+                    cumulative_sum,
+                }
+            })
+            .collect::<Vec<_>>();
+
+        MachineProof {
+            commitments,
+            opening_proof,
+            chip_proofs,
+        }
     }
 
     fn verify<SC>(&self, config: &SC, proof: &MachineProof<SC>) -> Result<(), ()>

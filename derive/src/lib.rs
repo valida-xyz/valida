@@ -250,7 +250,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     preprocessed_trace_lde,
                     main_trace_ldes.remove(0),
                     perm_trace_ldes.remove(0),
-                    cummulative_sums[#i],
+                    cumulative_sums[#i],
                     &perm_challenges,
                     alpha,
                 ));
@@ -329,7 +329,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     }).collect::<Vec<_>>()
                 );
 
-            let cummulative_sums = perm_traces.iter()
+            let cumulative_sums = perm_traces.iter()
                 .map(|trace| trace.row_slice(trace.height() - 1).last().unwrap().clone())
                 .collect::<Vec<_>>();
 
