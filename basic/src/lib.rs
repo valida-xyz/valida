@@ -4,14 +4,15 @@
 extern crate alloc;
 
 use alloc::boxed::Box;
+use alloc::format;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use p3_air::Air;
 use p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
-use p3_field::{AbstractField, PrimeField32};
+use p3_field::{AbstractField, AbstractExtensionField, PrimeField32};
 use p3_field::{extension::BinomialExtensionField, TwoAdicField};
-use p3_matrix::{Matrix, MatrixRowSlices};
+use p3_matrix::{Matrix, Dimensions, MatrixRowSlices};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::*;
 use p3_util::{log2_ceil_usize, log2_strict_usize};
@@ -43,7 +44,7 @@ use valida_cpu::{
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_machine::{
     AdviceProvider, BusArgument, Commitments, Chip, ChipProof, Instruction, Machine, MachineProof, OpenedValues, ProgramROM,
-    ValidaAirBuilder, generate_permutation_trace
+    ValidaAirBuilder, generate_permutation_trace, verify_constraints
 };
 use valida_machine::__internal::{get_log_quotient_degree, quotient, check_constraints, check_cumulative_sums};
 use valida_machine::__internal::p3_challenger::{CanObserve, FieldChallenger};
@@ -631,7 +632,384 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
     where
         SC: StarkConfig<Val = F>
     {
-        todo!()
+        let mut chips: [Box<&dyn Chip<Self, SC>>; NUM_CHIPS] = [
+            Box::new(self.cpu()),
+            Box::new(self.program()),
+            Box::new(self.mem()),
+            Box::new(self.add_u32()),
+            Box::new(self.sub_u32()),
+            Box::new(self.mul_u32()),
+            Box::new(self.div_u32()),
+            Box::new(self.shift_u32()),
+            Box::new(self.lt_u32()),
+            Box::new(self.com_u32()),
+            Box::new(self.bitwise_u32()),
+            Box::new(self.output()),
+            Box::new(self.range()),
+            Box::new(self.static_data()),
+        ];
+
+        let log_quotient_degrees: [usize; NUM_CHIPS] = [
+            get_log_quotient_degree::<Self, SC, _>(self, self.cpu()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.program()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.mem()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.add_u32()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.sub_u32()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.mul_u32()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.div_u32()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.shift_u32()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.lt_u32()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.com_u32()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.bitwise_u32()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.output()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.range()),
+            get_log_quotient_degree::<Self, SC, _>(self, self.static_data()),
+        ];
+
+        let mut challenger = config.challenger();
+        // TODO: Seed challenger with digest of all constraints & trace lengths.
+        let pcs = config.pcs();
+
+        let chips_interactions = chips
+        .iter()
+        .map(|chip| chip.all_interactions(self))
+        .collect::<Vec<_>>();
+
+        let dims = &[
+            chips
+                .iter()
+                .zip(proof.chip_proofs.iter())
+                .map(|(chip, chip_proof)| Dimensions {
+                    width: chip.trace_width(),
+                    height: 1 << chip_proof.log_degree,
+                })
+                .collect::<Vec<_>>(),
+            chips_interactions.iter()
+              .zip(proof.chip_proofs.iter())
+                .map(|(interactions, chip_proof)| Dimensions {
+                    width: (interactions.len() + 1) * SC::Challenge::D,
+                    height: 1 << chip_proof.log_degree,
+                })
+                .collect::<Vec<_>>(),
+            proof.chip_proofs.iter()
+                .zip(log_quotient_degrees)
+                .map(|(chip_proof, log_quotient_deg)| Dimensions {
+                    width: log_quotient_deg << SC::Challenge::D,
+                    height: 1 << chip_proof.log_degree,
+                })
+                .collect::<Vec<_>>(),
+        ];
+
+        // Get the generators of the trace subgroups for each chip.
+        let g_subgroups: [SC::Val; NUM_CHIPS] = proof.chip_proofs
+            .iter()
+            .map(|chip_proof| SC::Val::two_adic_generator(chip_proof.log_degree))
+            .collect::<Vec<_>>().try_into().unwrap();
+
+        // TODO: maybe avoid cloning opened values (not sure if possible)
+        let mut main_values = vec![];
+        let mut perm_values = vec![];
+        let mut quotient_values = vec![];
+
+        for chip_proof in proof.chip_proofs.iter() {
+            let OpenedValues {
+                preprocessed_local,
+                preprocessed_next,
+                trace_local,
+                trace_next,
+                permutation_local,
+                permutation_next,
+                quotient_chunks,
+            } = &chip_proof.opened_values;
+
+            main_values.push(vec![trace_local.clone(), trace_next.clone()]);
+            perm_values.push(vec![permutation_local.clone(), permutation_next.clone()]);
+            quotient_values.push(vec![quotient_chunks.clone()]);
+        }
+
+        let chips_opening_values = vec![main_values, perm_values, quotient_values];
+
+        // Observe commitments and get challenges.
+        let Commitments {
+            main_trace,
+            perm_trace,
+            quotient_chunks,
+        } = &proof.commitments;
+
+        // Compute the commitments to preprocessed traces (TODO: avoid in the future)
+        let preprocessed_traces: Vec<RowMajorMatrix<SC::Val>> =
+        tracing::info_span!("generate preprocessed traces")
+            .in_scope(||
+                chips.par_iter()
+                    .flat_map(|chip| chip.preprocessed_trace())
+                    .collect::<Vec<_>>()
+            );
+
+        let (preprocessed_commit, preprocessed_data) =
+            tracing::info_span!("commit to preprocessed traces")
+                .in_scope(|| pcs.commit_batches(preprocessed_traces.to_vec()));
+
+        challenger.observe(preprocessed_commit.clone());
+
+        challenger.observe(main_trace.clone());
+
+        let mut perm_challenges = Vec::new();
+        for _ in 0..3 {
+            perm_challenges.push(challenger.sample_ext_element::<SC::Challenge>());
+        }
+
+        challenger.observe(perm_trace.clone());
+
+        let alpha = challenger.sample_ext_element::<SC::Challenge>();
+
+        challenger.observe(quotient_chunks.clone());
+
+        // Verify the opening proof.
+        let zeta: SC::Challenge = challenger.sample_ext_element();
+        let zeta_and_next: [Vec<SC::Challenge>; NUM_CHIPS] =
+            g_subgroups.map(|g| vec![zeta, zeta * g]);
+        let zeta_exp_quotient_degree: [Vec<SC::Challenge>; NUM_CHIPS] =
+            log_quotient_degrees.map(|log_deg| vec![zeta.exp_power_of_2(log_deg)]);
+        pcs
+            .verify_multi_batches(
+                &[
+                    // TODO: add preprocessed trace
+                    (main_trace.clone(), zeta_and_next.as_slice()),
+                    (perm_trace.clone(), zeta_and_next.as_slice()),
+                    (quotient_chunks.clone(), zeta_exp_quotient_degree.as_slice()),
+                ],
+                dims,
+                chips_opening_values,
+                &proof.opening_proof,
+                &mut challenger,
+            )
+            .map_err(|_| ())?;
+
+        // Verify the constraints.
+        let mut i = 0;
+
+        let chip = self.cpu();
+        verify_constraints::<Self, _, SC>(
+            self,
+            chip,
+            &proof.chip_proofs[i].opened_values,
+            proof.chip_proofs[i].cumulative_sum,
+            proof.chip_proofs[i].log_degree,
+            g_subgroups[i],
+            zeta,
+            alpha,
+            &perm_challenges
+        ).expect(&format!("Failed to verify constraints on chip {}", i));
+        i += 1;
+
+        let chip = self.program();
+        verify_constraints::<Self, _, SC>(
+            self,
+            chip,
+            &proof.chip_proofs[i].opened_values,
+            proof.chip_proofs[i].cumulative_sum,
+            proof.chip_proofs[i].log_degree,
+            g_subgroups[i],
+            zeta,
+            alpha,
+            &perm_challenges
+        ).expect(&format!("Failed to verify constraints on chip {}", i));
+        i += 1;
+
+        let chip = self.mem();
+        verify_constraints::<Self, _, SC>(
+            self,
+            chip,
+            &proof.chip_proofs[i].opened_values,
+            proof.chip_proofs[i].cumulative_sum,
+            proof.chip_proofs[i].log_degree,
+            g_subgroups[i],
+            zeta,
+            alpha,
+            &perm_challenges
+        ).expect(&format!("Failed to verify constraints on chip {}", i));
+        i += 1;
+
+        let chip = self.add_u32();
+        verify_constraints::<Self, _, SC>(
+            self,
+            chip,
+            &proof.chip_proofs[i].opened_values,
+            proof.chip_proofs[i].cumulative_sum,
+            proof.chip_proofs[i].log_degree,
+            g_subgroups[i],
+            zeta,
+            alpha,
+            &perm_challenges
+        ).expect(&format!("Failed to verify constraints on chip {}", i));
+        i += 1;
+
+        let chip = self.sub_u32();
+        verify_constraints::<Self, _, SC>(
+            self,
+            chip,
+            &proof.chip_proofs[i].opened_values,
+            proof.chip_proofs[i].cumulative_sum,
+            proof.chip_proofs[i].log_degree,
+            g_subgroups[i],
+            zeta,
+            alpha,
+            &perm_challenges
+        ).expect(&format!("Failed to verify constraints on chip {}", i));
+        i += 1;
+
+        let chip = self.mul_u32();
+        verify_constraints::<Self, _, SC>(
+            self,
+            chip,
+            &proof.chip_proofs[i].opened_values,
+            proof.chip_proofs[i].cumulative_sum,
+            proof.chip_proofs[i].log_degree,
+            g_subgroups[i],
+            zeta,
+            alpha,
+            &perm_challenges
+        ).expect(&format!("Failed to verify constraints on chip {}", i));
+        i += 1;
+
+        let chip = self.div_u32();
+        verify_constraints::<Self, _, SC>(
+            self,
+            chip,
+            &proof.chip_proofs[i].opened_values,
+            proof.chip_proofs[i].cumulative_sum,
+            proof.chip_proofs[i].log_degree,
+            g_subgroups[i],
+            zeta,
+            alpha,
+            &perm_challenges
+        ).expect(&format!("Failed to verify constraints on chip {}", i));
+        i += 1;
+
+        let chip = self.div_u32();
+        verify_constraints::<Self, _, SC>(
+            self,
+            chip,
+            &proof.chip_proofs[i].opened_values,
+            proof.chip_proofs[i].cumulative_sum,
+            proof.chip_proofs[i].log_degree,
+            g_subgroups[i],
+            zeta,
+            alpha,
+            &perm_challenges
+        ).expect(&format!("Failed to verify constraints on chip {}", i));
+        i += 1;
+
+        let chip = self.shift_u32();
+        verify_constraints::<Self, _, SC>(
+            self,
+            chip,
+            &proof.chip_proofs[i].opened_values,
+            proof.chip_proofs[i].cumulative_sum,
+            proof.chip_proofs[i].log_degree,
+            g_subgroups[i],
+            zeta,
+            alpha,
+            &perm_challenges
+        ).expect(&format!("Failed to verify constraints on chip {}", i));
+        i += 1;
+
+        let chip = self.lt_u32();
+        verify_constraints::<Self, _, SC>(
+            self,
+            chip,
+            &proof.chip_proofs[i].opened_values,
+            proof.chip_proofs[i].cumulative_sum,
+            proof.chip_proofs[i].log_degree,
+            g_subgroups[i],
+            zeta,
+            alpha,
+            &perm_challenges
+        ).expect(&format!("Failed to verify constraints on chip {}", i));
+        i += 1;
+
+        let chip = self.com_u32();
+        verify_constraints::<Self, _, SC>(
+            self,
+            chip,
+            &proof.chip_proofs[i].opened_values,
+            proof.chip_proofs[i].cumulative_sum,
+            proof.chip_proofs[i].log_degree,
+            g_subgroups[i],
+            zeta,
+            alpha,
+            &perm_challenges
+        ).expect(&format!("Failed to verify constraints on chip {}", i));
+        i += 1;
+
+        let chip = self.bitwise_u32();
+        verify_constraints::<Self, _, SC>(
+            self,
+            chip,
+            &proof.chip_proofs[i].opened_values,
+            proof.chip_proofs[i].cumulative_sum,
+            proof.chip_proofs[i].log_degree,
+            g_subgroups[i],
+            zeta,
+            alpha,
+            &perm_challenges
+        ).expect(&format!("Failed to verify constraints on chip {}", i));
+        i += 1;
+
+        let chip = self.output();
+        verify_constraints::<Self, _, SC>(
+            self,
+            chip,
+            &proof.chip_proofs[i].opened_values,
+            proof.chip_proofs[i].cumulative_sum,
+            proof.chip_proofs[i].log_degree,
+            g_subgroups[i],
+            zeta,
+            alpha,
+            &perm_challenges
+        ).expect(&format!("Failed to verify constraints on chip {}", i));
+        i += 1;
+
+        let chip = self.range();
+        verify_constraints::<Self, _, SC>(
+            self,
+            chip,
+            &proof.chip_proofs[i].opened_values,
+            proof.chip_proofs[i].cumulative_sum,
+            proof.chip_proofs[i].log_degree,
+            g_subgroups[i],
+            zeta,
+            alpha,
+            &perm_challenges
+        ).expect(&format!("Failed to verify constraints on chip {}", i));
+        i += 1;
+
+        let chip = self.static_data();
+        verify_constraints::<Self, _, SC>(
+            self,
+            chip,
+            &proof.chip_proofs[i].opened_values,
+            proof.chip_proofs[i].cumulative_sum,
+            proof.chip_proofs[i].log_degree,
+            g_subgroups[i],
+            zeta,
+            alpha,
+            &perm_challenges
+        ).expect(&format!("Failed to verify constraints on chip {}", i));
+        i += 1;
+
+        // Verify that the cumulative_sum sums add up to zero.
+        let sum: SC::Challenge = proof
+            .chip_proofs
+            .iter()
+            .map(|chip_proof| chip_proof.cumulative_sum)
+            .sum();
+
+        if sum != SC::Challenge::zero() {
+            return Err(());
+        }
+
+        Ok(())
     }
 }
 

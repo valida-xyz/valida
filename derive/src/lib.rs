@@ -534,7 +534,7 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
             ];
 
             // Get the generators of the trace subgroups for each chip.
-            let g_subgroups :[SC::Val ; #num_chips] = proof.chip_proofs
+            let g_subgroups: [SC::Val; #num_chips] = proof.chip_proofs
                 .iter()
                 .map(|chip_proof| SC::Val::two_adic_generator(chip_proof.log_degree))
                 .collect::<Vec<_>>().try_into().unwrap();
@@ -562,14 +562,12 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
 
             let chips_opening_values = vec![main_values, perm_values, quotient_values];
 
-
             // Observe commitments and get challenges.
             let Commitments {
                 main_trace,
                 perm_trace,
                 quotient_chunks,
             } = &proof.commitments;
-
 
             // Compute the commitments to preprocessed traces (TODO: avoid in the future)
             let preprocessed_traces: Vec<RowMajorMatrix<SC::Val>> =
@@ -586,7 +584,6 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
 
             challenger.observe(preprocessed_commit.clone());
 
-            // challenger.observe(preprocessed_commit.clone());
             challenger.observe(main_trace.clone());
 
             let mut perm_challenges = Vec::new();
@@ -600,15 +597,16 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
 
             challenger.observe(quotient_chunks.clone());
 
-             // Verify the openning proof.
-             let zeta: SC::Challenge = challenger.sample_ext_element();
-             let zeta_and_next: [Vec<SC::Challenge>; #num_chips] =
-                 g_subgroups.map(|g| vec![zeta, zeta * g]);
-             let zeta_exp_quotient_degree: [Vec<SC::Challenge>; #num_chips] =
-                 log_quotient_degrees.map(|log_deg| vec![zeta.exp_power_of_2(log_deg)]);
+            // Verify the opening proof.
+            let zeta: SC::Challenge = challenger.sample_ext_element();
+            let zeta_and_next: [Vec<SC::Challenge>; #num_chips] =
+                g_subgroups.map(|g| vec![zeta, zeta * g]);
+            let zeta_exp_quotient_degree: [Vec<SC::Challenge>; #num_chips] =
+                log_quotient_degrees.map(|log_deg| vec![zeta.exp_power_of_2(log_deg)]);
             pcs
                 .verify_multi_batches(
                     &[
+                        // TODO: add preprocessed trace
                         (main_trace.clone(), zeta_and_next.as_slice()),
                         (perm_trace.clone(), zeta_and_next.as_slice()),
                         (quotient_chunks.clone(), zeta_exp_quotient_degree.as_slice()),
