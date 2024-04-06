@@ -148,6 +148,8 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
                     StopInstruction::execute_with_advice::<Adv>(self, ops, advice),
                 <LoadFpInstruction as Instruction<Self, F>>::OPCODE =>
                     LoadFpInstruction::execute_with_advice::<Adv>(self, ops, advice),
+                <Add32Instruction as Instruction<Self, F>>::OPCODE =>
+                    Add32Instruction::execute_with_advice::<Adv>(self, ops, advice),
                 <Sub32Instruction as Instruction<Self, F>>::OPCODE =>
                     Sub32Instruction::execute_with_advice::<Adv>(self, ops, advice),
                 <Mul32Instruction as Instruction<Self, F>>::OPCODE =>
@@ -537,7 +539,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             config,
             chip,
             log_degrees[i],
-            Some(preprocessed_trace_ldes.remove(0)),
+            None::<RowMajorMatrix::<SC::Val>>,
             main_trace_ldes.remove(0),
             perm_trace_ldes.remove(0),
             cumulative_sums[i],
@@ -859,20 +861,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         i += 1;
 
         let chip = self.mul_u32();
-        verify_constraints::<Self, _, SC>(
-            self,
-            chip,
-            &proof.chip_proofs[i].opened_values,
-            proof.chip_proofs[i].cumulative_sum,
-            proof.chip_proofs[i].log_degree,
-            g_subgroups[i],
-            zeta,
-            alpha,
-            &perm_challenges
-        ).expect(&format!("Failed to verify constraints on chip {}", i));
-        i += 1;
-
-        let chip = self.div_u32();
         verify_constraints::<Self, _, SC>(
             self,
             chip,
