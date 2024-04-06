@@ -38,7 +38,6 @@ use valida_cpu::{
     Store32Instruction,
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
-use valida_derive::Machine;
 use valida_machine::{
     AdviceProvider, BusArgument, Chip, ChipProof, Instruction, Machine, MachineProof, ProgramROM,
     ValidaAirBuilder,
@@ -52,140 +51,82 @@ use valida_static_data::{MachineWithStaticDataChip, StaticDataChip};
 use p3_maybe_rayon::prelude::*;
 use valida_machine::StarkConfig;
 
-#[derive(Machine, Default)]
-#[machine_fields(F)]
+#[derive(Default)]
 pub struct BasicMachine<F: PrimeField32 + TwoAdicField> {
     // Core instructions
-    #[instruction]
     load32: Load32Instruction,
-
-    #[instruction]
     store32: Store32Instruction,
-
-    #[instruction]
     jal: JalInstruction,
-
-    #[instruction]
     jalv: JalvInstruction,
-
-    #[instruction]
     beq: BeqInstruction,
-
-    #[instruction]
     bne: BneInstruction,
-
-    #[instruction]
     imm32: Imm32Instruction,
-
-    #[instruction]
     stop: StopInstruction,
-
-    #[instruction]
     loadfp: LoadFpInstruction,
 
     // ALU instructions
-    #[instruction(add_u32)]
     add32: Add32Instruction,
-
-    #[instruction(sub_u32)]
     sub32: Sub32Instruction,
-
-    #[instruction(mul_u32)]
     mul32: Mul32Instruction,
-
-    #[instruction(mul_u32)]
     mulhs32: Mulhs32Instruction,
-
-    #[instruction(mul_u32)]
     mulhu32: Mulhu32Instruction,
-
-    #[instruction(div_u32)]
     div32: Div32Instruction,
-
-    #[instruction(div_u32)]
     sdiv32: SDiv32Instruction,
-
-    #[instruction(shift_u32)]
     shl32: Shl32Instruction,
-
-    #[instruction(shift_u32)]
     shr32: Shr32Instruction,
-
-    #[instruction(shift_u32)]
     sra32: Sra32Instruction,
-
-    #[instruction(lt_u32)]
     lt32: Lt32Instruction,
-
-    #[instruction(lt_u32)]
     lte32: Lte32Instruction,
-
-    #[instruction(bitwise_u32)]
     and32: And32Instruction,
-
-    #[instruction(bitwise_u32)]
     or32: Or32Instruction,
-
-    #[instruction(bitwise_u32)]
     xor32: Xor32Instruction,
-
-    #[instruction(com_u32)]
     ne32: Ne32Instruction,
-
-    #[instruction(com_u32)]
     eq32: Eq32Instruction,
 
     // Input/output instructions
-    #[instruction]
     read: ReadAdviceInstruction,
-
-    #[instruction(output)]
     write: WriteInstruction,
 
-    #[chip]
+    // Chips
     cpu: CpuChip,
-
-    #[chip]
     program: ProgramChip,
-
-    #[chip]
     mem: MemoryChip,
-
-    #[chip]
     add_u32: Add32Chip,
-
-    #[chip]
     sub_u32: Sub32Chip,
-
-    #[chip]
     mul_u32: Mul32Chip,
-
-    #[chip]
     div_u32: Div32Chip,
-
-    #[chip]
     shift_u32: Shift32Chip,
-
-    #[chip]
     lt_u32: Lt32Chip,
-
-    #[chip]
     com_u32: Com32Chip,
-
-    #[chip]
     bitwise_u32: Bitwise32Chip,
-
-    #[chip]
     output: OutputChip,
-
-    #[chip]
     range: RangeCheckerChip<256>,
-
-    #[chip]
-    #[static_data_chip]
     static_data: StaticDataChip,
 
     _phantom_sc: PhantomData<fn() -> F>,
+}
+
+impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
+    fn run<Adv>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv)
+    where
+        Adv: AdviceProvider
+    {
+        todo!()
+    }
+
+    fn prove<SC>(&self, config: &SC) -> MachineProof<SC>
+    where
+        SC: StarkConfig<Val = F>
+    {
+        todo!()
+    }
+
+    fn verify<SC>(&self, config: &SC, proof: &MachineProof<SC>) -> Result<(), ()>
+    where
+        SC: StarkConfig<Val = F>
+    {
+        todo!()
+    }
 }
 
 impl<F: PrimeField32 + TwoAdicField> MachineWithGeneralBus<F> for BasicMachine<F> {
