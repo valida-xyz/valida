@@ -39,23 +39,20 @@ pub fn load_elf_object_file(file: Vec<u8>) -> Program {
             && section_header.sh_flags == (abi::SHF_ALLOC | abi::SHF_WRITE).into();
         let is_text: bool = section_header.sh_type == abi::SHT_PROGBITS
             && section_header.sh_flags == (abi::SHF_ALLOC | abi::SHF_EXECINSTR).into();
-        let is_useful: bool = is_data || is_bss || is_text;
-        if is_useful {
-            if is_data || is_text {
-                let section_data = file.section_data(&section_header).unwrap();
-                match section_data {
-                    (section_data, None) => {
-                        if is_data {
-                            data_sections.push((section_header, section_data));
-                        } else if is_text {
-                            text_sections.push((section_header, section_data));
-                        }
+        if is_data || is_text {
+            let section_data = file.section_data(&section_header).unwrap();
+            match section_data {
+                (section_data, None) => {
+                    if is_data {
+                        data_sections.push((section_header, section_data));
+                    } else if is_text {
+                        text_sections.push((section_header, section_data));
                     }
-                    _ => panic!("unsupported: compressed ELF section data"),
                 }
-            } else if is_bss {
-                bss_sections.push(section_header);
+                _ => panic!("unsupported: compressed ELF section data"),
             }
+        } else if is_bss {
+            bss_sections.push(section_header);
         }
     }
     let code_size = text_sections
