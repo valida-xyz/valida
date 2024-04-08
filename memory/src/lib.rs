@@ -2,8 +2,10 @@
 
 extern crate alloc;
 
+use crate::alloc::string::ToString;
 use crate::columns::{MemoryCols, MEM_COL_MAP, NUM_MEM_COLS};
 use alloc::collections::BTreeMap;
+use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::mem::transmute;
@@ -13,7 +15,7 @@ use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::prelude::*;
 use valida_bus::MachineWithMemBus;
 use valida_machine::StarkConfig;
-use valida_machine::{BusArgument, Chip, Interaction, Machine, Word};
+use valida_machine::{Chip, Interaction, Machine, Word};
 use valida_util::batch_multiplicative_inverse_allowing_zero;
 
 pub mod columns;
@@ -61,6 +63,19 @@ impl MemoryChip {
             cells: BTreeMap::new(),
             operations: BTreeMap::new(),
             static_data: BTreeMap::new(),
+        }
+    }
+
+    /// Return "---------------------" if uninitialized, else, return the cell's value.
+    /// Used in debugger mode
+    pub fn examine(&self, address: u32) -> String {
+        let value = self.cells.get(&address.into());
+        match value {
+            Some(raw_value) => {
+                let u32val: u32 = (*raw_value).into();
+                u32val.to_string()
+            }
+            None => String::from("--------"),
         }
     }
 
@@ -161,22 +176,22 @@ where
 
     fn local_sends(&self) -> Vec<Interaction<SC::Val>> {
         return vec![]; // TODO
-        let sends = Interaction {
-            fields: vec![VirtualPairCol::single_main(MEM_COL_MAP.diff)],
-            count: VirtualPairCol::one(),
-            argument_index: BusArgument::Local(0),
-        };
-        vec![sends]
+                       // let sends = Interaction {
+                       //     fields: vec![VirtualPairCol::single_main(MEM_COL_MAP.diff)],
+                       //     count: VirtualPairCol::one(),
+                       //     argument_index: BusArgument::Local(0),
+                       // };
+                       // vec![sends]
     }
 
     fn local_receives(&self) -> Vec<Interaction<SC::Val>> {
         return vec![]; // TODO
-        let receives = Interaction {
-            fields: vec![VirtualPairCol::single_main(MEM_COL_MAP.counter)],
-            count: VirtualPairCol::single_main(MEM_COL_MAP.counter_mult),
-            argument_index: BusArgument::Local(0),
-        };
-        vec![receives]
+                       // let receives = Interaction {
+                       //     fields: vec![VirtualPairCol::single_main(MEM_COL_MAP.counter)],
+                       //     count: VirtualPairCol::single_main(MEM_COL_MAP.counter_mult),
+                       //     argument_index: BusArgument::Local(0),
+                       // };
+                       // vec![receives]
     }
 
     fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {

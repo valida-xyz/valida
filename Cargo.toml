@@ -17,7 +17,7 @@ members = [
     "range",
     "static_data",
     "util",
-    "verifier"
+    "verifier",
 ]
 
 [workspace.dependencies]
