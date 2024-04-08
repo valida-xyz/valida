@@ -1,0 +1,9 @@
+[package]
+name = "valida-elf"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+elf = "0.7.4"
+valida-machine = { path = "../machine" }

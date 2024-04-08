@@ -2,8 +2,10 @@
 
 extern crate alloc;
 
+use crate::alloc::string::ToString;
 use crate::columns::{MemoryCols, MEM_COL_MAP, NUM_MEM_COLS};
 use alloc::collections::BTreeMap;
+use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::mem::transmute;
@@ -61,6 +63,19 @@ impl MemoryChip {
             cells: BTreeMap::new(),
             operations: BTreeMap::new(),
             static_data: BTreeMap::new(),
+        }
+    }
+
+    /// Return "---------------------" if uninitialized, else, return the cell's value.
+    /// Used in debugger mode
+    pub fn examine(&self, address: u32) -> String {
+        let value = self.cells.get(&address.into());
+        match value {
+            Some(raw_value) => {
+                let u32val: u32 = (*raw_value).into();
+                u32val.to_string()
+            }
+            None => String::from("--------"),
         }
     }
 

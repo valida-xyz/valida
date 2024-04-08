@@ -2,6 +2,15 @@ use crate::{AdviceProvider, Machine, Word, INSTRUCTION_ELEMENTS, OPERAND_ELEMENT
 use byteorder::{ByteOrder, LittleEndian};
 use p3_field::Field;
 
+/*
+use derive_more::Display;
+
+#[derive(Display)]
+enum Opcode {
+    // TODO
+}
+*/
+
 pub trait Instruction<M: Machine<F>, F: Field> {
     const OPCODE: u32;
 
