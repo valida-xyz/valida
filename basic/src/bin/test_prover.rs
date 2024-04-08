@@ -2,7 +2,7 @@ extern crate core;
 
 use p3_baby_bear::BabyBear;
 use p3_fri::{TwoAdicFriPcs, TwoAdicFriPcsConfig};
-use valida_alu_u32::add::{Add32Instruction, MachineWithAdd32Chip};
+use valida_alu_u32::add::Add32Instruction;
 use valida_basic::BasicMachine;
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
@@ -10,10 +10,8 @@ use valida_cpu::{
 };
 use valida_machine::{
     FixedAdviceProvider, Instruction, InstructionWord, Machine, MachineProof, Operands, ProgramROM,
-    Word,
 };
 
-use valida_memory::MachineWithMemoryChip;
 use valida_opcodes::BYTES_PER_INSTR;
 use valida_program::MachineWithProgramChip;
 

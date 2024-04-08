@@ -9,7 +9,7 @@ use p3_baby_bear::BabyBear;
 
 use p3_fri::{FriConfig, TwoAdicFriPcs, TwoAdicFriPcsConfig};
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{Machine, MachineProof, ProgramROM, StdinAdviceProvider};
+use valida_machine::{Machine, MachineProof, StdinAdviceProvider};
 
 use valida_elf::{load_executable_file, Program};
 use valida_program::MachineWithProgramChip;

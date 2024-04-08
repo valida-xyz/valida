@@ -10,7 +10,7 @@ use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::parse::{Parse, ParseStream};
-use syn::{spanned::Spanned, Data, Field, Fields, Ident, Type, TypePath};
+use syn::{spanned::Spanned, Data, Field, Fields, Ident};
 
 // TODO: now trivial with a single field
 struct MachineFields {
@@ -162,7 +162,7 @@ fn run_method(
         .collect::<TokenStream2>();
 
     let init_static_data: TokenStream2 = match static_data_chip {
-        Some(static_data_chip) => quote! {
+        Some(_static_data_chip) => quote! {
             self.initialize_memory();
         },
         None => quote! {},
