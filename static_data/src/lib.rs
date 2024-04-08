@@ -39,6 +39,10 @@ impl StaticDataChip {
         }
     }
 
+    pub fn load(&mut self, cells: BTreeMap<u32, Word<u8>>) {
+        self.cells = cells;
+    }
+
     pub fn write(&mut self, address: u32, value: Word<u8>) {
         self.cells.insert(address, value);
     }
