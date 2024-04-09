@@ -149,18 +149,6 @@ fn run_method(
     let name = &machine.ident;
     let (_, ty_generics, _) = machine.generics.split_for_impl();
 
-    let opcode_arms = instructions
-        .iter()
-        .map(|inst| {
-            let ty = &inst.ty;
-            quote! {
-                // TODO: Self instead of #name #ty_generics?
-                <#ty as Instruction<#name #ty_generics, #val>>::OPCODE =>
-                    #ty::execute_with_advice::<Adv>(self, ops, advice),
-            }
-        })
-        .collect::<TokenStream2>();
-
     let init_static_data: TokenStream2 = match static_data_chip {
         Some(_static_data_chip) => quote! {
             self.initialize_memory();
@@ -173,25 +161,10 @@ fn run_method(
             #init_static_data
 
             loop {
-               // Fetch
-               let pc = self.cpu().pc;
-               let instruction = program.get_instruction(pc);
-               let opcode = instruction.opcode;
-               let ops = instruction.operands;
-
-               // Execute
-               std::println!("trace: pc = {:?}, instruction = {:?}, ops = {:?}", pc, instruction, ops);
-               match opcode {
-                   #opcode_arms
-                   _ => panic!("Unrecognized opcode: {}", opcode),
-               };
-               self.read_word(pc as usize);
-
-               //let stop = self.step<Adv>(&program, &mut advice);
-               // A STOP instruction signals the end of the program
-               if opcode == <StopInstruction as Instruction<Self, #val>>::OPCODE {
-                   break;
-               }
+                let step_did_stop = self.step(advice);
+                if step_did_stop == StoppingFlag::DidStop {
+                    break;
+                }
             }
 
             // Record padded STOP instructions
@@ -221,7 +194,7 @@ fn step_method(machine: &syn::DeriveInput, instructions: &[&Field], val: &Ident)
         .collect::<TokenStream2>();
 
     quote! {
-       fn step<Adv: ::valida_machine::AdviceProvider>(&mut self, advice: &mut Adv) -> bool {
+       fn step<Adv: ::valida_machine::AdviceProvider>(&mut self, advice: &mut Adv) -> StoppingFlag {
            let pc = self.cpu().pc;
            let instruction = self.program.program_rom.get_instruction(pc);
            let opcode = instruction.opcode;
@@ -234,7 +207,11 @@ fn step_method(machine: &syn::DeriveInput, instructions: &[&Field], val: &Ident)
            };
            self.read_word(pc as usize);
 
-           opcode == <StopInstruction as Instruction<Self, #val>>::OPCODE
+           if opcode == <StopInstruction as Instruction<Self, #val>>::OPCODE {
+              StoppingFlag::DidStop
+           } else {
+              StoppingFlag::DidNotStop
+            }
        }
     }
 }

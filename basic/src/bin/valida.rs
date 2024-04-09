@@ -9,7 +9,7 @@ use p3_baby_bear::BabyBear;
 
 use p3_fri::{FriConfig, TwoAdicFriPcs, TwoAdicFriPcsConfig};
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{Machine, MachineProof, ProgramROM, StdinAdviceProvider};
+use valida_machine::{Machine, MachineProof, ProgramROM, StdinAdviceProvider, StoppingFlag};
 use valida_memory::MachineWithMemoryChip;
 
 use valida_elf::{load_executable_file, Program};
@@ -34,7 +34,7 @@ use valida_output::MachineWithOutputChip;
 use reedline_repl_rs::clap::{Arg, ArgMatches, Command};
 use reedline_repl_rs::{Repl, Result};
 
-#[derive(Parser)]
+#[derive(Parser, Clone)]
 struct Args {
     /// Command option either "run" or "prove" or "verify" or "interactive"
     #[arg(name = "Action Option")]
@@ -53,23 +53,23 @@ struct Args {
     stack_height: u32,
 }
 
-struct Context<'a> {
+struct Context {
     machine_: BasicMachine<BabyBear>,
-    args_: &'a Args,
+    args_: Args,
     breakpoints_: Vec<u32>,
-    stopped_: bool,
+    stopped_: StoppingFlag,
     last_fp_: u32,
     recorded_current_fp_: u32,
     last_fp_size_: u32,
 }
 
-impl Context<'_> {
+impl Context {
     fn new(args: &Args) -> Context {
         let mut context = Context {
             machine_: BasicMachine::<BabyBear>::default(),
-            args_: args.clone(),
+            args_: (*args).clone(),
             breakpoints_: Vec::new(),
-            stopped_: false,
+            stopped_: StoppingFlag::DidNotStop,
             last_fp_: args.stack_height,
             recorded_current_fp_: args.stack_height,
             last_fp_size_: 0,
@@ -87,10 +87,10 @@ impl Context<'_> {
         context
     }
 
-    fn step(&mut self) -> (bool, u32) {
+    fn step(&mut self) -> (StoppingFlag, u32) {
         // do not execute if already stopped
-        if self.stopped_ {
-            return (true, 0);
+        if self.stopped_ == StoppingFlag::DidStop {
+            return (StoppingFlag::DidStop, 0);
         }
         let state = self.machine_.step(&mut StdinAdviceProvider);
         let pc = self.machine_.cpu().pc;
@@ -109,22 +109,23 @@ impl Context<'_> {
     }
 }
 
-fn init_context(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
+fn init_context(_args: ArgMatches, _context: &mut Context) -> Result<Option<String>> {
     Ok(Some(String::from("created machine")))
 }
 
-fn status(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
+fn status(_args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     // construct machine status
     let mut status = String::new();
     status.push_str("FP: ");
     status.push_str(&context.machine_.cpu().fp.to_string());
     status.push_str(", PC: ");
     status.push_str(&context.machine_.cpu().pc.to_string());
-    status.push_str(if context.stopped_ {
-        ", Stopped"
-    } else {
-        ", Running"
-    });
+    status.push_str(
+        match context.stopped_ {
+            StoppingFlag::DidStop => ", Stopped",
+            StoppingFlag::DidNotStop => ", Running",
+        }
+    );
     Ok(Some(status))
 }
 
@@ -204,11 +205,11 @@ fn set_bp(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     Ok(Some(message))
 }
 
-fn run_until(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
+fn run_until(_args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     let mut message = String::new();
     loop {
         let (stop, pc) = context.step();
-        if stop {
+        if stop == StoppingFlag::DidStop {
             message.push_str("Execution stopped");
             break;
         }
@@ -221,10 +222,10 @@ fn run_until(args: ArgMatches, context: &mut Context) -> Result<Option<String>> 
     Ok(Some(message))
 }
 
-fn step(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
+fn step(_args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     let (stop, _) = context.step();
-    if stop {
-        context.stopped_ = true;
+    if stop == StoppingFlag::DidStop {
+        context.stopped_ = StoppingFlag::DidStop;
         Ok(Some(String::from("Execution stopped")))
     } else {
         Ok(None)

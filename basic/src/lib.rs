@@ -47,7 +47,7 @@ use valida_machine::__internal::{
 };
 use valida_machine::{
     generate_permutation_trace, verify_constraints, AdviceProvider, BusArgument, Chip, ChipProof,
-    Commitments, Instruction, Machine, MachineProof, OpenedValues, ProgramROM, ValidaAirBuilder,
+    Commitments, Instruction, Machine, MachineProof, OpenedValues, ProgramROM, StoppingFlag, ValidaAirBuilder,
 };
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_output::{MachineWithOutputChip, OutputChip, WriteInstruction};
@@ -123,101 +123,8 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         self.initialize_memory();
 
         loop {
-            // Fetch
-            let pc = self.cpu().pc;
-            let instruction = program.get_instruction(pc);
-            let opcode = instruction.opcode;
-            let ops = instruction.operands;
-
-            // Execute
-            match opcode {
-                <Load32Instruction as Instruction<Self, F>>::OPCODE => {
-                    Load32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <Store32Instruction as Instruction<Self, F>>::OPCODE => {
-                    Store32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <JalInstruction as Instruction<Self, F>>::OPCODE => {
-                    JalInstruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <JalvInstruction as Instruction<Self, F>>::OPCODE => {
-                    JalvInstruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <BeqInstruction as Instruction<Self, F>>::OPCODE => {
-                    BeqInstruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <BneInstruction as Instruction<Self, F>>::OPCODE => {
-                    BneInstruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <Imm32Instruction as Instruction<Self, F>>::OPCODE => {
-                    Imm32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <StopInstruction as Instruction<Self, F>>::OPCODE => {
-                    StopInstruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <LoadFpInstruction as Instruction<Self, F>>::OPCODE => {
-                    LoadFpInstruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <Add32Instruction as Instruction<Self, F>>::OPCODE => {
-                    Add32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <Sub32Instruction as Instruction<Self, F>>::OPCODE => {
-                    Sub32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <Mul32Instruction as Instruction<Self, F>>::OPCODE => {
-                    Mul32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <Mulhs32Instruction as Instruction<Self, F>>::OPCODE => {
-                    Mulhs32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <Mulhu32Instruction as Instruction<Self, F>>::OPCODE => {
-                    Mulhu32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <Div32Instruction as Instruction<Self, F>>::OPCODE => {
-                    Div32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <SDiv32Instruction as Instruction<Self, F>>::OPCODE => {
-                    SDiv32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <Shl32Instruction as Instruction<Self, F>>::OPCODE => {
-                    Shl32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <Shr32Instruction as Instruction<Self, F>>::OPCODE => {
-                    Shr32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <Lt32Instruction as Instruction<Self, F>>::OPCODE => {
-                    Lt32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <Lte32Instruction as Instruction<Self, F>>::OPCODE => {
-                    Lte32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <And32Instruction as Instruction<Self, F>>::OPCODE => {
-                    And32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <Or32Instruction as Instruction<Self, F>>::OPCODE => {
-                    Or32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <Xor32Instruction as Instruction<Self, F>>::OPCODE => {
-                    Xor32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <Ne32Instruction as Instruction<Self, F>>::OPCODE => {
-                    Ne32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <Eq32Instruction as Instruction<Self, F>>::OPCODE => {
-                    Eq32Instruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <ReadAdviceInstruction as Instruction<Self, F>>::OPCODE => {
-                    ReadAdviceInstruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                <WriteInstruction as Instruction<Self, F>>::OPCODE => {
-                    WriteInstruction::execute_with_advice::<Adv>(self, ops, advice)
-                }
-                _ => panic!("Unrecognized opcode: {}", opcode),
-            };
-            self.read_word(pc as usize);
-
-            // A STOP instruction signals the end of the program
-            if opcode == <StopInstruction as Instruction<Self, F>>::OPCODE {
+            let step_did_stop = self.step(advice);
+            if step_did_stop == StoppingFlag::DidStop {
                 break;
             }
         }
@@ -1146,6 +1053,110 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         }
 
         Ok(())
+    }
+
+    fn step<Adv>(&mut self, advice: &mut Adv) -> StoppingFlag
+        where Adv: AdviceProvider
+    {
+        // Fetch
+        let pc = self.cpu().pc;
+        let instruction = self.program.program_rom.get_instruction(pc);
+        let opcode = instruction.opcode;
+        let ops = instruction.operands;
+
+        // Execute
+        match opcode {
+            <Load32Instruction as Instruction<Self, F>>::OPCODE => {
+                Load32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Store32Instruction as Instruction<Self, F>>::OPCODE => {
+                Store32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <JalInstruction as Instruction<Self, F>>::OPCODE => {
+                JalInstruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <JalvInstruction as Instruction<Self, F>>::OPCODE => {
+                JalvInstruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <BeqInstruction as Instruction<Self, F>>::OPCODE => {
+                BeqInstruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <BneInstruction as Instruction<Self, F>>::OPCODE => {
+                BneInstruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Imm32Instruction as Instruction<Self, F>>::OPCODE => {
+                Imm32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <StopInstruction as Instruction<Self, F>>::OPCODE => {
+                StopInstruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <LoadFpInstruction as Instruction<Self, F>>::OPCODE => {
+                LoadFpInstruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Add32Instruction as Instruction<Self, F>>::OPCODE => {
+                Add32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Sub32Instruction as Instruction<Self, F>>::OPCODE => {
+                Sub32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Mul32Instruction as Instruction<Self, F>>::OPCODE => {
+                Mul32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Mulhs32Instruction as Instruction<Self, F>>::OPCODE => {
+                Mulhs32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Mulhu32Instruction as Instruction<Self, F>>::OPCODE => {
+                Mulhu32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Div32Instruction as Instruction<Self, F>>::OPCODE => {
+                Div32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <SDiv32Instruction as Instruction<Self, F>>::OPCODE => {
+                SDiv32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Shl32Instruction as Instruction<Self, F>>::OPCODE => {
+                Shl32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Shr32Instruction as Instruction<Self, F>>::OPCODE => {
+                Shr32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Lt32Instruction as Instruction<Self, F>>::OPCODE => {
+                Lt32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Lte32Instruction as Instruction<Self, F>>::OPCODE => {
+                Lte32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <And32Instruction as Instruction<Self, F>>::OPCODE => {
+                And32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Or32Instruction as Instruction<Self, F>>::OPCODE => {
+                Or32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Xor32Instruction as Instruction<Self, F>>::OPCODE => {
+                Xor32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Ne32Instruction as Instruction<Self, F>>::OPCODE => {
+                Ne32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Eq32Instruction as Instruction<Self, F>>::OPCODE => {
+                Eq32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <ReadAdviceInstruction as Instruction<Self, F>>::OPCODE => {
+                ReadAdviceInstruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <WriteInstruction as Instruction<Self, F>>::OPCODE => {
+                WriteInstruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            _ => panic!("Unrecognized opcode: {}", opcode),
+        };
+        self.read_word(pc as usize);
+
+        // A STOP instruction signals the end of the program
+        if opcode == <StopInstruction as Instruction<Self, F>>::OPCODE {
+            StoppingFlag::DidStop
+        } else {
+            StoppingFlag::DidNotStop
+        }
     }
 }
 

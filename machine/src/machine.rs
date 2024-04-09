@@ -4,12 +4,15 @@ use crate::proof::MachineProof;
 use crate::AdviceProvider;
 use p3_field::Field;
 
+#[derive(PartialEq, Eq)]
+pub enum StoppingFlag { DidStop, DidNotStop }
+
 pub trait Machine<F: Field>: Sync {
     fn run<Adv>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv)
     where
         Adv: AdviceProvider;
 
-    fn step<Adv>(&mut self, advice: &mut Adv) -> bool
+    fn step<Adv>(&mut self, advice: &mut Adv) -> StoppingFlag
     where
         Adv: AdviceProvider;
 
