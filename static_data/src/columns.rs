@@ -5,8 +5,14 @@ use valida_machine::Word;
 use valida_util::indices_arr;
 
 pub struct StaticDataCols<T> {
-    // Not used for anything, just present because of the assumption that each chip has a column in its trace
-    pub dummy: T,
+    /// Memory address
+    pub addr: T,
+
+    /// Memory cell
+    pub value: Word<T>,
+
+    /// Whether this row represents a real (address, value) pair
+    pub is_real: T,
 }
 
 pub const NUM_STATIC_DATA_COLS: usize = size_of::<StaticDataCols<u8>>();

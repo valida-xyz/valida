@@ -1,8 +1,6 @@
-#![no_std]
-
 extern crate alloc;
 
-use crate::columns::{NUM_STATIC_DATA_COLS, STATIC_DATA_PREPROCESSED_COL_MAP};
+use crate::columns::{NUM_STATIC_DATA_COLS, STATIC_DATA_COL_MAP};
 use alloc::collections::BTreeMap;
 use alloc::vec;
 use alloc::vec::Vec;
@@ -57,14 +55,24 @@ where
     SC: StarkConfig,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
-        RowMajorMatrix::new(vec![SC::Val::zero(); self.cells.len().next_power_of_two()], NUM_STATIC_DATA_COLS)
+        let mut rows = self.cells.iter()
+            .map(|(addr, value)| {
+                let mut row: Vec<SC::Val> = vec![SC::Val::from_canonical_u32(*addr)];
+                row.extend(value.0.into_iter().map(SC::Val::from_canonical_u8).collect::<Vec<_>>());
+                row.push(SC::Val::one());
+                row
+            })
+            .flatten()
+            .collect::<Vec<_>>();
+        rows.resize(rows.len().next_power_of_two() * NUM_STATIC_DATA_COLS, SC::Val::zero());
+        RowMajorMatrix::new(rows, NUM_STATIC_DATA_COLS)
     }
 
     fn global_sends(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
-        let addr = VirtualPairCol::single_preprocessed(STATIC_DATA_PREPROCESSED_COL_MAP.addr);
-        let value = STATIC_DATA_PREPROCESSED_COL_MAP.value.0.map(VirtualPairCol::single_preprocessed);
+        let addr = VirtualPairCol::single_main(STATIC_DATA_COL_MAP.addr);
+        let value = STATIC_DATA_COL_MAP.value.0.map(VirtualPairCol::single_main);
         let is_read = VirtualPairCol::constant(SC::Val::zero());
-        let is_real = VirtualPairCol::single_preprocessed(STATIC_DATA_PREPROCESSED_COL_MAP.is_real);
+        let is_real = VirtualPairCol::single_main(STATIC_DATA_COL_MAP.is_real);
         let is_static_initial = VirtualPairCol::constant(SC::Val::one());
         let clk = VirtualPairCol::constant(SC::Val::zero());
         let mut fields = vec![is_read, clk, addr, is_static_initial];

@@ -32,6 +32,6 @@ where
     AB: AirBuilder,
 {
     fn eval(&self, _builder: &mut AB) {
-        // Nothing to do here
+        // TODO: check equality of main trace with preprocessed trace
     }
 }

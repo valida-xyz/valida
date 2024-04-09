@@ -610,7 +610,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         let (openings, opening_proof) =
             pcs.open_multi_batches(&prover_data_and_points, &mut challenger);
 
-        // TODO: add preprocessed openings
         let [preprocessed_openings, main_openings, perm_openings, quotient_openings] = openings
             .try_into()
             .expect("Should have 3 rounds of openings");
@@ -624,7 +623,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let chip_proofs = log_degrees
             .iter()
-            .zip(preprocessed_openings)
+            .zip(preprocessed_openings) // TODO: add empties so that the zips don't truncate
             .zip(main_openings)
             .zip(perm_openings)
             .zip(quotient_openings)
