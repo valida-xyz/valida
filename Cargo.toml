@@ -4,7 +4,7 @@ members = [
     "assembler",
     "alu_u32",
     "basic",
-    "basic_macro",
+    # "basic_macro",
     "bus",
     "cpu",
     "derive",

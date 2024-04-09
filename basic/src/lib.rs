@@ -602,8 +602,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         let zeta_exp_quotient_degree: [Vec<SC::Challenge>; NUM_CHIPS] =
             log_quotient_degrees.map(|log_deg| vec![zeta.exp_power_of_2(log_deg)]);
         let prover_data_and_points = [
-            // TODO: Causes some errors, probably related to the fact that not all chips have preprocessed traces?
-            // (&preprocessed_data, zeta_and_next.as_slice()),
+            (&preprocessed_data, zeta_and_next.as_slice()),
             (&main_data, zeta_and_next.as_slice()),
             (&perm_data, zeta_and_next.as_slice()),
             (&quotient_data, zeta_exp_quotient_degree.as_slice()),
@@ -612,27 +611,27 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             pcs.open_multi_batches(&prover_data_and_points, &mut challenger);
 
         // TODO: add preprocessed openings
-        let [main_openings, perm_openings, quotient_openings] = openings
+        let [preprocessed_openings, main_openings, perm_openings, quotient_openings] = openings
             .try_into()
             .expect("Should have 3 rounds of openings");
 
         let commitments = Commitments {
+            preprocessed_trace: preprocessed_commit,
             main_trace: main_commit,
             perm_trace: perm_commit,
             quotient_chunks: quotient_commit,
         };
 
-        // TODO: add preprocessed openings
         let chip_proofs = log_degrees
             .iter()
+            .zip(preprocessed_openings)
             .zip(main_openings)
             .zip(perm_openings)
             .zip(quotient_openings)
             .zip(perm_traces)
-            .map(|((((log_degree, main), perm), quotient), perm_trace)| {
-                // TODO: add preprocessed openings
-                let [preprocessed_local, preprocessed_next] = [vec![], vec![]];
-
+            .map(|(((((log_degree, preprocessed), main), perm), quotient), perm_trace)| {
+                let [preprocessed_local, preprocessed_next] =
+                    preprocessed.try_into().expect("Should have 2 openings");
                 let [main_local, main_next] = main.try_into().expect("Should have 2 openings");
                 let [perm_local, perm_next] = perm.try_into().expect("Should have 2 openings");
                 let [quotient_chunks] = quotient.try_into().expect("Should have 1 opening");
@@ -752,6 +751,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             .unwrap();
 
         // TODO: maybe avoid cloning opened values (not sure if possible)
+        let mut preprocessed_values = vec![];
         let mut main_values = vec![];
         let mut perm_values = vec![];
         let mut quotient_values = vec![];
@@ -767,15 +767,17 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
                 quotient_chunks,
             } = &chip_proof.opened_values;
 
+            preprocessed_values.push(vec![preprocessed_local.clone(), preprocessed_next.clone()]);
             main_values.push(vec![trace_local.clone(), trace_next.clone()]);
             perm_values.push(vec![permutation_local.clone(), permutation_next.clone()]);
             quotient_values.push(vec![quotient_chunks.clone()]);
         }
 
-        let chips_opening_values = vec![main_values, perm_values, quotient_values];
+        let chips_opening_values = vec![preprocessed_values, main_values, perm_values, quotient_values];
 
         // Observe commitments and get challenges.
         let Commitments {
+            preprocessed_trace,
             main_trace,
             perm_trace,
             quotient_chunks,
@@ -817,7 +819,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             log_quotient_degrees.map(|log_deg| vec![zeta.exp_power_of_2(log_deg)]);
         pcs.verify_multi_batches(
             &[
-                // TODO: add preprocessed trace
+                (preprocessed_trace.clone(), zeta_and_next.as_slice()),
                 (main_trace.clone(), zeta_and_next.as_slice()),
                 (perm_trace.clone(), zeta_and_next.as_slice()),
                 (quotient_chunks.clone(), zeta_exp_quotient_degree.as_slice()),
