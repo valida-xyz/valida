@@ -205,7 +205,7 @@ fn set_bp(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     Ok(Some(message))
 }
 
-fn run_until(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
+fn run_until(_ : ArgMatches, context: &mut Context) -> Result<Option<String>> {
     let mut message = String::new();
     loop {
         let (stop, pc) = context.step();
@@ -222,7 +222,7 @@ fn run_until(args: ArgMatches, context: &mut Context) -> Result<Option<String>> 
     Ok(Some(message))
 }
 
-fn step(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
+fn step(_ : ArgMatches, context: &mut Context) -> Result<Option<String>> {
     let (stop, _) = context.step();
     if stop {
         context.stopped_ = true;

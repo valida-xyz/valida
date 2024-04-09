@@ -2,14 +2,7 @@ use crate::{AdviceProvider, Machine, Word, INSTRUCTION_ELEMENTS, OPERAND_ELEMENT
 use byteorder::{ByteOrder, LittleEndian};
 use p3_field::Field;
 
-/*
-use derive_more::Display;
-
-#[derive(Display)]
-enum Opcode {
-    // TODO
-}
-*/
+use valida_opcodes::Opcode;
 
 pub trait Instruction<M: Machine<F>, F: Field> {
     const OPCODE: u32;
@@ -29,6 +22,20 @@ pub trait Instruction<M: Machine<F>, F: Field> {
 pub struct InstructionWord<F> {
     pub opcode: u32,
     pub operands: Operands<F>,
+}
+
+impl ToString for InstructionWord<i32> {
+    fn to_string(&self) -> String {
+        let opcode = match Opcode::try_from(self.opcode) {
+            Ok(opcode_name) => {
+                format!("{:?}", opcode_name)
+            }
+            Err(_) => {format!("UNKNOWN_OP:{}", self.opcode.to_string())}
+        };
+        format!(
+            "{} {:?}", opcode, self.operands.0
+        )
+    }
 }
 
 impl InstructionWord<i32> {
