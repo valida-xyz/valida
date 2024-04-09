@@ -5,7 +5,10 @@ use crate::AdviceProvider;
 use p3_field::Field;
 
 #[derive(PartialEq, Eq)]
-pub enum StoppingFlag { DidStop, DidNotStop }
+pub enum StoppingFlag {
+    DidStop,
+    DidNotStop,
+}
 
 pub trait Machine<F: Field>: Sync {
     fn run<Adv>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv)

@@ -47,7 +47,8 @@ use valida_machine::__internal::{
 };
 use valida_machine::{
     generate_permutation_trace, verify_constraints, AdviceProvider, BusArgument, Chip, ChipProof,
-    Commitments, Instruction, Machine, MachineProof, OpenedValues, ProgramROM, StoppingFlag, ValidaAirBuilder,
+    Commitments, Instruction, Machine, MachineProof, OpenedValues, ProgramROM, StoppingFlag,
+    ValidaAirBuilder,
 };
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_output::{MachineWithOutputChip, OutputChip, WriteInstruction};
@@ -1056,7 +1057,8 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
     }
 
     fn step<Adv>(&mut self, advice: &mut Adv) -> StoppingFlag
-        where Adv: AdviceProvider
+    where
+        Adv: AdviceProvider,
     {
         // Fetch
         let pc = self.cpu().pc;

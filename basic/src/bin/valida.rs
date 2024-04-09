@@ -120,12 +120,10 @@ fn status(_args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     status.push_str(&context.machine_.cpu().fp.to_string());
     status.push_str(", PC: ");
     status.push_str(&context.machine_.cpu().pc.to_string());
-    status.push_str(
-        match context.stopped_ {
-            StoppingFlag::DidStop => ", Stopped",
-            StoppingFlag::DidNotStop => ", Running",
-        }
-    );
+    status.push_str(match context.stopped_ {
+        StoppingFlag::DidStop => ", Stopped",
+        StoppingFlag::DidNotStop => ", Running",
+    });
     Ok(Some(status))
 }
 
