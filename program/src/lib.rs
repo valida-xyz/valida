@@ -18,7 +18,7 @@ pub mod stark;
 
 #[derive(Default)]
 pub struct ProgramChip {
-    program_rom: ProgramROM<i32>,
+    pub program_rom: ProgramROM<i32>,
     pub counts: Vec<u32>,
 }
 

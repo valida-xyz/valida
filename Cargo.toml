@@ -4,9 +4,11 @@ members = [
     "assembler",
     "alu_u32",
     "basic",
+    "basic_macro",
     "bus",
     "cpu",
     "derive",
+    "elf",
     "native_field",
     "machine",
     "memory",
@@ -16,7 +18,7 @@ members = [
     "range",
     "static_data",
     "util",
-    "verifier"
+    "verifier",
 ]
 
 [workspace.dependencies]

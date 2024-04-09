@@ -1,5 +1,3 @@
-#![no_std]
-
 extern crate alloc;
 
 use alloc::format;
@@ -76,6 +74,7 @@ fn impl_machine(machine: &syn::DeriveInput) -> TokenStream {
 
         let name = &machine.ident;
         let run = run_method(machine, &instructions, &val, &static_data_chip);
+        let step = step_method(machine, &instructions, &val);
         let prove = prove_method(&chips);
         let verify = verify_method(&chips);
 
@@ -83,6 +82,7 @@ fn impl_machine(machine: &syn::DeriveInput) -> TokenStream {
 
         let stream = quote! {
             impl #impl_generics Machine<#val> for #name #ty_generics #where_clause {
+                #step
                 #run
                 #prove
                 #verify
@@ -149,18 +149,6 @@ fn run_method(
     let name = &machine.ident;
     let (_, ty_generics, _) = machine.generics.split_for_impl();
 
-    let opcode_arms = instructions
-        .iter()
-        .map(|inst| {
-            let ty = &inst.ty;
-            quote! {
-                // TODO: Self instead of #name #ty_generics?
-                <#ty as Instruction<#name #ty_generics, #val>>::OPCODE =>
-                    #ty::execute_with_advice::<Adv>(self, ops, advice),
-            }
-        })
-        .collect::<TokenStream2>();
-
     let init_static_data: TokenStream2 = match static_data_chip {
         Some(_static_data_chip) => quote! {
             self.initialize_memory();
@@ -173,21 +161,8 @@ fn run_method(
             #init_static_data
 
             loop {
-                // Fetch
-                let pc = self.cpu().pc;
-                let instruction = program.get_instruction(pc);
-                let opcode = instruction.opcode;
-                let ops = instruction.operands;
-
-                // Execute
-                match opcode {
-                    #opcode_arms
-                    _ => panic!("Unrecognized opcode: {}", opcode),
-                };
-                self.read_word(pc as usize);
-
-                // A STOP instruction signals the end of the program
-                if opcode == <StopInstruction as Instruction<Self, #val>>::OPCODE {
+                let step_did_stop = self.step(advice);
+                if step_did_stop == StoppingFlag::DidStop {
                     break;
                 }
             }
@@ -198,6 +173,46 @@ fn run_method(
                 self.read_word(self.cpu().pc as usize);
             }
         }
+    }
+}
+
+fn step_method(machine: &syn::DeriveInput, instructions: &[&Field], val: &Ident) -> TokenStream2 {
+    // TODO: combine this with run
+    let name = &machine.ident;
+    let (_, ty_generics, _) = machine.generics.split_for_impl();
+
+    let opcode_arms = instructions
+        .iter()
+        .map(|inst| {
+            let ty = &inst.ty;
+            quote! {
+                // TODO: Self instead of #name #ty_generics?
+                <#ty as Instruction<#name #ty_generics, #val>>::OPCODE =>
+                    #ty::execute_with_advice::<Adv>(self, ops, advice),
+            }
+        })
+        .collect::<TokenStream2>();
+
+    quote! {
+       fn step<Adv: ::valida_machine::AdviceProvider>(&mut self, advice: &mut Adv) -> StoppingFlag {
+           let pc = self.cpu().pc;
+           let instruction = self.program.program_rom.get_instruction(pc);
+           let opcode = instruction.opcode;
+           let ops = instruction.operands;
+
+           std::println!("step: pc = {:?}, instruction = {:?}", pc, instruction);
+           match opcode {
+               #opcode_arms
+               _ => panic!("Unrecognized opcode: {}", opcode),
+           };
+           self.read_word(pc as usize);
+
+           if opcode == <StopInstruction as Instruction<Self, #val>>::OPCODE {
+              StoppingFlag::DidStop
+           } else {
+              StoppingFlag::DidNotStop
+            }
+       }
     }
 }
 
@@ -250,7 +265,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     preprocessed_trace_lde,
                     main_trace_ldes.remove(0),
                     perm_trace_ldes.remove(0),
-                    cummulative_sums[#i],
+                    cumulative_sums[#i],
                     &perm_challenges,
                     alpha,
                 ));
@@ -329,7 +344,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     }).collect::<Vec<_>>()
                 );
 
-            let cummulative_sums = perm_traces.iter()
+            let cumulative_sums = perm_traces.iter()
                 .map(|trace| trace.row_slice(trace.height() - 1).last().unwrap().clone())
                 .collect::<Vec<_>>();
 
@@ -531,7 +546,7 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
             ];
 
             // Get the generators of the trace subgroups for each chip.
-            let g_subgroups :[SC::Val ; #num_chips] = proof.chip_proofs
+            let g_subgroups: [SC::Val; #num_chips] = proof.chip_proofs
                 .iter()
                 .map(|chip_proof| SC::Val::two_adic_generator(chip_proof.log_degree))
                 .collect::<Vec<_>>().try_into().unwrap();
@@ -559,14 +574,12 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
 
             let chips_opening_values = vec![main_values, perm_values, quotient_values];
 
-
             // Observe commitments and get challenges.
             let Commitments {
                 main_trace,
                 perm_trace,
                 quotient_chunks,
             } = &proof.commitments;
-
 
             // Compute the commitments to preprocessed traces (TODO: avoid in the future)
             let preprocessed_traces: Vec<RowMajorMatrix<SC::Val>> =
@@ -583,7 +596,6 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
 
             challenger.observe(preprocessed_commit.clone());
 
-            // challenger.observe(preprocessed_commit.clone());
             challenger.observe(main_trace.clone());
 
             let mut perm_challenges = Vec::new();
@@ -597,15 +609,16 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
 
             challenger.observe(quotient_chunks.clone());
 
-             // Verify the openning proof.
-             let zeta: SC::Challenge = challenger.sample_ext_element();
-             let zeta_and_next: [Vec<SC::Challenge>; #num_chips] =
-                 g_subgroups.map(|g| vec![zeta, zeta * g]);
-             let zeta_exp_quotient_degree: [Vec<SC::Challenge>; #num_chips] =
-                 log_quotient_degrees.map(|log_deg| vec![zeta.exp_power_of_2(log_deg)]);
+            // Verify the opening proof.
+            let zeta: SC::Challenge = challenger.sample_ext_element();
+            let zeta_and_next: [Vec<SC::Challenge>; #num_chips] =
+                g_subgroups.map(|g| vec![zeta, zeta * g]);
+            let zeta_exp_quotient_degree: [Vec<SC::Challenge>; #num_chips] =
+                log_quotient_degrees.map(|log_deg| vec![zeta.exp_power_of_2(log_deg)]);
             pcs
                 .verify_multi_batches(
                     &[
+                        // TODO: add preprocessed trace
                         (main_trace.clone(), zeta_and_next.as_slice()),
                         (perm_trace.clone(), zeta_and_next.as_slice()),
                         (quotient_chunks.clone(), zeta_exp_quotient_degree.as_slice()),
