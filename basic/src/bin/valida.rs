@@ -97,6 +97,9 @@ impl Context<'_> {
         let pc = self.machine_.cpu().pc;
         let fp = self.machine_.cpu().fp;
 
+        let instruction = self.machine_.program().program_rom.get_instruction(pc);
+        println!("{:4} : {:?}", pc, instruction.to_string());
+
         // check if fp is changed
         if fp != self.recorded_current_fp_ {
             self.last_fp_size_ = self.recorded_current_fp_ - fp;
@@ -176,20 +179,27 @@ fn last_frame(_: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     Ok(Some(frame))
 }
 
-fn list_instrs(_: ArgMatches, context: &mut Context) -> Result<Option<String>> {
+fn list_instrs(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     let pc = context.machine_.cpu().pc;
 
     let program_rom = &context.machine_.program().program_rom;
     let total_size = program_rom.0.len();
 
+    let print_size_arg = args.get_one::<String>("size");
+
+    let print_size = match print_size_arg {
+        Some(size) => size.parse::<u32>().unwrap(),
+        None => 10,
+    };
+
     let mut formatted = String::new();
-    for i in 0..5 {
+    for i in 0..print_size {
         let cur_pc = pc + i;
         if cur_pc >= total_size as u32 {
             break;
         }
         let instruction = program_rom.get_instruction(cur_pc);
-        formatted.push_str(format!("{:?} : {:?}\n", cur_pc, instruction).as_str());
+        formatted.push_str(format!("{:4} : {:?}\n", cur_pc, instruction.to_string()).as_str());
     }
     Ok(Some(formatted))
 }
@@ -204,8 +214,26 @@ fn set_bp(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     let message = format!("Breakpoint set at pc: {}", pc);
     Ok(Some(message))
 }
+fn show_memory(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
+    let addr = args
+        .get_one::<String>("addr")
+        .unwrap()
+        .parse::<u32>()
+        .unwrap();
 
-fn run_until(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
+    // show memory at address, by default show 20 cells
+    let mut memory = String::new();
+    for i in 0..8 {
+        let read_addr = addr + i * 4;
+        let string_val = context.machine_.mem().examine(read_addr);
+        let memory_str = format!("0x{:<8x} : {}\n", read_addr, string_val);
+        memory += &memory_str;
+    }
+
+    Ok(Some(memory))
+}
+
+fn run_until(_: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     let mut message = String::new();
     loop {
         let (stop, pc) = context.step();
@@ -222,7 +250,7 @@ fn run_until(args: ArgMatches, context: &mut Context) -> Result<Option<String>> 
     Ok(Some(message))
 }
 
-fn step(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
+fn step(_: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     let (stop, _) = context.step();
     if stop {
         context.stopped_ = true;
@@ -267,8 +295,16 @@ fn repl_run(args: &Args) {
             run_until,
         )
         .with_command(
-            Command::new("l").about("list instruction at current PC"),
+            Command::new("l")
+                .about("list instruction at current PC")
+                .arg(Arg::new("size").required(false)),
             list_instrs,
+        )
+        .with_command(
+            Command::new("m")
+                .arg(Arg::new("addr").required(true))
+                .about("show memory at address"),
+            show_memory,
         )
         .with_command(
             Command::new("reset").about("reset machine state!"),

@@ -227,7 +227,6 @@ fn step_method(machine: &syn::DeriveInput, instructions: &[&Field], val: &Ident)
            let opcode = instruction.opcode;
            let ops = instruction.operands;
 
-           std::println!("step: pc = {:?}, instruction = {:?}", pc, instruction);
            match opcode {
                #opcode_arms
                _ => panic!("Unrecognized opcode: {}", opcode),
