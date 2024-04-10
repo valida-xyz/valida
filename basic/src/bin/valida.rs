@@ -97,6 +97,9 @@ impl Context<'_> {
         let pc = self.machine_.cpu().pc;
         let fp = self.machine_.cpu().fp;
 
+        let instruction = self.machine_.program().program_rom.get_instruction(pc);
+        println!("{:4} : {:?}", pc, instruction.to_string());
+
         // check if fp is changed
         if fp != self.recorded_current_fp_ {
             self.last_fp_size_ = self.recorded_current_fp_ - fp;
@@ -182,11 +185,13 @@ fn list_instrs(args: ArgMatches, context: &mut Context) -> Result<Option<String>
     let program_rom = &context.machine_.program().program_rom;
     let total_size = program_rom.0.len();
 
-    let print_size = args
-        .get_one::<String>("size")
-        .unwrap()
-        .parse::<u32>()
-        .unwrap();
+    let print_size_arg = args
+        .get_one::<String>("size");
+
+    let print_size = match print_size_arg {
+        Some(size) => size.parse::<u32>().unwrap(),
+        None => 10,
+    };
 
     let mut formatted = String::new();
     for i in 0..print_size {
@@ -195,7 +200,7 @@ fn list_instrs(args: ArgMatches, context: &mut Context) -> Result<Option<String>
             break;
         }
         let instruction = program_rom.get_instruction(cur_pc);
-        formatted.push_str(format!("{:?} : {:?}\n", cur_pc, instruction.to_string()).as_str());
+        formatted.push_str(format!("{:4} : {:?}\n", cur_pc, instruction.to_string()).as_str());
     }
     Ok(Some(formatted))
 }

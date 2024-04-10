@@ -100,6 +100,16 @@ impl InstructionWord<i32> {
                     self.print_first_operand(),
                     self.print_second_operand()),
             valida_opcodes::STOP => "".to_string(),
+            valida_opcodes::LOAD32 =>
+                format!(
+                    "{}(fp), {}(fp)",
+                    self.operands.0[0],
+                    self.operands.0[1]),
+            valida_opcodes::STORE32 =>
+                format!(
+                    "{}(fp), {}(fp)",
+                    self.operands.0[1],
+                    self.operands.0[2]),
             _ => {
                 format!(
                     "{}(fp), {}, {}", self.operands.0[0], self.print_first_operand(), self.print_second_operand()
