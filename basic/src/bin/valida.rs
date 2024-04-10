@@ -176,20 +176,26 @@ fn last_frame(_: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     Ok(Some(frame))
 }
 
-fn list_instrs(_: ArgMatches, context: &mut Context) -> Result<Option<String>> {
+fn list_instrs(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     let pc = context.machine_.cpu().pc;
 
     let program_rom = &context.machine_.program().program_rom;
     let total_size = program_rom.0.len();
 
+    let print_size = args
+        .get_one::<String>("size")
+        .unwrap()
+        .parse::<u32>()
+        .unwrap();
+
     let mut formatted = String::new();
-    for i in 0..5 {
+    for i in 0..print_size {
         let cur_pc = pc + i;
         if cur_pc >= total_size as u32 {
             break;
         }
         let instruction = program_rom.get_instruction(cur_pc);
-        formatted.push_str(format!("{:?} : {:?}\n", cur_pc, instruction).as_str());
+        formatted.push_str(format!("{:?} : {:?}\n", cur_pc, instruction.to_string()).as_str());
     }
     Ok(Some(formatted))
 }
@@ -267,7 +273,8 @@ fn repl_run(args: &Args) {
             run_until,
         )
         .with_command(
-            Command::new("l").about("list instruction at current PC"),
+            Command::new("l").about("list instruction at current PC")
+            .arg(Arg::new("size").required(false)),
             list_instrs,
         )
         .with_command(
