@@ -40,7 +40,7 @@ pub enum Opcode {
 
 macro_rules! declare_opcode {
     ($opcode : ident) => {
-        pub const $opcode : u32 = Opcode::$opcode as u32;
+        pub const $opcode: u32 = Opcode::$opcode as u32;
     };
 }
 
@@ -60,7 +60,6 @@ declare_opcode!(LOADFP);
 /// NONDETERMINISTIC
 declare_opcode!(READ_ADVICE);
 
-
 /// U32 ALU
 declare_opcode!(ADD32);
 declare_opcode!(SUB32);
@@ -79,7 +78,6 @@ declare_opcode!(SRA32);
 declare_opcode!(MULHS32);
 declare_opcode!(LTE32);
 declare_opcode!(EQ32);
-
 
 /// NATIVE FIELD
 declare_opcode!(ADD);

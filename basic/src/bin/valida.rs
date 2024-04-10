@@ -185,8 +185,7 @@ fn list_instrs(args: ArgMatches, context: &mut Context) -> Result<Option<String>
     let program_rom = &context.machine_.program().program_rom;
     let total_size = program_rom.0.len();
 
-    let print_size_arg = args
-        .get_one::<String>("size");
+    let print_size_arg = args.get_one::<String>("size");
 
     let print_size = match print_size_arg {
         Some(size) => size.parse::<u32>().unwrap(),
@@ -216,7 +215,7 @@ fn set_bp(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     Ok(Some(message))
 }
 
-fn run_until(_ : ArgMatches, context: &mut Context) -> Result<Option<String>> {
+fn run_until(_: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     let mut message = String::new();
     loop {
         let (stop, pc) = context.step();
@@ -233,7 +232,7 @@ fn run_until(_ : ArgMatches, context: &mut Context) -> Result<Option<String>> {
     Ok(Some(message))
 }
 
-fn step(_ : ArgMatches, context: &mut Context) -> Result<Option<String>> {
+fn step(_: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     let (stop, _) = context.step();
     if stop {
         context.stopped_ = true;
@@ -278,8 +277,9 @@ fn repl_run(args: &Args) {
             run_until,
         )
         .with_command(
-            Command::new("l").about("list instruction at current PC")
-            .arg(Arg::new("size").required(false)),
+            Command::new("l")
+                .about("list instruction at current PC")
+                .arg(Arg::new("size").required(false)),
             list_instrs,
         )
         .with_command(

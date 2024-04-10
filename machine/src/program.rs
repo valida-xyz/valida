@@ -30,7 +30,9 @@ impl ToString for InstructionWord<i32> {
             Ok(opcode_name) => {
                 format!("{:?}", opcode_name)
             }
-            Err(_) => {format!("UNKNOWN_OP:{}", self.opcode.to_string())}
+            Err(_) => {
+                format!("UNKNOWN_OP:{}", self.opcode.to_string())
+            }
         };
         format!("{} {}", opcode, self.print_operands())
     }
@@ -46,13 +48,17 @@ impl InstructionWord<i32> {
 
     pub fn print_imm32(&self) -> String {
         assert!(self.opcode == IMM32, "Instruction is not immediate");
-    
+
         //extract the immediate value
         let imm0 = self.operands.0[1];
         let imm1 = self.operands.0[2];
         let imm2 = self.operands.0[3];
         let imm3 = self.operands.0[4];
-        format!("{}(fp), {}", self.operands.0[0], imm0 << 24 | imm1 << 16 | imm2 << 8 | imm3)
+        format!(
+            "{}(fp), {}",
+            self.operands.0[0],
+            imm0 << 24 | imm1 << 16 | imm2 << 8 | imm3
+        )
     }
 
     pub fn print_first_operand(&self) -> String {
@@ -68,51 +74,43 @@ impl InstructionWord<i32> {
         }
     }
 
-    pub fn print_address(&self, index : usize) -> String {
-        format!("{}", self.operands.0[index]/24)
+    pub fn print_address(&self, index: usize) -> String {
+        format!("{}", self.operands.0[index] / 24)
     }
 
     pub fn print_operands(&self) -> String {
         match self.opcode {
             valida_opcodes::IMM32 => self.print_imm32(),
-            valida_opcodes::JAL =>
-                format!(
-                    "{}(fp), PC: {}, {}",
-                    self.operands.0[0],
-                    self.print_address(1),
-                    self.operands.0[2]),
-            valida_opcodes::JALV =>
-                format!(
-                    "{}(fp), {}(fp), {}(fp)",
-                    self.operands.0[0],
-                    self.operands.0[1],
-                    self.operands.0[2]),
-            valida_opcodes::LOADFP =>
-                format!(
-                    "{}(fp), {}",
-                    self.operands.0[0],
-                    self.operands.0[1]),
-            valida_opcodes::BEQ |
-            valida_opcodes::BNE =>
-                format!(
-                    "{}, {}, {}",
-                    self.print_address(0),
-                    self.print_first_operand(),
-                    self.print_second_operand()),
+            valida_opcodes::JAL => format!(
+                "{}(fp), PC: {}, {}",
+                self.operands.0[0],
+                self.print_address(1),
+                self.operands.0[2]
+            ),
+            valida_opcodes::JALV => format!(
+                "{}(fp), {}(fp), {}(fp)",
+                self.operands.0[0], self.operands.0[1], self.operands.0[2]
+            ),
+            valida_opcodes::LOADFP => format!("{}(fp), {}", self.operands.0[0], self.operands.0[1]),
+            valida_opcodes::BEQ | valida_opcodes::BNE => format!(
+                "{}, {}, {}",
+                self.print_address(0),
+                self.print_first_operand(),
+                self.print_second_operand()
+            ),
             valida_opcodes::STOP => "".to_string(),
-            valida_opcodes::LOAD32 =>
-                format!(
-                    "{}(fp), {}(fp)",
-                    self.operands.0[0],
-                    self.operands.0[1]),
-            valida_opcodes::STORE32 =>
-                format!(
-                    "{}(fp), {}(fp)",
-                    self.operands.0[1],
-                    self.operands.0[2]),
+            valida_opcodes::LOAD32 => {
+                format!("{}(fp), {}(fp)", self.operands.0[0], self.operands.0[1])
+            }
+            valida_opcodes::STORE32 => {
+                format!("{}(fp), {}(fp)", self.operands.0[1], self.operands.0[2])
+            }
             _ => {
                 format!(
-                    "{}(fp), {}, {}", self.operands.0[0], self.print_first_operand(), self.print_second_operand()
+                    "{}(fp), {}, {}",
+                    self.operands.0[0],
+                    self.print_first_operand(),
+                    self.print_second_operand()
                 )
             }
         }
