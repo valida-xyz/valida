@@ -58,7 +58,10 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
                 let opcode = match mnemonic {
                     // Core CPU
                     "lw" => LOAD32,
+                    "loadu8" => LOADU8,
+                    "loads8" => LOADS8,
                     "sw" => STORE32,
+                    "storeu8" => STOREU8,
                     "jal" => JAL,
                     "jalv" => JALV,
                     "beq" | "beqi" => BEQ,

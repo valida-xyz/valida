@@ -15,6 +15,10 @@ pub enum Opcode {
     STOP = 8,
     READ_ADVICE = 9,
     LOADFP = 10,
+    LOADU8 = 11,
+    LOADS8 = 12,
+    STOREU8 = 13,
+
     ADD32 = 100,
     SUB32 = 101,
     MUL32 = 102,
@@ -56,6 +60,9 @@ declare_opcode!(BNE);
 declare_opcode!(IMM32);
 declare_opcode!(STOP);
 declare_opcode!(LOADFP);
+declare_opcode!(LOADU8);
+declare_opcode!(LOADS8);
+declare_opcode!(STOREU8);
 
 /// NONDETERMINISTIC
 declare_opcode!(READ_ADVICE);

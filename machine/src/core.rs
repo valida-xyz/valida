@@ -15,6 +15,15 @@ impl Word<u8> {
     }
 }
 
+impl Word<u8> {
+    pub fn update_byte(self, byte: u8, loc: usize) -> Self {
+        let mut result: [u8; MEMORY_CELL_BYTES] = self.0;
+        result[loc] = byte;
+        Self(result)
+    }
+}
+
+
 impl<F: Copy> Word<F> {
     pub fn transform<T, G>(self, mut f: G) -> Word<T>
     where
@@ -38,6 +47,15 @@ impl<F: PrimeField> Word<F> {
         result
     }
 }
+
+impl Word<u8> {
+    pub fn to_u8(self) -> u8 {
+        let result = self.0;
+        let byte = result[MEMORY_CELL_BYTES - 1];
+        byte
+    }
+}
+
 
 impl Into<u32> for Word<u8> {
     fn into(self) -> u32 {

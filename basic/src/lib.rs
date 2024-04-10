@@ -37,8 +37,8 @@ use valida_bus::{
 };
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
-    Load32Instruction, LoadFpInstruction, ReadAdviceInstruction, StopInstruction,
-    Store32Instruction,
+    Load32Instruction, LoadU8Instruction, LoadS8Instruction, LoadFpInstruction, ReadAdviceInstruction, StopInstruction,
+    Store32Instruction, StoreU8Instruction
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_machine::__internal::p3_challenger::{CanObserve, FieldChallenger};
@@ -64,6 +64,13 @@ pub struct BasicMachine<F: PrimeField32 + TwoAdicField> {
     // Core instructions
     load32: Load32Instruction,
     store32: Store32Instruction,
+
+    loadu8: LoadU8Instruction,
+
+    loads8: LoadS8Instruction,
+
+    storeu8: StoreU8Instruction,
+
     jal: JalInstruction,
     jalv: JalvInstruction,
     beq: BeqInstruction,
