@@ -8,7 +8,7 @@ use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRowSlices;
 use valida_opcodes::BYTES_PER_INSTR;
 
-impl<F> BaseAir<F> for CpuChip {
+impl<F: AbstractField> BaseAir<F> for CpuChip {
     fn width(&self) -> usize {
         NUM_CPU_COLS
     }

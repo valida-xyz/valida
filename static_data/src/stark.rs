@@ -12,7 +12,7 @@ impl<F: AbstractField> BaseAir<F> for StaticDataChip {
         NUM_STATIC_DATA_COLS
     }
 
-    fn preprocessed_trace(&self) -> Option<RowMajorMatrix<F>> {
+    fn preprocessed_trace(&self) -> RowMajorMatrix<F> {
         let mut rows = self.cells.iter()
             .map(|(addr, value)| {
                 let mut row: Vec<F> = vec![F::from_canonical_u32(*addr)];
@@ -23,7 +23,7 @@ impl<F: AbstractField> BaseAir<F> for StaticDataChip {
             .flatten()
             .collect::<Vec<_>>();
         rows.resize(rows.len().next_power_of_two() * NUM_STATIC_DATA_PREPROCESSED_COLS, F::zero());
-        Some(RowMajorMatrix::new(rows, NUM_STATIC_DATA_PREPROCESSED_COLS))
+        RowMajorMatrix::new(rows, NUM_STATIC_DATA_PREPROCESSED_COLS)
     }
 }
 

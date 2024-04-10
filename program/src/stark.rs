@@ -19,7 +19,7 @@ impl<F: Field> BaseAir<F> for ProgramChip {
         NUM_PROGRAM_COLS
     }
 
-    fn preprocessed_trace(&self) -> Option<RowMajorMatrix<F>> {
+    fn preprocessed_trace(&self) -> RowMajorMatrix<F> {
         // Pad the ROM to a power of two.
         let mut rom = self.program_rom.0.clone();
         let n = rom.len();
@@ -35,7 +35,6 @@ impl<F: Field> BaseAir<F> for ProgramChip {
                 row
             })
             .collect();
-        let trace = RowMajorMatrix::new(flattened, NUM_PREPROCESSED_COLS);
-        Some(trace)
+        RowMajorMatrix::new(flattened, NUM_PREPROCESSED_COLS)
     }
 }

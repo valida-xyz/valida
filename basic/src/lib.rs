@@ -183,7 +183,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             tracing::info_span!("generate preprocessed traces").in_scope(|| {
                 chips
                     .par_iter()
-                    .flat_map(|chip| chip.preprocessed_trace())
+                    .map(|chip| chip.preprocessed_trace())
                     .collect::<Vec<_>>()
             });
 
@@ -623,7 +623,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let chip_proofs = log_degrees
             .iter()
-            .zip(preprocessed_openings) // TODO: add empties so that the zips don't truncate
+            .zip(preprocessed_openings)
             .zip(main_openings)
             .zip(perm_openings)
             .zip(quotient_openings)
@@ -787,7 +787,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             tracing::info_span!("generate preprocessed traces").in_scope(|| {
                 chips
                     .par_iter()
-                    .flat_map(|chip| chip.preprocessed_trace())
+                    .map(|chip| chip.preprocessed_trace())
                     .collect::<Vec<_>>()
             });
 

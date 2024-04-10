@@ -132,6 +132,7 @@ where
     let betas = random_elements[2].powers();
 
     let preprocessed = chip.preprocessed_trace();
+    let preprocessed_height = preprocessed.height();
 
     // Compute the reciprocal columns
     //
@@ -153,11 +154,7 @@ where
             } else {
                 alphas_global[interaction.argument_index()]
             };
-            let preprocessed_row = if preprocessed.is_some() {
-                preprocessed.as_ref().unwrap().row_slice(n)
-            } else {
-                &[]
-            };
+            let preprocessed_row = preprocessed.row_slice(n % preprocessed_height);
             row[m] = reduce_row(
                 main_row,
                 preprocessed_row,
@@ -179,11 +176,7 @@ where
         if n > 0 {
             phi[n] = phi[n - 1];
         }
-        let preprocessed_row = if preprocessed.is_some() {
-            preprocessed.as_ref().unwrap().row_slice(n)
-        } else {
-            &[]
-        };
+        let preprocessed_row = preprocessed.row_slice(n % preprocessed_height);
         for (m, (interaction, interaction_type)) in all_interactions.iter().enumerate() {
             let mult = interaction
                 .count

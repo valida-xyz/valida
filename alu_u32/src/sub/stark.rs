@@ -7,7 +7,7 @@ use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRowSlices;
 
-impl<F> BaseAir<F> for Sub32Chip {
+impl<F: AbstractField> BaseAir<F> for Sub32Chip {
     fn width(&self) -> usize {
         NUM_SUB_COLS
     }
