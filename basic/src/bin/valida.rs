@@ -75,12 +75,13 @@ impl Context<'_> {
             last_fp_size_: 0,
         };
 
-        let rom = match ProgramROM::from_file(&args.program) {
-            Ok(contents) => contents,
-            Err(e) => panic!("Failure to load file: {}. {}", &args.program, e),
-        };
+        let Program { code, data } = load_executable_file(
+            fs::read(&args.program)
+                .expect(format!("Failed to read executable file: {}", &args.program).as_str()),
+        );
 
-        context.machine_.program_mut().set_program_rom(&rom);
+        context.machine_.program_mut().set_program_rom(&code);
+        context.machine_.static_data_mut().load(data);
         context.machine_.cpu_mut().fp = args.stack_height;
         context.machine_.cpu_mut().save_register_state();
 
