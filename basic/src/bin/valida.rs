@@ -214,6 +214,24 @@ fn set_bp(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     let message = format!("Breakpoint set at pc: {}", pc);
     Ok(Some(message))
 }
+fn show_memory(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
+    let addr = args
+        .get_one::<String>("addr")
+        .unwrap()
+        .parse::<u32>()
+        .unwrap();
+
+    // show memory at address, by default show 20 cells
+    let mut memory = String::new();
+    for i in 0..8 {
+        let read_addr = addr + i * 4;
+        let string_val = context.machine_.mem().examine(read_addr);
+        let memory_str = format!("0x{:<8x} : {}\n", read_addr, string_val);
+        memory += &memory_str;
+    }
+
+    Ok(Some(memory))
+}
 
 fn run_until(_: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     let mut message = String::new();
@@ -281,6 +299,12 @@ fn repl_run(args: &Args) {
                 .about("list instruction at current PC")
                 .arg(Arg::new("size").required(false)),
             list_instrs,
+        )
+        .with_command(
+            Command::new("m")
+                .arg(Arg::new("addr").required(true))
+                .about("show memory at address"),
+            show_memory,
         )
         .with_command(
             Command::new("reset").about("reset machine state!"),
