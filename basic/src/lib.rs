@@ -1122,6 +1122,9 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             <Shr32Instruction as Instruction<Self, F>>::OPCODE => {
                 Shr32Instruction::execute_with_advice::<Adv>(self, ops, advice)
             }
+            <Sra32Instruction as Instruction<Self, F>>::OPCODE => {
+                Sra32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
             <Lt32Instruction as Instruction<Self, F>>::OPCODE => {
                 Lt32Instruction::execute_with_advice::<Adv>(self, ops, advice)
             }
