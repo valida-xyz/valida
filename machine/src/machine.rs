@@ -10,6 +10,12 @@ pub enum StoppingFlag {
     DidNotStop,
 }
 
+#[derive(Debug)]
+pub enum FailureReason {
+    CumulativeSumNonZero,
+    FailureToVerifyMultiOpening,
+}
+
 pub trait Machine<F: Field>: Sync {
     fn run<Adv>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv)
     where
@@ -23,7 +29,7 @@ pub trait Machine<F: Field>: Sync {
     where
         SC: StarkConfig<Val = F>;
 
-    fn verify<SC>(&self, config: &SC, proof: &MachineProof<SC>) -> Result<(), ()>
+    fn verify<SC>(&self, config: &SC, proof: &MachineProof<SC>) -> Result<(), FailureReason>
     where
         SC: StarkConfig<Val = F>;
 }

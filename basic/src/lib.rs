@@ -48,7 +48,7 @@ use valida_machine::__internal::{
 use valida_machine::{
     generate_permutation_trace, verify_constraints, AdviceProvider, BusArgument, Chip, ChipProof,
     Commitments, Instruction, Machine, MachineProof, OpenedValues, ProgramROM, StoppingFlag,
-    ValidaAirBuilder,
+    ValidaAirBuilder, FailureReason,
 };
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_output::{MachineWithOutputChip, OutputChip, WriteInstruction};
@@ -665,7 +665,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         }
     }
 
-    fn verify<SC>(&self, config: &SC, proof: &MachineProof<SC>) -> Result<(), ()>
+    fn verify<SC>(&self, config: &SC, proof: &MachineProof<SC>) -> Result<(), FailureReason>
     where
         SC: StarkConfig<Val = F>,
     {
@@ -828,7 +828,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &proof.opening_proof,
             &mut challenger,
         )
-        .map_err(|_| ())?;
+        .map_err(|_| FailureReason::FailureToVerifyMultiOpening)?;
 
         // Verify the constraints.
         let mut i = 0;
@@ -1051,7 +1051,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             .sum();
 
         if sum != SC::Challenge::zero() {
-            return Err(());
+            return Err(FailureReason::CumulativeSumNonZero);
         }
 
         Ok(())
