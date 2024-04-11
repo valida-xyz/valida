@@ -179,19 +179,13 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         // TODO: Seed challenger with digest of all constraints & trace lengths.
         let pcs = config.pcs();
 
-        let preprocessed_traces: Vec<RowMajorMatrix<SC::Val>> =
+        let mut preprocessed_traces: Vec<RowMajorMatrix<SC::Val>> =
             tracing::info_span!("generate preprocessed traces").in_scope(|| {
                 chips
                     .par_iter()
                     .map(|chip| chip.preprocessed_trace())
                     .collect::<Vec<_>>()
             });
-
-        let (preprocessed_commit, preprocessed_data) =
-            tracing::info_span!("commit to preprocessed traces")
-                .in_scope(|| pcs.commit_batches(preprocessed_traces.to_vec()));
-        challenger.observe(preprocessed_commit.clone());
-        let mut preprocessed_trace_ldes = pcs.get_ldes(&preprocessed_data);
 
         let main_traces: [RowMajorMatrix<SC::Val>; NUM_CHIPS] =
             tracing::info_span!("generate main trace").in_scope(|| {
@@ -202,6 +196,18 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
                     .try_into()
                     .unwrap()
             });
+
+        for (preprocessed_trace, main_trace) in preprocessed_traces.iter_mut().zip(main_traces.iter()) {
+            let w = preprocessed_trace.width();
+            preprocessed_trace.values.resize(preprocessed_trace.width() * main_trace.height(),
+                                             SC::Val::zero());
+        }
+
+        let (preprocessed_commit, preprocessed_data) =
+            tracing::info_span!("commit to preprocessed traces")
+                .in_scope(|| pcs.commit_batches(preprocessed_traces.to_vec()));
+        challenger.observe(preprocessed_commit.clone());
+        let mut preprocessed_trace_ldes = pcs.get_ldes(&preprocessed_data);
 
         let degrees: [usize; NUM_CHIPS] = main_traces
             .iter()
@@ -665,7 +671,8 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         }
     }
 
-    fn verify<SC>(&self, config: &SC, proof: &MachineProof<SC>) -> Result<(), FailureReason>
+    fn verify<SC>(&self, config: &SC, proof: &MachineProof<SC>)
+        -> Result<(), FailureReason<SC>>
     where
         SC: StarkConfig<Val = F>,
     {
@@ -828,7 +835,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &proof.opening_proof,
             &mut challenger,
         )
-        .map_err(|_| FailureReason::FailureToVerifyMultiOpening)?;
+        .map_err(FailureReason::FailureToVerifyMultiOpening)?;
 
         // Verify the constraints.
         let mut i = 0;
