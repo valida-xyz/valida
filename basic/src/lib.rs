@@ -198,9 +198,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             });
 
         for (preprocessed_trace, main_trace) in preprocessed_traces.iter_mut().zip(main_traces.iter()) {
-            let w = preprocessed_trace.width();
-            preprocessed_trace.values.resize(preprocessed_trace.width() * main_trace.height(),
-                                             SC::Val::zero());
+            preprocessed_trace.expand_to_height(main_trace.height());
         }
 
         let (preprocessed_commit, preprocessed_data) =
@@ -790,13 +788,17 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         } = &proof.commitments;
 
         // Compute the commitments to preprocessed traces (TODO: avoid in the future)
-        let preprocessed_traces: Vec<RowMajorMatrix<SC::Val>> =
+        let mut preprocessed_traces: Vec<RowMajorMatrix<SC::Val>> =
             tracing::info_span!("generate preprocessed traces").in_scope(|| {
                 chips
                     .par_iter()
                     .map(|chip| chip.preprocessed_trace())
                     .collect::<Vec<_>>()
             });
+
+        for (preprocessed_trace, dim) in preprocessed_traces.iter_mut().zip(dims[0].iter()) {
+            preprocessed_trace.expand_to_height(dim.height);
+        }
 
         let (preprocessed_commit, preprocessed_data) =
             tracing::info_span!("commit to preprocessed traces")
