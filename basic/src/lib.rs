@@ -268,6 +268,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         check_constraints::<Self, _, SC>(
             self,
             chip,
+            &preprocessed_traces[i],
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
@@ -291,6 +292,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         check_constraints::<Self, _, SC>(
             self,
             chip,
+            &preprocessed_traces[i],
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
@@ -314,6 +316,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         check_constraints::<Self, _, SC>(
             self,
             chip,
+            &preprocessed_traces[i],
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
@@ -337,6 +340,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         check_constraints::<Self, _, SC>(
             self,
             chip,
+            &preprocessed_traces[i],
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
@@ -360,6 +364,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         check_constraints::<Self, _, SC>(
             self,
             chip,
+            &preprocessed_traces[i],
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
@@ -383,6 +388,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         check_constraints::<Self, _, SC>(
             self,
             chip,
+            &preprocessed_traces[i],
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
@@ -406,6 +412,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         check_constraints::<Self, _, SC>(
             self,
             chip,
+            &preprocessed_traces[i],
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
@@ -429,6 +436,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         check_constraints::<Self, _, SC>(
             self,
             chip,
+            &preprocessed_traces[i],
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
@@ -452,6 +460,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         check_constraints::<Self, _, SC>(
             self,
             chip,
+            &preprocessed_traces[i],
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
@@ -475,6 +484,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         check_constraints::<Self, _, SC>(
             self,
             chip,
+            &preprocessed_traces[i],
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
@@ -498,6 +508,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         check_constraints::<Self, _, SC>(
             self,
             chip,
+            &preprocessed_traces[i],
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
@@ -521,6 +532,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         check_constraints::<Self, _, SC>(
             self,
             chip,
+            &preprocessed_traces[i],
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
@@ -544,6 +556,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         check_constraints::<Self, _, SC>(
             self,
             chip,
+            &preprocessed_traces[i],
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
@@ -567,6 +580,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         check_constraints::<Self, _, SC>(
             self,
             chip,
+            &preprocessed_traces[i],
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
