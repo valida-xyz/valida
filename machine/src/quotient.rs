@@ -20,7 +20,7 @@ pub fn quotient<M, A, SC, PreprocessedTraceLde, MainTraceLde, PermTraceLde>(
     config: &SC,
     air: &A,
     log_degree: usize,
-    preprocessed_trace_lde: Option<PreprocessedTraceLde>,
+    preprocessed_trace_lde: PreprocessedTraceLde,
     main_trace_lde: MainTraceLde,
     perm_trace_lde: PermTraceLde,
     cumulative_sum: SC::Challenge,
@@ -40,7 +40,7 @@ where
 
     let log_stride_for_quotient = pcs.log_blowup() - log_quotient_degree;
     let preprocessed_trace_lde_for_quotient =
-        preprocessed_trace_lde.map(|lde| lde.vertically_strided(1 << log_stride_for_quotient, 0));
+        preprocessed_trace_lde.vertically_strided(1 << log_stride_for_quotient, 0);
     let main_trace_lde_for_quotient =
         main_trace_lde.vertically_strided(1 << log_stride_for_quotient, 0);
     let perm_trace_lde_for_quotient =
@@ -74,7 +74,7 @@ fn quotient_values<M, SC, A, PreprocessedTraceLde, MainTraceLde, PermTraceLde>(
     air: &A,
     log_degree: usize,
     log_quotient_degree: usize,
-    preprocessed_trace_lde: Option<PreprocessedTraceLde>,
+    preprocessed_trace_lde: PreprocessedTraceLde,
     main_trace_lde: MainTraceLde,
     perm_trace_lde: PermTraceLde,
     cumulative_sum: SC::Challenge,
@@ -130,29 +130,22 @@ where
             let is_first_row = *SC::PackedVal::from_slice(&lagrange_first_evals[i_range.clone()]);
             let is_last_row = *SC::PackedVal::from_slice(&lagrange_last_evals[i_range]);
 
-            let (preprocessed_local, preprocessed_next): (Vec<_>, Vec<_>) =
-                match &preprocessed_trace_lde {
-                    Some(lde) => {
-                        let local = (0..lde.width())
-                            .map(|col| {
-                                SC::PackedVal::from_fn(|offset| {
-                                    let row = wrap(i_local_start + offset);
-                                    lde.get(row, col)
-                                })
-                            })
-                            .collect();
-                        let next = (0..lde.width())
-                            .map(|col| {
-                                SC::PackedVal::from_fn(|offset| {
-                                    let row = wrap(i_next_start + offset);
-                                    lde.get(row, col)
-                                })
-                            })
-                            .collect();
-                        (local, next)
-                    }
-                    None => (vec![], vec![]),
-                };
+            let preprocessed_local: Vec<_> = (0..preprocessed_trace_lde.width())
+                .map(|col| {
+                    SC::PackedVal::from_fn(|offset| {
+                        let row = wrap(i_local_start + offset);
+                        preprocessed_trace_lde.get(row, col)
+                    })
+                })
+                .collect();
+            let preprocessed_next: Vec<_> = (0..preprocessed_trace_lde.width())
+                .map(|col| {
+                    SC::PackedVal::from_fn(|offset| {
+                        let row = wrap(i_next_start + offset);
+                        preprocessed_trace_lde.get(row, col)
+                    })
+                })
+                .collect();
 
             let main_local: Vec<_> = (0..main_trace_lde.width())
                 .map(|col| {
