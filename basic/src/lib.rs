@@ -717,7 +717,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             .map(|chip| chip.all_interactions(self))
             .collect::<Vec<_>>();
 
-        let dims = &[
+        let main_trace_dims =
             chips
                 .iter()
                 .zip(proof.chip_proofs.iter())
@@ -725,7 +725,33 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
                     width: chip.trace_width(),
                     height: 1 << chip_proof.log_degree,
                 })
-                .collect::<Vec<_>>(),
+                .collect::<Vec<_>>();
+
+        // Compute the preprocessed traces (TODO: avoid in the future)
+        let mut preprocessed_traces: Vec<RowMajorMatrix<SC::Val>> =
+            tracing::info_span!("generate preprocessed traces").in_scope(|| {
+                chips
+                    .par_iter()
+                    .map(|chip| chip.preprocessed_trace())
+                    .collect::<Vec<_>>()
+            });
+
+        for (preprocessed_trace, dim) in preprocessed_traces.iter_mut().zip(main_trace_dims.iter()) {
+            preprocessed_trace.expand_to_height(dim.height);
+        }
+
+        let preprocessed_trace_dims =
+            chips
+                .iter()
+                .zip(proof.chip_proofs.iter())
+                .zip(preprocessed_traces.iter())
+                .map(|((chip, chip_proof), preprocessed_trace)| Dimensions {
+                    width: preprocessed_trace.width(),
+                    height: 1 << chip_proof.log_degree,
+                })
+                .collect::<Vec<_>>();
+
+        let permutation_trace_dims =
             chips_interactions
                 .iter()
                 .zip(proof.chip_proofs.iter())
@@ -733,7 +759,9 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
                     width: (interactions.len() + 1) * SC::Challenge::D,
                     height: 1 << chip_proof.log_degree,
                 })
-                .collect::<Vec<_>>(),
+                .collect::<Vec<_>>();
+
+        let quotient_dims =
             proof
                 .chip_proofs
                 .iter()
@@ -742,7 +770,13 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
                     width: log_quotient_deg << SC::Challenge::D,
                     height: 1 << chip_proof.log_degree,
                 })
-                .collect::<Vec<_>>(),
+                .collect::<Vec<_>>();
+
+        let dims = &[
+            preprocessed_trace_dims,
+            main_trace_dims,
+            permutation_trace_dims,
+            quotient_dims,
         ];
 
         // Get the generators of the trace subgroups for each chip.
@@ -788,18 +822,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         } = &proof.commitments;
 
         // Compute the commitments to preprocessed traces (TODO: avoid in the future)
-        let mut preprocessed_traces: Vec<RowMajorMatrix<SC::Val>> =
-            tracing::info_span!("generate preprocessed traces").in_scope(|| {
-                chips
-                    .par_iter()
-                    .map(|chip| chip.preprocessed_trace())
-                    .collect::<Vec<_>>()
-            });
-
-        for (preprocessed_trace, dim) in preprocessed_traces.iter_mut().zip(dims[0].iter()) {
-            preprocessed_trace.expand_to_height(dim.height);
-        }
-
         let (preprocessed_commit, preprocessed_data) =
             tracing::info_span!("commit to preprocessed traces")
                 .in_scope(|| pcs.commit_batches(preprocessed_traces.to_vec()));
