@@ -110,18 +110,6 @@ impl MemoryChip {
         self.cells.insert(address, value.into());
     }
 
-    /// Write a byte value to the least significant byte, and write zeros to the other 3 bytes. 
-    pub fn write_u8(&mut self, clk: u32, address: u32, value: u8, log: bool) {
-        let value_word = Word::from_u8(value);
-        if log {
-            self.operations
-                .entry(clk)
-                .or_insert_with(Vec::new)
-                .push(Operation::Write(address, value_word));
-        }
-        self.cells.insert(address, value_word);
-    }
-
     pub fn write_static(&mut self, address: u32, value: Word<u8>) {
         self.cells.insert(address, value.clone());
         self.static_data.insert(address, value);
