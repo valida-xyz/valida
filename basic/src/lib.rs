@@ -839,6 +839,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         let (preprocessed_commit, preprocessed_data) =
             tracing::info_span!("commit to preprocessed traces")
                 .in_scope(|| pcs.commit_batches(preprocessed_traces.to_vec()));
+        assert_eq!(preprocessed_commit, proof.commitments.preprocessed_trace);
 
         challenger.observe(preprocessed_commit.clone());
 
