@@ -625,12 +625,27 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             (&perm_data, zeta_and_next.as_slice()),
             (&quotient_data, zeta_exp_quotient_degree.as_slice()),
         ];
-        let (openings, opening_proof) =
-            pcs.open_multi_batches(&prover_data_and_points, &mut challenger);
+        // let (openings, opening_proof) =
+        //     pcs.open_multi_batches(&prover_data_and_points, &mut challenger);
 
-        let [preprocessed_openings, main_openings, perm_openings, quotient_openings] = openings
-            .try_into()
-            .expect("Should have 4 rounds of openings");
+        let (preprocessed_openings, preprocessed_opening_proof) =
+            pcs.open_multi_batches(&[(&preprocessed_data, zeta_and_next.as_slice())],
+                                   &mut challenger);
+        let [preprocessed_openings] = preprocessed_openings.try_into().expect("Should have 1 round opening");
+
+        let (main_openings, main_opening_proof) =
+            pcs.open_multi_batches(&[(&main_data, zeta_and_next.as_slice())],
+                                   &mut challenger);
+        let [main_openings] = main_openings.try_into().expect("Should have 1 round opening");
+
+        let (perm_openings, perm_opening_proof) =
+            pcs.open_multi_batches(&[(&perm_data, zeta_and_next.as_slice())],
+                                   &mut challenger);
+        let [perm_openings] = perm_openings.try_into().expect("Should have 1 round opening");
+
+        // let [preprocessed_openings, main_openings, perm_openings, quotient_openings] = openings
+        //     .try_into()
+        //     .expect("Should have 4 rounds of openings");
 
         let commitments = Commitments {
             preprocessed_trace: preprocessed_commit,

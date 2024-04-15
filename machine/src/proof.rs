@@ -13,8 +13,17 @@ type PcsProof<SC> = <<SC as StarkConfig>::Pcs as Pcs<Val<SC>, ValMat<SC>>>::Proo
 #[serde(bound = "SC::Challenge: Serialize + DeserializeOwned")]
 pub struct MachineProof<SC: StarkConfig> {
     pub commitments: Commitments<Com<SC>>,
-    pub opening_proof: PcsProof<SC>,
+    pub opening_proofs: OpeningProofs<SC>,
     pub chip_proofs: Vec<ChipProof<SC::Challenge>>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(bound = "SC::Challenge: Serialize + DeserializeOwned")]
+pub struct OpeningProofs<SC: StarkConfig> {
+    pub preprocessed: PcsProof<SC>,
+    pub main: PcsProof<SC>,
+    pub perm: PcsProof<SC>,
+    pub quotient: PcsProof<SC>,
 }
 
 #[derive(Serialize, Deserialize)]
