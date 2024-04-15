@@ -37,8 +37,8 @@ use valida_bus::{
 };
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
-    Load32Instruction, LoadU8Instruction, LoadS8Instruction, LoadFpInstruction, ReadAdviceInstruction, StopInstruction,
-    Store32Instruction, StoreU8Instruction
+    Load32Instruction, LoadFpInstruction, LoadS8Instruction, LoadU8Instruction,
+    ReadAdviceInstruction, StopInstruction, Store32Instruction, StoreU8Instruction,
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_machine::__internal::p3_challenger::{CanObserve, FieldChallenger};

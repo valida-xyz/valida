@@ -15,8 +15,8 @@ use valida_machine::{
 };
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 use valida_opcodes::{
-    BEQ, BNE, BYTES_PER_INSTR, IMM32, JAL, JALV, LOAD32, LOADFP, READ_ADVICE, STOP, STORE32,
-    LOADU8, LOADS8, STOREU8
+    BEQ, BNE, BYTES_PER_INSTR, IMM32, JAL, JALV, LOAD32, LOADFP, LOADS8, LOADU8, READ_ADVICE, STOP,
+    STORE32, STOREU8,
 };
 
 use p3_air::VirtualPairCol;
@@ -520,13 +520,15 @@ where
 
         // The original content of the cell to write to.
         let cell_write = state
-        .mem_mut()
-        .read(clk, write_addr.into(), true, pc, opcode, 1, "");
+            .mem_mut()
+            .read(clk, write_addr.into(), true, pc, opcode, 1, "");
 
         // The Word to write, with one byte overwritten to the read byte
         let cell_to_write = cell_write.update_byte(cell_byte, index_of_write);
-        
-        state.mem_mut().write(clk, write_addr.into(), cell_to_write, true);
+
+        state
+            .mem_mut()
+            .write(clk, write_addr.into(), cell_to_write, true);
         state.cpu_mut().pc += 1;
         state.cpu_mut().push_op(Operation::StoreU8, opcode, ops);
     }
