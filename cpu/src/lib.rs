@@ -457,6 +457,80 @@ where
     }
 }
 
+impl<M, F> Instruction<M, F> for LoadU8Instruction
+where
+    M: MachineWithCpuChip<F>,
+    F: Field,
+{
+    const OPCODE: u32 = LOADU8;
+
+    fn execute(state: &mut M, ops: Operands<i32>) {
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
+        let clk = state.cpu().clock;
+        let pc = state.cpu().pc;
+        let fp = state.cpu().fp;
+        let read_addr_1 = (fp as i32 + ops.c()) as u32;
+        let read_addr_2 = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
+        let cell = state.mem_mut().read(
+            clk,
+            read_addr_2.into(),
+            true,
+            pc,
+            opcode,
+            1,
+            &format!(
+                "fp = {}, c = {}, [fp+c] = {:?}",
+                fp as i32,
+                ops.c() as u32,
+                read_addr_2
+            ),
+        );
+        state.mem_mut().write(clk, write_addr, cell, true);
+        state.cpu_mut().pc += 1;
+        state.cpu_mut().push_op(Operation::Load32, opcode, ops);
+    }
+}
+
+impl<M, F> Instruction<M, F> for LoadS8Instruction
+where
+    M: MachineWithCpuChip<F>,
+    F: Field,
+{
+    const OPCODE: u32 = LOADS8;
+
+    fn execute(state: &mut M, ops: Operands<i32>) {
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
+        let clk = state.cpu().clock;
+        let pc = state.cpu().pc;
+        let fp = state.cpu().fp;
+        let read_addr_1 = (fp as i32 + ops.c()) as u32;
+        let read_addr_2 = state
+            .mem_mut()
+            .read(clk, read_addr_1, true, pc, opcode, 0, "");
+        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
+        let cell = state.mem_mut().read(
+            clk,
+            read_addr_2.into(),
+            true,
+            pc,
+            opcode,
+            1,
+            &format!(
+                "fp = {}, c = {}, [fp+c] = {:?}",
+                fp as i32,
+                ops.c() as u32,
+                read_addr_2
+            ),
+        );
+        state.mem_mut().write(clk, write_addr, cell, true);
+        state.cpu_mut().pc += 1;
+        state.cpu_mut().push_op(Operation::Load32, opcode, ops);
+    }
+}
+
 impl<M, F> Instruction<M, F> for Store32Instruction
 where
     M: MachineWithCpuChip<F>,
@@ -482,8 +556,14 @@ where
     }
 }
 
+/// Get the index of a byte in a memory cell.
 fn index_of_word(addr: u32) -> usize {
-    return ((addr & !3) - 1) as usize;
+    (addr&3) as usize
+}
+
+/// Get the key to the BTree map of the memory cells.
+fn index_to_word(addr: u32) -> u32 {
+    (addr&!3) as u32
 }
 
 impl<M, F> Instruction<M, F> for StoreU8Instruction
@@ -497,6 +577,9 @@ where
         let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
         let read_addr = (state.cpu().fp as i32 + ops.c()) as u32;
+
+        // Make sure we get to a non empty map by making it a multiple of 4.
+        let read_addr_index = index_to_word(read_addr);
         let write_addr_loc = (state.cpu().fp as i32 + ops.b()) as u32;
         let pc = state.cpu().pc;
         let write_addr = state
@@ -506,22 +589,21 @@ where
         // Read the cell from the read address.
         let cell = state
             .mem_mut()
-            .read(clk, read_addr, true, pc, opcode, 1, "");
+            .read(clk, read_addr_index, true, pc, opcode, 1, "");
 
         // index of the word for the byte to read from
         let index_of_read = index_of_word(read_addr);
 
-        // The byte read from the read address.
+        // The word read from the read address.
         let cell_read = cell.0;
+        // The byte read from the read address.
         let cell_byte = cell_read[index_of_read];
 
         // Index of the word for the byte to write to
         let index_of_write = index_of_word(write_addr.into());
 
-        // The original content of the cell to write to.
-        let cell_write = state
-            .mem_mut()
-            .read(clk, write_addr.into(), true, pc, opcode, 1, "");
+        // The original content of the cell to write to. If the cell was empty, initiate it with a default value.
+        let cell_write = state.mem_mut().read_or_init(clk, write_addr.into(), true);
 
         // The Word to write, with one byte overwritten to the read byte
         let cell_to_write = cell_write.update_byte(cell_byte, index_of_write);

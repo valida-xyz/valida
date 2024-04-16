@@ -63,12 +63,9 @@ use valida_machine::StarkConfig;
 pub struct BasicMachine<F: PrimeField32 + TwoAdicField> {
     // Core instructions
     load32: Load32Instruction,
-    store32: Store32Instruction,
-
     loadu8: LoadU8Instruction,
-
     loads8: LoadS8Instruction,
-
+    store32: Store32Instruction,
     storeu8: StoreU8Instruction,
 
     jal: JalInstruction,
@@ -1078,8 +1075,17 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             <Load32Instruction as Instruction<Self, F>>::OPCODE => {
                 Load32Instruction::execute_with_advice::<Adv>(self, ops, advice)
             }
+            <LoadU8Instruction as Instruction<Self, F>>::OPCODE => {
+                LoadU8Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <LoadS8Instruction as Instruction<Self, F>>::OPCODE => {
+                LoadS8Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
             <Store32Instruction as Instruction<Self, F>>::OPCODE => {
                 Store32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <StoreU8Instruction as Instruction<Self, F>>::OPCODE => {
+                StoreU8Instruction::execute_with_advice::<Adv>(self, ops, advice)
             }
             <JalInstruction as Instruction<Self, F>>::OPCODE => {
                 JalInstruction::execute_with_advice::<Adv>(self, ops, advice)
