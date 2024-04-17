@@ -521,7 +521,8 @@ where
             .mem_mut()
             .read(clk, read_addr, true, pc, opcode, 2, "")
             .into();
-        state.cpu_mut().fp += cell;
+        let offset: i32 = cell as i32;
+        state.cpu_mut().fp = (state.cpu().fp as i32 + offset) as u32;
         state.cpu_mut().push_op(Operation::Jalv, opcode, ops);
     }
 }

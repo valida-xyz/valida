@@ -147,7 +147,7 @@ fn show_frame(args: ArgMatches, context: &mut Context) -> Result<Option<String>>
         let offset = i * -4;
         let read_addr = (fp + offset) as u32;
         let string_val = context.machine_.mem().examine(read_addr);
-        let frameslot_addr = format!("{}(fp)", offset);
+        let frameslot_addr = format!("0x{:8} | {:3}(fp)", read_addr, offset);
         let frameslot = format!("{:>7}", frameslot_addr);
         let frame_str = format!("\n{} : {}", frameslot, string_val);
         frame += &frame_str;
