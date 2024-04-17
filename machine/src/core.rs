@@ -7,10 +7,39 @@ use p3_field::{Field, PrimeField};
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Word<F>(pub [F; MEMORY_CELL_BYTES]);
 
+// Functions for byte manipulations
+/// Get the index of a byte in a memory cell.
+pub fn index_of_word(addr: u32) -> usize {
+    (addr&3) as usize
+}
+
+/// Get the key to the map of the memory cells which is not empty.
+pub fn index_to_word(addr: u32) -> u32 {
+    (addr&!3) as u32
+}
+//----------------------------------
+
 impl Word<u8> {
     pub fn from_u8(byte: u8) -> Self {
         let mut result = [0; MEMORY_CELL_BYTES];
         result[MEMORY_CELL_BYTES - 1] = byte;
+        Self(result)
+    }
+}
+
+impl Word<u8> {
+    pub fn sign_extend_byte(byte: u8, loc: usize) -> Self {
+        let sign = byte as i8 >> 7; 
+        let mut result: [u8; MEMORY_CELL_BYTES] = [sign as u8; MEMORY_CELL_BYTES];
+        result[loc] = byte;
+        Self(result)
+    }
+}
+
+impl Word<u8> {
+    pub fn zero_extend_byte(byte: u8, loc: usize) -> Self {
+        let mut result: [u8; MEMORY_CELL_BYTES] = [0; MEMORY_CELL_BYTES];
+        result[loc] = byte;
         Self(result)
     }
 }
