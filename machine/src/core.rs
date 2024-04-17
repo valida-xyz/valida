@@ -9,13 +9,13 @@ pub struct Word<F>(pub [F; MEMORY_CELL_BYTES]);
 
 // Functions for byte manipulations
 /// Get the index of a byte in a memory cell.
-pub fn index_of_word(addr: u32) -> usize {
-    (addr&3) as usize
+pub fn index_of_byte(addr: u32) -> usize {
+    (addr & 3) as usize
 }
 
-/// Get the key to the map of the memory cells which is not empty.
+/// Get the address of the memory cells which is not empty (a multiple of 4).
 pub fn index_to_word(addr: u32) -> u32 {
-    (addr&!3) as u32
+    (addr & !3) as u32
 }
 //----------------------------------
 
@@ -28,8 +28,9 @@ impl Word<u8> {
 }
 
 impl Word<u8> {
+    //TODO if the byte isn't the lowest byte then this doesn't make sense?
     pub fn sign_extend_byte(byte: u8, loc: usize) -> Self {
-        let sign = byte as i8 >> 7; 
+        let sign = byte as i8 >> 7;
         let mut result: [u8; MEMORY_CELL_BYTES] = [sign as u8; MEMORY_CELL_BYTES];
         result[loc] = byte;
         Self(result)

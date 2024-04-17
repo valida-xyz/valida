@@ -11,7 +11,9 @@ use core::marker::Sync;
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithMemBus, MachineWithProgramBus};
 use valida_machine::{
-    instructions, AdviceProvider, Chip, Instruction, InstructionWord, Interaction, Operands, Word, index_of_word, index_to_word};
+    index_of_byte, index_to_word, instructions, AdviceProvider, Chip, Instruction, InstructionWord,
+    Interaction, Operands, Word,
+};
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 use valida_opcodes::{
     BEQ, BNE, BYTES_PER_INSTR, IMM32, JAL, JALV, LOAD32, LOADFP, LOADS8, LOADU8, READ_ADVICE, STOP,
@@ -468,14 +470,14 @@ where
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let fp = state.cpu().fp;
-        
+
         let read_addr_loc = (fp as i32 + ops.c()) as u32;
-        
+
         let read_addr = state
             .mem_mut()
             .read(clk, read_addr_loc, true, pc, opcode, 0, "");
         let read_addr_index = index_to_word(read_addr.into());
-        
+
         // The word from the read address.
         let cell = state.mem_mut().read(
             clk,
@@ -493,21 +495,23 @@ where
         );
 
         // The array index of the word for the byte to read from
-        let index_of_read = index_of_word(read_addr.into());
+        let index_of_read = index_of_byte(read_addr.into());
         // The byte from the read cell.
         let cell_byte = cell[index_of_read];
 
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        // The key to the memory map, converted to a multiple of 4.
+        // The address, converted to a multiple of 4.
         let write_addr_index = index_to_word(write_addr);
 
         // The array index of the word for the byte to write to
-        let index_of_write = index_of_word(write_addr.into());
-        
+        let index_of_write = index_of_byte(write_addr.into());
+
         // The Word to write, with one byte overwritten to the read byte
         let cell_to_write = Word::zero_extend_byte(cell_byte, index_of_write);
 
-        state.mem_mut().write(clk, write_addr_index, cell_to_write, true);
+        state
+            .mem_mut()
+            .write(clk, write_addr_index, cell_to_write, true);
         state.cpu_mut().pc += 1;
         state.cpu_mut().push_op(Operation::LoadU8, opcode, ops);
     }
@@ -525,18 +529,18 @@ where
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let fp = state.cpu().fp;
-        
+
         let read_addr_loc = (fp as i32 + ops.c()) as u32;
-        
+
         let read_addr = state
             .mem_mut()
             .read(clk, read_addr_loc, true, pc, opcode, 0, "");
         let read_addr_index = index_to_word(read_addr.into());
-        
+
         // The word from the read address.
         let cell = state.mem_mut().read(
             clk,
-            read_addr_index,
+            read_addr.into(), //TODO should be read_addr_index but currently it causes read before write error.
             true,
             pc,
             opcode,
@@ -550,21 +554,23 @@ where
         );
 
         // The array index of the word for the byte to read from
-        let index_of_read = index_of_word(read_addr.into());
+        let index_of_read = index_of_byte(read_addr.into());
         // The byte from the read cell.
         let cell_byte = cell[index_of_read];
 
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        // The key to the memory map, converted to a multiple of 4.
+        // The address, converted to a multiple of 4.
         let write_addr_index = index_to_word(write_addr);
 
         // The array index of the word for the byte to write to
-        let index_of_write = index_of_word(write_addr.into());
-        
+        let index_of_write = index_of_byte(write_addr.into());
+
         // The Word to write, with one byte overwritten to the read byte
         let cell_to_write = Word::sign_extend_byte(cell_byte, index_of_write);
 
-        state.mem_mut().write(clk, write_addr_index, cell_to_write, true);
+        state
+            .mem_mut()
+            .write(clk, write_addr_index, cell_to_write, true);
         state.cpu_mut().pc += 1;
         state.cpu_mut().push_op(Operation::LoadS8, opcode, ops);
     }
@@ -621,7 +627,7 @@ where
             .read(clk, read_addr_index, true, pc, opcode, 1, "");
 
         // The array index of the word for the byte to read from
-        let index_of_read = index_of_word(read_addr);
+        let index_of_read = index_of_byte(read_addr);
 
         // The word from the read address.
         let cell_read = cell.0;
@@ -629,11 +635,11 @@ where
         let cell_byte = cell_read[index_of_read];
 
         // The array index of the word for the byte to write to
-        let index_of_write = index_of_word(write_addr.into());
+        let index_of_write = index_of_byte(write_addr.into());
 
         // The key to the memory map, converted to a multiple of 4.
         let write_addr_index = index_to_word(write_addr.into());
-        
+
         // The original content of the cell to write to. If the cell is empty, initiate it with a default value.
         let cell_write = state.mem_mut().read_or_init(clk, write_addr_index, true);
 
