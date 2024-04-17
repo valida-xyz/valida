@@ -19,6 +19,7 @@ members = [
     "static_data",
     "util",
     "verifier",
+    "gdb",
 ]
 
 [workspace.dependencies]
