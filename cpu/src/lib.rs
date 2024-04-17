@@ -561,7 +561,7 @@ fn index_of_word(addr: u32) -> usize {
     (addr&3) as usize
 }
 
-/// Get the key to the BTree map of the memory cells.
+/// Get the key to the map of the memory cells which is not empty.
 fn index_to_word(addr: u32) -> u32 {
     (addr&!3) as u32
 }
@@ -578,7 +578,7 @@ where
         let clk = state.cpu().clock;
         let read_addr = (state.cpu().fp as i32 + ops.c()) as u32;
 
-        // Make sure we get to a non empty map by making it a multiple of 4.
+        // Make sure we get to the correct and non empty map by making it a multiple of 4.
         let read_addr_index = index_to_word(read_addr);
         let write_addr_loc = (state.cpu().fp as i32 + ops.b()) as u32;
         let pc = state.cpu().pc;
@@ -591,7 +591,7 @@ where
             .mem_mut()
             .read(clk, read_addr_index, true, pc, opcode, 1, "");
 
-        // index of the word for the byte to read from
+        // The array index of the word for the byte to read from
         let index_of_read = index_of_word(read_addr);
 
         // The word read from the read address.
@@ -599,11 +599,14 @@ where
         // The byte read from the read address.
         let cell_byte = cell_read[index_of_read];
 
-        // Index of the word for the byte to write to
+        // The array index of the word for the byte to write to
         let index_of_write = index_of_word(write_addr.into());
 
+        // The key to the memory map, converted to a multiple of 4.
+        let write_addr_index = index_to_word(write_addr.into());
+        
         // The original content of the cell to write to. If the cell was empty, initiate it with a default value.
-        let cell_write = state.mem_mut().read_or_init(clk, write_addr.into(), true);
+        let cell_write = state.mem_mut().read_or_init(clk, write_addr_index, true);
 
         // The Word to write, with one byte overwritten to the read byte
         let cell_to_write = cell_write.update_byte(cell_byte, index_of_write);
