@@ -503,11 +503,8 @@ where
         // The address, converted to a multiple of 4.
         let write_addr_index = index_to_word(write_addr);
 
-        // The array index of the word for the byte to write to
-        let index_of_write = index_of_byte(write_addr.into());
-
         // The Word to write, with one byte overwritten to the read byte
-        let cell_to_write = Word::zero_extend_byte(cell_byte, index_of_write);
+        let cell_to_write = Word::zero_extend_byte(cell_byte);
 
         state
             .mem_mut()
@@ -562,11 +559,8 @@ where
         // The address, converted to a multiple of 4.
         let write_addr_index = index_to_word(write_addr);
 
-        // The array index of the word for the byte to write to
-        let index_of_write = index_of_byte(write_addr.into());
-
         // The Word to write, with one byte overwritten to the read byte
-        let cell_to_write = Word::sign_extend_byte(cell_byte, index_of_write);
+        let cell_to_write = Word::sign_extend_byte(cell_byte);
 
         state
             .mem_mut()
