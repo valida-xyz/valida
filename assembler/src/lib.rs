@@ -104,12 +104,12 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
 
                 // Insert zero operands if necessary
                 match mnemonic {
-                    "lw" => {
+                    "lw" | "loadu8" | "loads8" => {
                         // (a, 0, c, 0, 0)
                         operands.insert(1, 0);
                         operands.extend(vec![0; 2]);
                     }
-                    "sw" => {
+                    "sw" | "storeu8" => {
                         // (0, b, c, 0, 0)
                         operands.insert(0, 0);
                         operands.extend(vec![0; 2]);

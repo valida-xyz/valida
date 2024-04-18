@@ -11,7 +11,7 @@ use core::marker::Sync;
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithMemBus, MachineWithProgramBus};
 use valida_machine::{
-    index_of_byte, addr_of_word, instructions, AdviceProvider, Chip, Instruction, InstructionWord,
+    addr_of_word, index_of_byte, instructions, AdviceProvider, Chip, Instruction, InstructionWord,
     Interaction, Operands, Word,
 };
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
@@ -532,9 +532,9 @@ where
         let read_addr = state
             .mem_mut()
             .read(clk, read_addr_loc, true, pc, opcode, 0, "");
-        
+
         let read_addr_index = addr_of_word(read_addr.into());
-        
+
         // The word from the read address.
         let cell = state.mem_mut().read(
             clk,

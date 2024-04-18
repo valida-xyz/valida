@@ -102,7 +102,16 @@ impl InstructionWord<i32> {
             valida_opcodes::LOAD32 => {
                 format!("{}(fp), {}(fp)", self.operands.0[0], self.operands.0[2])
             }
+            valida_opcodes::LOADU8 => {
+                format!("{}(fp), {}(fp)", self.operands.0[0], self.operands.0[2])
+            }
+            valida_opcodes::LOADS8 => {
+                format!("{}(fp), {}(fp)", self.operands.0[0], self.operands.0[2])
+            }
             valida_opcodes::STORE32 => {
+                format!("{}(fp), {}(fp)", self.operands.0[1], self.operands.0[2])
+            }
+            valida_opcodes::STOREU8 => {
                 format!("{}(fp), {}(fp)", self.operands.0[1], self.operands.0[2])
             }
             _ => {
