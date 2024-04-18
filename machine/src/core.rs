@@ -31,7 +31,7 @@ impl Word<u8> {
     pub fn sign_extend_byte(byte: u8) -> Self {
         let sign = byte as i8 >> 7;
         let mut result: [u8; MEMORY_CELL_BYTES] = [sign as u8; MEMORY_CELL_BYTES];
-        result[3] = byte;
+        result[0] = byte;
         Self(result)
     }
 }
@@ -39,7 +39,7 @@ impl Word<u8> {
 impl Word<u8> {
     pub fn zero_extend_byte(byte: u8) -> Self {
         let mut result: [u8; MEMORY_CELL_BYTES] = [0; MEMORY_CELL_BYTES];
-        result[3] = byte;
+        result[0] = byte;
         Self(result)
     }
 }
