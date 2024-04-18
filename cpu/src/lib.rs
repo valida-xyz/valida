@@ -643,7 +643,7 @@ where
 
         state
             .mem_mut()
-            .write(clk, 0, Word::from(0), true);
+            .write(clk, write_addr_index, cell_to_write, true);
         state.cpu_mut().pc += 1;
         state.cpu_mut().push_op(Operation::StoreU8, opcode, ops);
     }
