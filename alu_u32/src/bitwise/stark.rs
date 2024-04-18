@@ -8,7 +8,7 @@ use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::AbstractField;
 use p3_matrix::MatrixRowSlices;
 
-impl<F> BaseAir<F> for Bitwise32Chip {
+impl<F: AbstractField> BaseAir<F> for Bitwise32Chip {
     fn width(&self) -> usize {
         NUM_BITWISE_COLS
     }

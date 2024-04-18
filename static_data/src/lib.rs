@@ -1,18 +1,15 @@
-#![no_std]
-
 extern crate alloc;
 
-use crate::columns::{StaticDataCols, NUM_STATIC_DATA_COLS, STATIC_DATA_COL_MAP};
+use crate::columns::{NUM_STATIC_DATA_COLS, STATIC_DATA_COL_MAP};
 use alloc::collections::BTreeMap;
 use alloc::vec;
 use alloc::vec::Vec;
-use core::mem::transmute;
 use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
 use valida_bus::MachineWithMemBus;
 use valida_machine::{Chip, Interaction, StarkConfig, Word};
-use valida_memory::MachineWithMemoryChip;
+use valida_memory::{MachineWithMemoryChip};
 
 pub mod columns;
 pub mod stark;
@@ -58,23 +55,16 @@ where
     SC: StarkConfig,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
-        let mut rows = self
-            .cells
-            .iter()
+        let mut rows = self.cells.iter()
             .map(|(addr, value)| {
-                let mut row = [SC::Val::zero(); NUM_STATIC_DATA_COLS];
-                let cols: &mut StaticDataCols<SC::Val> = unsafe { transmute(&mut row) };
-                cols.addr = SC::Val::from_canonical_u32(*addr);
-                cols.value = value.transform(SC::Val::from_canonical_u8);
-                cols.is_real = SC::Val::one();
+                let mut row: Vec<SC::Val> = vec![SC::Val::from_canonical_u32(*addr)];
+                row.extend(value.0.into_iter().map(SC::Val::from_canonical_u8).collect::<Vec<_>>());
+                row.push(SC::Val::one());
                 row
             })
             .flatten()
             .collect::<Vec<_>>();
-        rows.resize(
-            rows.len().next_power_of_two() * NUM_STATIC_DATA_COLS,
-            SC::Val::zero(),
-        );
+        rows.resize(rows.len().next_power_of_two() * NUM_STATIC_DATA_COLS, SC::Val::zero());
         RowMajorMatrix::new(rows, NUM_STATIC_DATA_COLS)
     }
 

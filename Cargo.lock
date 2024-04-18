@@ -650,7 +650,6 @@ checksum = "0ab1bc2a289d34bd04a330323ac98a1b4bc82c9d9fcb1e66b63caa84da26b575"
 [[package]]
 name = "p3-air"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "p3-field",
  "p3-matrix",
@@ -659,7 +658,6 @@ dependencies = [
 [[package]]
 name = "p3-baby-bear"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "p3-field",
  "rand",
@@ -669,7 +667,6 @@ dependencies = [
 [[package]]
 name = "p3-challenger"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "p3-field",
  "p3-maybe-rayon",
@@ -680,7 +677,6 @@ dependencies = [
 [[package]]
 name = "p3-commit"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "p3-challenger",
  "p3-field",
@@ -691,7 +687,6 @@ dependencies = [
 [[package]]
 name = "p3-dft"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "p3-field",
  "p3-matrix",
@@ -702,7 +697,6 @@ dependencies = [
 [[package]]
 name = "p3-field"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "itertools 0.12.1",
  "p3-util",
@@ -713,7 +707,6 @@ dependencies = [
 [[package]]
 name = "p3-fri"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "itertools 0.12.1",
  "p3-challenger",
@@ -731,7 +724,6 @@ dependencies = [
 [[package]]
 name = "p3-goldilocks"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "p3-field",
  "p3-util",
@@ -742,7 +734,6 @@ dependencies = [
 [[package]]
 name = "p3-interpolation"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "p3-field",
  "p3-matrix",
@@ -753,7 +744,6 @@ dependencies = [
 [[package]]
 name = "p3-keccak"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "p3-symmetric",
  "tiny-keccak",
@@ -762,7 +752,6 @@ dependencies = [
 [[package]]
 name = "p3-matrix"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "p3-field",
  "p3-maybe-rayon",
@@ -773,12 +762,10 @@ dependencies = [
 [[package]]
 name = "p3-maybe-rayon"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 
 [[package]]
 name = "p3-mds"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "p3-baby-bear",
  "p3-dft",
@@ -794,7 +781,6 @@ dependencies = [
 [[package]]
 name = "p3-merkle-tree"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "itertools 0.12.1",
  "p3-commit",
@@ -810,7 +796,6 @@ dependencies = [
 [[package]]
 name = "p3-mersenne-31"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "criterion",
  "itertools 0.12.1",
@@ -826,7 +811,6 @@ dependencies = [
 [[package]]
 name = "p3-poseidon"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "p3-field",
  "p3-mds",
@@ -837,7 +821,6 @@ dependencies = [
 [[package]]
 name = "p3-symmetric"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "itertools 0.12.1",
  "p3-field",
@@ -846,7 +829,6 @@ dependencies = [
 [[package]]
 name = "p3-uni-stark"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "itertools 0.12.1",
  "p3-air",
@@ -864,7 +846,6 @@ dependencies = [
 [[package]]
 name = "p3-util"
 version = "0.1.0"
-source = "git+https://github.com/valida-xyz/Plonky3.git?branch=valida-main#3c89583157f5186148674543c91160be0a734c8e"
 dependencies = [
  "serde",
 ]
@@ -1513,48 +1494,6 @@ dependencies = [
  "valida-cpu",
  "valida-derive",
  "valida-elf",
- "valida-machine",
- "valida-memory",
- "valida-opcodes",
- "valida-output",
- "valida-program",
- "valida-range",
- "valida-static-data",
-]
-
-[[package]]
-name = "valida-basic-macro"
-version = "0.1.0"
-dependencies = [
- "byteorder",
- "ciborium",
- "clap",
- "p3-air",
- "p3-baby-bear",
- "p3-challenger",
- "p3-commit",
- "p3-dft",
- "p3-field",
- "p3-fri",
- "p3-goldilocks",
- "p3-keccak",
- "p3-matrix",
- "p3-maybe-rayon",
- "p3-mds",
- "p3-merkle-tree",
- "p3-poseidon",
- "p3-symmetric",
- "p3-uni-stark",
- "p3-util",
- "rand",
- "rand_pcg",
- "rand_seeder",
- "tracing",
- "valida-alu-u32",
- "valida-assembler",
- "valida-bus",
- "valida-cpu",
- "valida-derive",
  "valida-machine",
  "valida-memory",
  "valida-opcodes",

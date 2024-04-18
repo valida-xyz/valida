@@ -19,8 +19,8 @@ impl<F: Field, const MAX: u32> BaseAir<F> for RangeCheckerChip<MAX> {
         NUM_RANGE_COLS
     }
 
-    fn preprocessed_trace(&self) -> Option<RowMajorMatrix<F>> {
+    fn preprocessed_trace(&self) -> RowMajorMatrix<F> {
         let column = (0..MAX).map(F::from_canonical_u32).collect();
-        Some(RowMajorMatrix::new_col(column))
+        RowMajorMatrix::new_col(column)
     }
 }

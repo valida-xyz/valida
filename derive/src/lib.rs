@@ -382,8 +382,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             let zeta_exp_quotient_degree: [Vec<SC::Challenge>; #num_chips] =
                 log_quotient_degrees.map(|log_deg| vec![zeta.exp_power_of_2(log_deg)]);
             let prover_data_and_points = [
-                // TODO: Causes some errors, probably related to the fact that not all chips have preprocessed traces?
-                // (&preprocessed_data, zeta_and_next.as_slice()),
+                (&preprocessed_data, zeta_and_next.as_slice()),
                 (&main_data, zeta_and_next.as_slice()),
                 (&perm_data, zeta_and_next.as_slice()),
                 (&quotient_data, zeta_exp_quotient_degree.as_slice()),
@@ -391,28 +390,26 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             let (openings, opening_proof) = pcs.open_multi_batches(
                &prover_data_and_points, &mut challenger);
 
-            // TODO: add preprocessed openings
-            let [main_openings, perm_openings, quotient_openings] =
-                openings.try_into().expect("Should have 3 rounds of openings");
+            let [preprocessed_openings, main_openings, perm_openings, quotient_openings] =
+                openings.try_into().expect("Should have 4 rounds of openings");
 
             let commitments = Commitments {
+                preprocessed_trace: preprocessed_commit,
                 main_trace: main_commit,
                 perm_trace: perm_commit,
                 quotient_chunks: quotient_commit,
             };
 
-
-            // TODO: add preprocessed openings
             let chip_proofs = log_degrees
                 .iter()
+                .zip(preprocessed_openings)
                 .zip(main_openings)
                 .zip(perm_openings)
                 .zip(quotient_openings)
                 .zip(perm_traces)
-                .map(|((((log_degree,  main), perm), quotient), perm_trace)| {
-                    // TODO: add preprocessed openings
+                .map(|(((((log_degree, preprocessed), main), perm), quotient), perm_trace)| {
                     let [preprocessed_local, preprocessed_next] =
-                        [vec![], vec![]];
+                        preprocessed.try_into().expect("Should have 2 openings");
 
                     let [main_local, main_next] = main.try_into().expect("Should have 2 openings");
                     let [perm_local, perm_next] = perm.try_into().expect("Should have 2 openings");

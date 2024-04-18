@@ -16,7 +16,7 @@ use p3_maybe_rayon::prelude::*;
 use valida_bus::MachineWithMemBus;
 use valida_machine::StarkConfig;
 use valida_machine::{Chip, Interaction, Machine, Word};
-use valida_util::batch_multiplicative_inverse_allowing_zero;
+// use valida_util::batch_multiplicative_inverse_allowing_zero;
 
 pub mod columns;
 pub mod stark;
@@ -264,130 +264,130 @@ impl MemoryChip {
         row
     }
 
-    fn insert_dummy_reads(ops: &mut Vec<(u32, Operation)>) {
-        if ops.is_empty() {
-            return;
-        }
+    // fn insert_dummy_reads(ops: &mut Vec<(u32, Operation)>) {
+    //     if ops.is_empty() {
+    //         return;
+    //     }
 
-        let table_len = ops.len() as u32;
-        let mut dummy_ops = Vec::new();
-        for (op1, op2) in ops.iter().zip(ops.iter().skip(1)) {
-            let addr_diff = op2.1.get_address() - op1.1.get_address();
-            if addr_diff != 0 {
-                // Add dummy reads when addr_diff is greater than the number of operations
-                if addr_diff > table_len {
-                    let num_dummy_ops = addr_diff / table_len;
-                    for i in 0..num_dummy_ops {
-                        let dummy_op_clk = op1.0;
-                        let dummy_op_addr = op1.1.get_address() + table_len * (i + 1);
-                        let dummy_op_value = op1.1.get_value();
-                        dummy_ops.push((
-                            dummy_op_clk,
-                            Operation::DummyRead(dummy_op_addr, dummy_op_value),
-                        ));
-                    }
-                } else {
-                    continue;
-                }
-            } else {
-                let clk_diff = op2.0 - op1.0;
-                if clk_diff > table_len {
-                    let num_dummy_ops = clk_diff / table_len;
-                    for j in 0..num_dummy_ops {
-                        let dummy_op_clk = op1.0 + table_len * (j + 1);
-                        let dummy_op_addr = op1.1.get_address();
-                        let dummy_op_value = op1.1.get_value();
-                        dummy_ops.push((
-                            dummy_op_clk,
-                            Operation::DummyRead(dummy_op_addr, dummy_op_value),
-                        ));
-                    }
-                }
-            }
-        }
+    //     let table_len = ops.len() as u32;
+    //     let mut dummy_ops = Vec::new();
+    //     for (op1, op2) in ops.iter().zip(ops.iter().skip(1)) {
+    //         let addr_diff = op2.1.get_address() - op1.1.get_address();
+    //         if addr_diff != 0 {
+    //             // Add dummy reads when addr_diff is greater than the number of operations
+    //             if addr_diff > table_len {
+    //                 let num_dummy_ops = addr_diff / table_len;
+    //                 for i in 0..num_dummy_ops {
+    //                     let dummy_op_clk = op1.0;
+    //                     let dummy_op_addr = op1.1.get_address() + table_len * (i + 1);
+    //                     let dummy_op_value = op1.1.get_value();
+    //                     dummy_ops.push((
+    //                         dummy_op_clk,
+    //                         Operation::DummyRead(dummy_op_addr, dummy_op_value),
+    //                     ));
+    //                 }
+    //             } else {
+    //                 continue;
+    //             }
+    //         } else {
+    //             let clk_diff = op2.0 - op1.0;
+    //             if clk_diff > table_len {
+    //                 let num_dummy_ops = clk_diff / table_len;
+    //                 for j in 0..num_dummy_ops {
+    //                     let dummy_op_clk = op1.0 + table_len * (j + 1);
+    //                     let dummy_op_addr = op1.1.get_address();
+    //                     let dummy_op_value = op1.1.get_value();
+    //                     dummy_ops.push((
+    //                         dummy_op_clk,
+    //                         Operation::DummyRead(dummy_op_addr, dummy_op_value),
+    //                     ));
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        // TODO: Track number of operations at a given address instead of recounting here
-        for (clk, dummy_op) in dummy_ops.iter() {
-            let idx_addr = ops.binary_search_by_key(&dummy_op.get_address(), |(_, dummy_op)| {
-                dummy_op.get_address()
-            });
-            if let Ok(idx_addr) = idx_addr {
-                ops.insert(idx_addr, (*clk, dummy_op.clone()));
-                let num_ops = ops[idx_addr..]
-                    .iter()
-                    .take_while(|(_, op2)| dummy_op.get_address() == op2.get_address())
-                    .count();
-                let idx_clk =
-                    ops[idx_addr..(idx_addr + num_ops)].partition_point(|(clk2, _)| clk2 < clk);
-                ops.insert(idx_addr + idx_clk, (*clk, *dummy_op));
-            } else if let Err(idx_addr) = idx_addr {
-                ops.insert(idx_addr, (*clk, dummy_op.clone()));
-            }
-        }
+    //     // TODO: Track number of operations at a given address instead of recounting here
+    //     for (clk, dummy_op) in dummy_ops.iter() {
+    //         let idx_addr = ops.binary_search_by_key(&dummy_op.get_address(), |(_, dummy_op)| {
+    //             dummy_op.get_address()
+    //         });
+    //         if let Ok(idx_addr) = idx_addr {
+    //             ops.insert(idx_addr, (*clk, dummy_op.clone()));
+    //             let num_ops = ops[idx_addr..]
+    //                 .iter()
+    //                 .take_while(|(_, op2)| dummy_op.get_address() == op2.get_address())
+    //                 .count();
+    //             let idx_clk =
+    //                 ops[idx_addr..(idx_addr + num_ops)].partition_point(|(clk2, _)| clk2 < clk);
+    //             ops.insert(idx_addr + idx_clk, (*clk, *dummy_op));
+    //         } else if let Err(idx_addr) = idx_addr {
+    //             ops.insert(idx_addr, (*clk, dummy_op.clone()));
+    //         }
+    //     }
 
-        // Pad the end of the table with dummy reads (to the next power of two)
-        let num_dummy_ops = ops.len().next_power_of_two() - ops.len();
-        let dummy_op_clk = ops.last().unwrap().0;
-        let dummy_op_addr = ops.last().unwrap().1.get_address();
-        let dummy_op_value = ops.last().unwrap().1.get_value();
-        for _ in 0..num_dummy_ops {
-            ops.push((
-                dummy_op_clk,
-                Operation::DummyRead(dummy_op_addr, dummy_op_value),
-            ));
-        }
+    //     // Pad the end of the table with dummy reads (to the next power of two)
+    //     let num_dummy_ops = ops.len().next_power_of_two() - ops.len();
+    //     let dummy_op_clk = ops.last().unwrap().0;
+    //     let dummy_op_addr = ops.last().unwrap().1.get_address();
+    //     let dummy_op_value = ops.last().unwrap().1.get_value();
+    //     for _ in 0..num_dummy_ops {
+    //         ops.push((
+    //             dummy_op_clk,
+    //             Operation::DummyRead(dummy_op_addr, dummy_op_value),
+    //         ));
+    //     }
 
-        // Resort (TODO: this shouldn't be necessary if `insert_dummy_reads` is
-        // implemented correctly...)
-        ops.sort_by_key(|(clk, op)| (op.get_address(), *clk));
-    }
+    //     // Resort (TODO: this shouldn't be necessary if `insert_dummy_reads` is
+    //     // implemented correctly...)
+    //     ops.sort_by_key(|(clk, op)| (op.get_address(), *clk));
+    // }
 
-    fn compute_address_diffs<F: PrimeField>(
-        &self,
-        ops: Vec<(u32, Operation)>,
-        rows: &mut Vec<[F; NUM_MEM_COLS]>,
-    ) {
-        if ops.is_empty() {
-            return;
-        }
+    // fn compute_address_diffs<F: PrimeField>(
+    //     &self,
+    //     ops: Vec<(u32, Operation)>,
+    //     rows: &mut Vec<[F; NUM_MEM_COLS]>,
+    // ) {
+    //     if ops.is_empty() {
+    //         return;
+    //     }
 
-        let i0 = self.static_data.len();
+    //     let i0 = self.static_data.len();
 
-        // Compute `diff` and `counter_mult`
-        let mut diff = vec![F::zero(); rows.len()];
-        let mut mult = vec![F::zero(); rows.len()];
-        for i in 0..(ops.len() - 1) {
-            let addr = ops[i].1.get_address();
-            let addr_next = ops[i + 1].1.get_address();
-            let value = if addr_next != addr {
-                addr_next - addr
-            } else {
-                let clk = ops[i].0;
-                let clk_next = ops[i + 1].0;
-                clk_next - clk
-            };
-            diff[i] = F::from_canonical_u32(value);
-            mult[value as usize] += F::one();
-        }
+    //     // Compute `diff` and `counter_mult`
+    //     let mut diff = vec![F::zero(); rows.len()];
+    //     let mut mult = vec![F::zero(); rows.len()];
+    //     for i in 0..(ops.len() - 1) {
+    //         let addr = ops[i].1.get_address();
+    //         let addr_next = ops[i + 1].1.get_address();
+    //         let value = if addr_next != addr {
+    //             addr_next - addr
+    //         } else {
+    //             let clk = ops[i].0;
+    //             let clk_next = ops[i + 1].0;
+    //             clk_next - clk
+    //         };
+    //         diff[i] = F::from_canonical_u32(value);
+    //         mult[value as usize] += F::one();
+    //     }
 
-        // Compute `diff_inv`
-        let diff_inv = batch_multiplicative_inverse_allowing_zero(diff.clone());
+    //     // Compute `diff_inv`
+    //     let diff_inv = batch_multiplicative_inverse_allowing_zero(diff.clone());
 
-        // Set trace values
-        for i in 0..(ops.len() - 1) {
-            rows[i0 + i][MEM_COL_MAP.diff] = diff[i];
-            rows[i0 + i][MEM_COL_MAP.diff_inv] = diff_inv[i];
-            rows[i0 + i][MEM_COL_MAP.counter_mult] = mult[i];
+    //     // Set trace values
+    //     for i in 0..(ops.len() - 1) {
+    //         rows[i0 + i][MEM_COL_MAP.diff] = diff[i];
+    //         rows[i0 + i][MEM_COL_MAP.diff_inv] = diff_inv[i];
+    //         rows[i0 + i][MEM_COL_MAP.counter_mult] = mult[i];
 
-            let addr = ops[i].1.get_address();
-            let addr_next = ops[i + 1].1.get_address();
-            if addr_next - addr != 0 {
-                rows[i0 + i][MEM_COL_MAP.addr_not_equal] = F::one();
-            }
-        }
+    //         let addr = ops[i].1.get_address();
+    //         let addr_next = ops[i + 1].1.get_address();
+    //         if addr_next - addr != 0 {
+    //             rows[i0 + i][MEM_COL_MAP.addr_not_equal] = F::one();
+    //         }
+    //     }
 
-        // The first row should have a zero-valued diff, which is "sent" to the local
-        // range check bus. We need to account for that value on the receiving end here.
-        rows[0][MEM_COL_MAP.counter_mult] += F::one();
-    }
+    //     // The first row should have a zero-valued diff, which is "sent" to the local
+    //     // range check bus. We need to account for that value on the receiving end here.
+    //     rows[0][MEM_COL_MAP.counter_mult] += F::one();
+    // }
 }

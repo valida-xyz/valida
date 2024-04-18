@@ -7,7 +7,7 @@ use p3_air::{Air, AirBuilder, BaseAir};
 use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRowSlices;
 
-impl<F> BaseAir<F> for NativeFieldChip {
+impl<F: AbstractField> BaseAir<F> for NativeFieldChip {
     fn width(&self) -> usize {
         NUM_NATIVE_FIELD_COLS
     }

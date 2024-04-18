@@ -2,8 +2,9 @@ use crate::columns::NUM_MEM_COLS;
 use crate::MemoryChip;
 
 use p3_air::{Air, AirBuilder, BaseAir};
+use p3_field::AbstractField;
 
-impl<F> BaseAir<F> for MemoryChip {
+impl<F: AbstractField> BaseAir<F> for MemoryChip {
     fn width(&self) -> usize {
         NUM_MEM_COLS
     }

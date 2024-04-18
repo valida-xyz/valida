@@ -1,5 +1,4 @@
 use alloc::vec;
-use alloc::vec::Vec;
 
 use crate::config::StarkConfig;
 use crate::{Machine, ValidaAirBuilder};

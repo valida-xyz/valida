@@ -1,5 +1,4 @@
 use crate::config::StarkConfig;
-use alloc::vec::Vec;
 use p3_commit::Pcs;
 use p3_matrix::dense::RowMajorMatrix;
 use serde::de::DeserializeOwned;
@@ -14,12 +13,22 @@ type PcsProof<SC> = <<SC as StarkConfig>::Pcs as Pcs<Val<SC>, ValMat<SC>>>::Proo
 #[serde(bound = "SC::Challenge: Serialize + DeserializeOwned")]
 pub struct MachineProof<SC: StarkConfig> {
     pub commitments: Commitments<Com<SC>>,
-    pub opening_proof: PcsProof<SC>,
+    pub opening_proofs: OpeningProofs<SC>,
     pub chip_proofs: Vec<ChipProof<SC::Challenge>>,
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(bound = "SC::Challenge: Serialize + DeserializeOwned")]
+pub struct OpeningProofs<SC: StarkConfig> {
+    pub preprocessed: PcsProof<SC>,
+    pub main: PcsProof<SC>,
+    pub perm: PcsProof<SC>,
+    pub quotient: PcsProof<SC>,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct Commitments<Com> {
+    pub preprocessed_trace: Com,
     pub main_trace: Com,
     pub perm_trace: Com,
     pub quotient_chunks: Com,

@@ -14,6 +14,7 @@ use p3_maybe_rayon::prelude::*;
 pub fn check_constraints<M, A, SC>(
     machine: &M,
     air: &A,
+    preprocessed: &RowMajorMatrix<SC::Val>,
     main: &RowMajorMatrix<SC::Val>,
     perm: &RowMajorMatrix<SC::Challenge>,
     perm_challenges: &[SC::Challenge],
@@ -28,7 +29,8 @@ pub fn check_constraints<M, A, SC>(
         return;
     }
 
-    let preprocessed = air.preprocessed_trace();
+    let preprocessed_height = preprocessed.height();
+    assert_eq!(height, preprocessed_height);
 
     let cumulative_sum = *perm.row_slice(perm.height() - 1).last().unwrap();
 
@@ -38,16 +40,8 @@ pub fn check_constraints<M, A, SC>(
 
         let main_local = main.row_slice(i);
         let main_next = main.row_slice(i_next);
-        let preprocessed_local = if preprocessed.is_some() {
-            preprocessed.as_ref().unwrap().row_slice(i)
-        } else {
-            &[]
-        };
-        let preprocessed_next = if preprocessed.is_some() {
-            preprocessed.as_ref().unwrap().row_slice(i_next)
-        } else {
-            &[]
-        };
+        let preprocessed_local = preprocessed.row_slice(i);
+        let preprocessed_next = preprocessed.row_slice(i_next);
         let perm_local = perm.row_slice(i);
         let perm_next = perm.row_slice(i_next);
 

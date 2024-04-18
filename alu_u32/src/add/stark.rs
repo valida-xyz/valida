@@ -4,10 +4,10 @@ use core::borrow::Borrow;
 
 use crate::add::columns::NUM_ADD_COLS;
 use p3_air::{Air, AirBuilder, BaseAir};
-use p3_field::PrimeField;
+use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRowSlices;
 
-impl<F> BaseAir<F> for Add32Chip {
+impl<F: AbstractField> BaseAir<F> for Add32Chip {
     fn width(&self) -> usize {
         NUM_ADD_COLS
     }

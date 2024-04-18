@@ -7,7 +7,6 @@ use alloc::format;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::iter;
-use core::marker::Sync;
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithMemBus, MachineWithProgramBus};
 use valida_machine::{
