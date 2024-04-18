@@ -14,7 +14,7 @@ pub fn index_of_byte(addr: u32) -> usize {
 }
 
 /// Get the address of the memory cells which is not empty (a multiple of 4).
-pub fn index_to_word(addr: u32) -> u32 {
+pub fn addr_of_word(addr: u32) -> u32 {
     (addr & !3) as u32
 }
 //----------------------------------
