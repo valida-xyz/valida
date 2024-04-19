@@ -69,11 +69,11 @@ impl AdviceProvider for StdinAdviceProvider {
     }
 }
 
-struct GlobalAdviceProvider {
+pub struct GlobalAdviceProvider {
     provider : AdviceProviderType,
 }
 impl GlobalAdviceProvider {
-    pub fn new(file_name : Option<String>) -> Self {
+    pub fn new(file_name : &Option<String>) -> Self {
         match file_name {
             Some(file_name) => {
                 let mut file = File::open(file_name).unwrap();
