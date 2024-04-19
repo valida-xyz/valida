@@ -68,3 +68,28 @@ impl AdviceProvider for StdinAdviceProvider {
         }
     }
 }
+
+struct GlobalAdviceProvider {
+    provider : AdviceProviderType,
+}
+impl GlobalAdviceProvider {
+    pub fn new(file_name : Option<String>) -> Self {
+        match file_name {
+            Some(file_name) => {
+                let mut file = File::open(file_name).unwrap();
+                let provider = AdviceProviderType::Fixed(FixedAdviceProvider::from_file(&mut file));
+                Self { provider }
+            },
+            None => {
+                let provider = AdviceProviderType::Stdin(StdinAdviceProvider);
+                Self { provider }
+            }
+        } 
+    }
+}
+
+impl AdviceProvider for GlobalAdviceProvider {
+    fn get_advice(&mut self) -> Option<u8> {
+        self.provider.get_advice()
+    }
+}
