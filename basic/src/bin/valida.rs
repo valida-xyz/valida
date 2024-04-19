@@ -51,6 +51,10 @@ struct Args {
     /// Stack height (which is also the initial frame pointer value)
     #[arg(long, default_value = "16777216")]
     stack_height: u32,
+
+    /// Advice file
+    #[arg(name = "Advice file")]
+    advice: Option<String>,
 }
 
 struct Context {
@@ -74,7 +78,13 @@ impl Context {
             last_fp_: args.stack_height,
             recorded_current_fp_: args.stack_height,
             last_fp_size_: 0,
-            advice: Box::new(StdinAdviceProvider),
+            advice: match &args.advice {
+                Some(file) => {
+                    let mut file = File::open(file).unwrap();
+                    Box::new(FixedAdviceProvider::from_file(&mut file))
+                }
+                _ => Box::new(StdinAdviceProvider),
+            },
         };
 
         let Program { code, data } = load_executable_file(
