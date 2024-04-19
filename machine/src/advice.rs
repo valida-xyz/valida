@@ -1,6 +1,7 @@
 use core::slice;
 use std::io;
 use std::io::Read;
+use std::fs::File;
 
 pub trait AdviceProvider {
     /// Get the next byte from the advice tape, if any.
@@ -12,12 +13,32 @@ pub struct FixedAdviceProvider {
     index: usize,
 }
 
+enum AdviceProviderType {
+    Stdin(StdinAdviceProvider),
+    Fixed(FixedAdviceProvider),
+}
+
+impl AdviceProviderType {
+    fn get_advice(&mut self) -> Option<u8> {
+        match self {
+            AdviceProviderType::Stdin(provider) => provider.get_advice(),
+            AdviceProviderType::Fixed(provider) => provider.get_advice(),
+        }
+    }
+}
+
 impl FixedAdviceProvider {
     pub fn empty() -> Self {
         Self::new(vec![])
     }
 
     pub fn new(advice: Vec<u8>) -> Self {
+        Self { advice, index: 0 }
+    }
+    pub fn from_file(file : &mut File) -> Self {
+        // read the entire file into self::advice:
+        let mut advice = Vec::new();
+        file.read_to_end(&mut advice).unwrap();
         Self { advice, index: 0 }
     }
 }
