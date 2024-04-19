@@ -99,7 +99,7 @@ impl Context {
         if self.stopped_ == StoppingFlag::DidStop {
             return (StoppingFlag::DidStop, 0);
         }
-        let state = self.machine_.step(&mut StdinAdviceProvider);
+        let state = self.machine_.step(&mut self.advice);
         let pc = self.machine_.cpu().pc;
         let fp = self.machine_.cpu().fp;
 
@@ -338,7 +338,7 @@ fn main() {
     machine.static_data_mut().load(data);
 
     // Run the program
-    machine.run(&code, &mut StdinAdviceProvider);
+    machine.run(&code, &mut GlobalAdviceProvider::new(&args.advice));
 
     type Val = BabyBear;
     type Challenge = BinomialExtensionField<Val, 5>;
