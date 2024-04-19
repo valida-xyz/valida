@@ -166,7 +166,7 @@ fn last_frame(_: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     frame += &format!("Current FP: 0x{:x}\n", fp).as_str();
 
     // print last frame
-    for i in (-5..(last_size / 4) + 1).rev() {
+    for i in (-10..(last_size / 4) + 1).rev() {
         let offset = (i * 4) as i32;
         let read_addr = (fp + offset) as u32;
         let string_val = context.machine_.mem().examine(read_addr);

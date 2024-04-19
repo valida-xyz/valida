@@ -11,11 +11,13 @@ use core::marker::Sync;
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithMemBus, MachineWithProgramBus};
 use valida_machine::{
-    instructions, AdviceProvider, Chip, Instruction, InstructionWord, Interaction, Operands, Word,
+    addr_of_word, index_of_byte, instructions, AdviceProvider, Chip, Instruction, InstructionWord,
+    Interaction, Operands, Word,
 };
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 use valida_opcodes::{
-    BEQ, BNE, BYTES_PER_INSTR, IMM32, JAL, JALV, LOAD32, LOADFP, READ_ADVICE, STOP, STORE32,
+    BEQ, BNE, BYTES_PER_INSTR, IMM32, JAL, JALV, LOAD32, LOADFP, LOADS8, LOADU8, READ_ADVICE, STOP,
+    STORE32, STOREU8,
 };
 
 use p3_air::VirtualPairCol;
@@ -31,7 +33,10 @@ pub mod stark;
 #[derive(Clone)]
 pub enum Operation {
     Store32,
+    StoreU8,
     Load32,
+    LoadU8,
+    LoadS8,
     Jal,
     Jalv,
     Beq(Option<Word<u8>> /*imm*/),
@@ -174,6 +179,15 @@ impl CpuChip {
             }
             Operation::Load32 => {
                 cols.opcode_flags.is_load = SC::Val::one();
+            }
+            Operation::StoreU8 => {
+                cols.opcode_flags.is_store_u8 = SC::Val::one();
+            }
+            Operation::LoadU8 => {
+                cols.opcode_flags.is_load_u8 = SC::Val::one();
+            }
+            Operation::LoadS8 => {
+                cols.opcode_flags.is_load_s8 = SC::Val::one();
             }
             Operation::Jal => {
                 cols.opcode_flags.is_jal = SC::Val::one();
@@ -349,7 +363,10 @@ pub trait MachineWithCpuChip<F: Field>: MachineWithMemoryChip<F> {
 
 instructions!(
     Load32Instruction,
+    LoadU8Instruction,
+    LoadS8Instruction,
     Store32Instruction,
+    StoreU8Instruction,
     JalInstruction,
     JalvInstruction,
     BeqInstruction,
@@ -441,6 +458,119 @@ where
     }
 }
 
+impl<M, F> Instruction<M, F> for LoadU8Instruction
+where
+    M: MachineWithCpuChip<F>,
+    F: Field,
+{
+    const OPCODE: u32 = LOADU8;
+
+    fn execute(state: &mut M, ops: Operands<i32>) {
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
+        let clk = state.cpu().clock;
+        let pc = state.cpu().pc;
+        let fp = state.cpu().fp;
+
+        let read_addr_loc = (fp as i32 + ops.c()) as u32;
+
+        let read_addr = state
+            .mem_mut()
+            .read(clk, read_addr_loc, true, pc, opcode, 0, "");
+        let read_addr_index = addr_of_word(read_addr.into());
+
+        // The word from the read address.
+        let cell = state.mem_mut().read(
+            clk,
+            read_addr_index,
+            true,
+            pc,
+            opcode,
+            1,
+            &format!(
+                "fp = {}, c = {}, [fp+c] = {:?}",
+                fp as i32,
+                ops.c() as u32,
+                read_addr_index
+            ),
+        );
+
+        // The array index of the word for the byte to read from
+        let index_of_read = index_of_byte(read_addr.into());
+        // The byte from the read cell.
+        let cell_byte = cell[index_of_read];
+
+        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
+        // The address, converted to a multiple of 4.
+        let write_addr_index = addr_of_word(write_addr);
+
+        // The Word to write, with one byte overwritten to the read byte
+        let cell_to_write = Word::zero_extend_byte(cell_byte);
+
+        state
+            .mem_mut()
+            .write(clk, write_addr_index, cell_to_write, true);
+        state.cpu_mut().pc += 1;
+        state.cpu_mut().push_op(Operation::LoadU8, opcode, ops);
+    }
+}
+
+impl<M, F> Instruction<M, F> for LoadS8Instruction
+where
+    M: MachineWithCpuChip<F>,
+    F: Field,
+{
+    const OPCODE: u32 = LOADS8;
+
+    fn execute(state: &mut M, ops: Operands<i32>) {
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
+        let clk = state.cpu().clock;
+        let pc = state.cpu().pc;
+        let fp = state.cpu().fp;
+
+        let read_addr_loc = (fp as i32 + ops.c()) as u32;
+
+        let read_addr = state
+            .mem_mut()
+            .read(clk, read_addr_loc, true, pc, opcode, 0, "");
+
+        let read_addr_index = addr_of_word(read_addr.into());
+
+        // The word from the read address.
+        let cell = state.mem_mut().read(
+            clk,
+            read_addr_index,
+            true,
+            pc,
+            opcode,
+            1,
+            &format!(
+                "fp = {}, c = {}, [fp+c] = {:?}",
+                fp as i32,
+                ops.c() as u32,
+                read_addr_index
+            ),
+        );
+
+        // The array index of the word for the byte to read from
+        let index_of_read = index_of_byte(read_addr.into());
+        // The byte from the read cell.
+        let cell_byte = cell[index_of_read];
+
+        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
+        // The address, converted to a multiple of 4.
+        let write_addr_index = addr_of_word(write_addr);
+
+        // The Word to write, with one byte overwritten to the read byte
+        let cell_to_write = Word::sign_extend_byte(cell_byte);
+
+        state
+            .mem_mut()
+            .write(clk, write_addr_index, cell_to_write, true);
+        state.cpu_mut().pc += 1;
+        state.cpu_mut().push_op(Operation::LoadS8, opcode, ops);
+    }
+}
+
 impl<M, F> Instruction<M, F> for Store32Instruction
 where
     M: MachineWithCpuChip<F>,
@@ -456,13 +586,66 @@ where
         let pc = state.cpu().pc;
         let write_addr = state
             .mem_mut()
-            .read(clk, write_addr_loc.into(), true, pc, opcode, 0, "");
+            .read(clk, write_addr_loc, true, pc, opcode, 0, "");
         let cell = state
             .mem_mut()
             .read(clk, read_addr, true, pc, opcode, 1, "");
         state.mem_mut().write(clk, write_addr.into(), cell, true);
         state.cpu_mut().pc += 1;
         state.cpu_mut().push_op(Operation::Store32, opcode, ops);
+    }
+}
+
+impl<M, F> Instruction<M, F> for StoreU8Instruction
+where
+    M: MachineWithCpuChip<F>,
+    F: Field,
+{
+    const OPCODE: u32 = STOREU8;
+
+    fn execute(state: &mut M, ops: Operands<i32>) {
+        let opcode = <Self as Instruction<M, F>>::OPCODE;
+        let clk = state.cpu().clock;
+        let read_addr = (state.cpu().fp as i32 + ops.c()) as u32;
+
+        // Make sure we get to the correct and non empty map for the byte.
+        let read_addr_index = addr_of_word(read_addr);
+        let write_addr_loc = (state.cpu().fp as i32 + ops.b()) as u32;
+        let pc = state.cpu().pc;
+        let write_addr = state
+            .mem_mut()
+            .read(clk, write_addr_loc.into(), true, pc, opcode, 0, "");
+
+        // Read the cell from the read address.
+        let cell = state
+            .mem_mut()
+            .read(clk, read_addr_index, true, pc, opcode, 1, "");
+
+        // The array index of the word for the byte to read from
+        let index_of_read = index_of_byte(read_addr);
+
+        // The word from the read address.
+        let cell_read = cell.0;
+        // The byte from the read cell.
+        let cell_byte = cell_read[index_of_read];
+
+        // The array index of the word for the byte to write to
+        let index_of_write = index_of_byte(write_addr.into());
+
+        // The key to the memory map, converted to a multiple of 4.
+        let write_addr_index = addr_of_word(write_addr.into());
+
+        // The original content of the cell to write to. If the cell is empty, initiate it with a default value.
+        let cell_write = state.mem_mut().read_or_init(clk, write_addr_index, true);
+
+        // The Word to write, with one byte overwritten to the read byte
+        let cell_to_write = cell_write.update_byte(cell_byte, index_of_write);
+
+        state
+            .mem_mut()
+            .write(clk, write_addr_index, cell_to_write, true);
+        state.cpu_mut().pc += 1;
+        state.cpu_mut().push_op(Operation::StoreU8, opcode, ops);
     }
 }
 

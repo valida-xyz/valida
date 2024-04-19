@@ -2,6 +2,8 @@
 
 extern crate alloc;
 
+use valida_machine::MEMORY_CELL_BYTES;
+
 use crate::alloc::string::ToString;
 use crate::columns::{MemoryCols, MEM_COL_MAP, NUM_MEM_COLS};
 use alloc::collections::BTreeMap;
@@ -79,6 +81,7 @@ impl MemoryChip {
         }
     }
 
+    /// Read from a cell. If the cell is empty, panic.
     pub fn read(
         &mut self,
         clk: u32,
@@ -91,6 +94,22 @@ impl MemoryChip {
     ) -> Word<u8> {
         let value = self.cells.get(&address.into()).copied()
           .unwrap_or_else(|| panic!("memory chip: read before write: {} (pc = {}, opcode = {}, ordinal = {}, extra_info = {})", address, pc, opcode, ordinal, extra_info));
+        if log {
+            self.operations
+                .entry(clk)
+                .or_insert_with(Vec::new)
+                .push(Operation::Read(address.into(), value));
+        }
+        value
+    }
+
+    /// Read from a cell. If the cell is empty, initialize it with the default values.
+    pub fn read_or_init(&mut self, clk: u32, address: u32, log: bool) -> Word<u8> {
+        let value = self
+            .cells
+            .get(&address.into())
+            .copied()
+            .unwrap_or_else(|| Word([0; MEMORY_CELL_BYTES]));
         if log {
             self.operations
                 .entry(clk)
