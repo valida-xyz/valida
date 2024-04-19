@@ -9,7 +9,10 @@ use p3_baby_bear::BabyBear;
 
 use p3_fri::{FriConfig, TwoAdicFriPcs, TwoAdicFriPcsConfig};
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{AdviceProvider, GlobalAdviceProvider, Machine, MachineProof, ProgramROM, StdinAdviceProvider, StoppingFlag};
+use valida_machine::{
+    AdviceProvider, GlobalAdviceProvider, Machine, MachineProof, ProgramROM, StdinAdviceProvider,
+    StoppingFlag,
+};
 use valida_memory::MachineWithMemoryChip;
 
 use valida_elf::{load_executable_file, Program};
@@ -65,7 +68,7 @@ struct Context {
     last_fp_: u32,
     recorded_current_fp_: u32,
     last_fp_size_: u32,
-    advice : GlobalAdviceProvider,
+    advice: GlobalAdviceProvider,
 }
 
 impl Context {
@@ -78,7 +81,7 @@ impl Context {
             last_fp_: args.stack_height,
             recorded_current_fp_: args.stack_height,
             last_fp_size_: 0,
-            advice : GlobalAdviceProvider::new(&args.advice),
+            advice: GlobalAdviceProvider::new(&args.advice),
         };
 
         let Program { code, data } = load_executable_file(
