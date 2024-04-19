@@ -10,6 +10,7 @@ use core::iter;
 use core::marker::Sync;
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithMemBus, MachineWithProgramBus};
+use valida_machine::is_mul_4;
 use valida_machine::{
     addr_of_word, index_of_byte, instructions, AdviceProvider, Chip, Instruction, InstructionWord,
     Interaction, Operands, Word,
@@ -433,11 +434,27 @@ where
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let fp = state.cpu().fp;
+
         let read_addr_1 = (fp as i32 + ops.c()) as u32;
+        assert!(
+            is_mul_4(read_addr_1),
+            "LOAD32: Read address location is not a multiple of 4!"
+        );
+
         let read_addr_2 = state
             .mem_mut()
             .read(clk, read_addr_1, true, pc, opcode, 0, "");
+        assert!(
+            is_mul_4(read_addr_2.into()),
+            "LOAD32: Read address is not a multiple of 4!"
+        );
+
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
+        assert!(
+            is_mul_4(write_addr),
+            "LOAD32: Write address location is not a multiple of 4!"
+        );
+
         let cell = state.mem_mut().read(
             clk,
             read_addr_2.into(),
@@ -581,12 +598,29 @@ where
     fn execute(state: &mut M, ops: Operands<i32>) {
         let opcode = <Self as Instruction<M, F>>::OPCODE;
         let clk = state.cpu().clock;
+
         let read_addr = (state.cpu().fp as i32 + ops.c()) as u32;
+        assert!(
+            is_mul_4(read_addr),
+            "STORE32: Read address is not a multiple of 4!"
+        );
+
         let write_addr_loc = (state.cpu().fp as i32 + ops.b()) as u32;
+        assert!(
+            is_mul_4(write_addr_loc),
+            "STORE32: Write address location is not a multiple of 4!"
+        );
+
         let pc = state.cpu().pc;
+
         let write_addr = state
             .mem_mut()
             .read(clk, write_addr_loc, true, pc, opcode, 0, "");
+        assert!(
+            is_mul_4(write_addr.into()),
+            "STORE32: Write address is not a multiple of 4!"
+        );
+
         let cell = state
             .mem_mut()
             .read(clk, read_addr, true, pc, opcode, 1, "");
