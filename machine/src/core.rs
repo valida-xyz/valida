@@ -17,6 +17,10 @@ pub fn index_of_byte(addr: u32) -> usize {
 pub fn addr_of_word(addr: u32) -> u32 {
     (addr & !3) as u32
 }
+
+pub fn is_mul_4(addr: u32) -> bool {
+    addr.rem_euclid(4) == 0
+}
 //----------------------------------
 
 impl Word<u8> {
