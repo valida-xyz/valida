@@ -300,7 +300,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             config,
             chip,
             log_degrees[i],
-            Some(preprocessed_trace_ldes.remove(0)),
+            None::<RowMajorMatrix<SC::Val>>,
             main_trace_ldes.remove(0),
             perm_trace_ldes.remove(0),
             cumulative_sums[i],

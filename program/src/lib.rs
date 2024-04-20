@@ -11,7 +11,7 @@ use valida_util::pad_to_power_of_two;
 
 use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
-use valida_machine::StarkConfig;
+use valida_machine::{InstructionWord, StarkConfig};
 
 pub mod columns;
 pub mod stark;
@@ -36,15 +36,33 @@ where
     SC: StarkConfig,
 {
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
-        let mut values = self
+        // Pad the ROM to a power of two.
+        let mut rom = self.program_rom.0.clone();
+        let n = rom.len();
+        rom.resize(n.next_power_of_two(), InstructionWord::default());
+
+        let mut counts = self
             .counts
             .iter()
             .map(|c| SC::Val::from_canonical_u32(*c))
             .collect();
 
-        pad_to_power_of_two::<NUM_PROGRAM_COLS, SC::Val>(&mut values);
+        pad_to_power_of_two::<1, SC::Val>(&mut counts);
 
-        RowMajorMatrix::new(values, NUM_PROGRAM_COLS)
+        let flattened = rom
+            .into_iter()
+            .enumerate()
+            .zip(counts)
+            .flat_map(|((n, word), c)| {
+                let mut row = vec![SC::Val::zero(); NUM_PROGRAM_COLS];
+                row.push(SC::Val::from_canonical_usize(n));
+                row.append(&mut Vec::from(&word.flatten()));
+                row.push(c);
+                row
+            })
+            .collect();
+
+        RowMajorMatrix::new(flattened, NUM_PROGRAM_COLS)
     }
 
     fn global_receives(&self, _machine: &M) -> Vec<Interaction<SC::Val>> {
