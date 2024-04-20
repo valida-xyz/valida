@@ -52,6 +52,24 @@ enum EmuGdbEventLoop {}
 
 // TODO: follow https://github.com/daniel5151/gdbstub/blob/master/examples/armv4t/main.rs
 
+impl run_blocking::BlockingEventLoop for EmuGdbEventLoop {
+
+    #[allow(clippy::type_complexity)]
+    fn wait_for_stop_reason(
+        target: &mut emu::Emu,
+        conn: &mut Self::Connection,
+    ) -> Result<
+        run_blocking::Event<SingleThreadStopReason<u32>>,
+        run_blocking::WaitForStopReasonError<
+            <Self::Target as Target>::Error,
+            <Self::Connection as Connection>::Error,
+        >,
+    > {
+    }
+
+    fn on_interrupt(
+        _target: &mut emu::Emu,
+    ) -> Result<Option<SingleThreadStopReason<u32>>, <emu::Emu as Target>::Error> {}
 
 
-
+}
