@@ -657,6 +657,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
                     .unwrap()
                     .clone();
                 ChipProof {
+                    public_inputs: vec![],
                     log_degree: *log_degree,
                     opened_values,
                     cumulative_sum,
