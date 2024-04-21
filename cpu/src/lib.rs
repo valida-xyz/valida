@@ -514,18 +514,16 @@ where
         // The array index of the word for the byte to read from
         let index_of_read = index_of_byte(read_addr.into());
         // The byte from the read cell.
-        let cell_byte = cell[index_of_read];
+        let cell_byte: u8 = cell[index_of_read];
 
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
         // The address, converted to a multiple of 4.
         let write_addr_index = addr_of_word(write_addr);
 
         // The Word to write, with one byte overwritten to the read byte
-        let cell_to_write = Word::zero_extend_byte(cell_byte);
-
         state
             .mem_mut()
-            .write(clk, write_addr_index, cell_to_write, true);
+            .write(clk, write_addr_index, Word::from_u8(cell_byte), true);
         state.cpu_mut().pc += 1;
         state.cpu_mut().push_op(Operation::LoadU8, opcode, ops);
     }
