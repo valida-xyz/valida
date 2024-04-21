@@ -50,8 +50,8 @@ use valida_machine::__internal::{
 };
 use valida_machine::{
     generate_permutation_trace, verify_constraints, AdviceProvider, BusArgument, Chip, ChipProof,
-    Commitments, Instruction, Machine, MachineProof, OpenedValues, ProgramROM, StoppingFlag,
-    ValidaAirBuilder,
+    ColumnIndex, ColumnVector, Commitments, Instruction, Machine, MachineProof, OpenedValues,
+    ProgramROM, StoppingFlag, ValidaAirBuilder,
 };
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_output::{MachineWithOutputChip, OutputChip, WriteInstruction};
@@ -263,6 +263,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         let alpha: SC::Challenge = challenger.sample_ext_element();
 
         let mut quotients: Vec<RowMajorMatrix<SC::Val>> = vec![];
+        let mut public_inputs: Vec<Vec<(ColumnIndex, ColumnVector<SC::Val>)>> = vec![];
 
         let mut i: usize = 0;
 
@@ -287,6 +288,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.program();
@@ -310,6 +312,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(Chip::generate_public_inputs(chip as &dyn Chip<Self, SC>));
         i += 1;
 
         let chip = self.mem();
@@ -333,6 +336,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.add_u32();
@@ -356,6 +360,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.sub_u32();
@@ -379,6 +384,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.mul_u32();
@@ -402,6 +408,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.div_u32();
@@ -425,6 +432,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.shift_u32();
@@ -448,6 +456,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.lt_u32();
@@ -471,6 +480,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.com_u32();
@@ -494,6 +504,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.bitwise_u32();
@@ -517,6 +528,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.output();
@@ -540,6 +552,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(Chip::generate_public_inputs(chip as &dyn Chip<Self, SC>));
         i += 1;
 
         let chip = self.range();
@@ -563,6 +576,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.static_data();
@@ -586,6 +600,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(Chip::generate_public_inputs(chip as &dyn Chip<Self, SC>));
         i += 1;
 
         assert_eq!(quotients.len(), NUM_CHIPS);
@@ -636,35 +651,39 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             .zip(perm_openings)
             .zip(quotient_openings)
             .zip(perm_traces)
-            .map(|((((log_degree, main), perm), quotient), perm_trace)| {
-                // TODO: add preprocessed openings
-                let [preprocessed_local, preprocessed_next] = [vec![], vec![]];
+            .zip(public_inputs)
+            .map(
+                |(((((log_degree, main), perm), quotient), perm_trace), public_inputs)| {
+                    // TODO: add preprocessed openings
+                    let [preprocessed_local, preprocessed_next] = [vec![], vec![]];
 
-                let [main_local, main_next] = main.try_into().expect("Should have 2 openings");
-                let [perm_local, perm_next] = perm.try_into().expect("Should have 2 openings");
-                let [quotient_chunks] = quotient.try_into().expect("Should have 1 opening");
+                    let [main_local, main_next] = main.try_into().expect("Should have 2 openings");
+                    let [perm_local, perm_next] = perm.try_into().expect("Should have 2 openings");
+                    let [quotient_chunks] = quotient.try_into().expect("Should have 1 opening");
 
-                let opened_values = OpenedValues {
-                    preprocessed_local,
-                    preprocessed_next,
-                    trace_local: main_local,
-                    trace_next: main_next,
-                    permutation_local: perm_local,
-                    permutation_next: perm_next,
-                    quotient_chunks,
-                };
+                    let opened_values = OpenedValues {
+                        preprocessed_local,
+                        preprocessed_next,
+                        trace_local: main_local,
+                        trace_next: main_next,
+                        permutation_local: perm_local,
+                        permutation_next: perm_next,
+                        quotient_chunks,
+                    };
 
-                let cumulative_sum = perm_trace
-                    .row_slice(perm_trace.height() - 1)
-                    .last()
-                    .unwrap()
-                    .clone();
-                ChipProof {
-                    log_degree: *log_degree,
-                    opened_values,
-                    cumulative_sum,
-                }
-            })
+                    let cumulative_sum = perm_trace
+                        .row_slice(perm_trace.height() - 1)
+                        .last()
+                        .unwrap()
+                        .clone();
+                    ChipProof {
+                        public_inputs,
+                        log_degree: *log_degree,
+                        opened_values,
+                        cumulative_sum,
+                    }
+                },
+            )
             .collect::<Vec<_>>();
 
         MachineProof {
