@@ -2,7 +2,7 @@
 
 Valida is a STARK-based virtual machine aiming to improve upon the state of the art in the following categories:
 - **Code reuse**: The VM has a RISC-inspired instruction set, simplifying the targeting of conventional programming languages. We are currently developing a backend compiler to compile LLVM IR to the Valida ISA. This will enable proving programs written in Rust, Go, C++, and others, and require minimal to no changes in source code.
-- **Prover performance**: The VM is engineered to maximize prover performance. It is compatible with a 31-bit field, is restricted to degree 3 constraints, and has minimal instruction decoding. The VM doesn't contain any general-purpose registers, nor a dedicated stack, and instead operates directly on memory. We also utilize newer lookup arguments to reduce trace overhead involved in cross-chip communcation.
+- **Prover performance**: The VM is engineered to maximize prover performance. It is compatible with a 31-bit field, is restricted to degree 3 constraints, and has minimal instruction decoding. The VM doesn't contain any general-purpose registers, nor a dedicated stack, and instead operates directly on memory. We also utilize newer lookup arguments to reduce trace overhead involved in cross-chip communication.
 - **Extensibility**: The VM is designed to be customizable. It can easily be extended to include an arbitrary number of user-defined instructions. Procedural macros are used to construct the desired machine at compile time, avoiding any runtime penalties.
 
 Our roadmap also includes implementing fast recursion and continuations to enable massively parallelizable proving of individual program execution.
