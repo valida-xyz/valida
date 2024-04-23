@@ -1,5 +1,3 @@
-#![no_std]
-
 extern crate alloc;
 
 use alloc::collections::BTreeMap;
@@ -35,29 +33,30 @@ pub fn load_elf_object_file(file: Vec<u8>) -> Program {
     let mut bss_sections: Vec<SectionHeader> = vec![];
     let mut text_sections: Vec<(SectionHeader, &[u8])> = vec![];
     for section_header in file.section_headers().unwrap().iter() {
+        std::println!("sh_type = {:?}, sh_flags = {:?}, sh_name = {:?}, sh_size = {:?}", section_header.sh_type, section_header.sh_flags, section_header.sh_name, section_header.sh_size);
         let is_data: bool = section_header.sh_type == abi::SHT_PROGBITS
             && section_header.sh_flags == (abi::SHF_ALLOC | abi::SHF_WRITE).into();
+        let is_rodata: bool = section_header.sh_type == abi::SHT_PROGBITS
+            && (section_header.sh_flags == abi::SHF_ALLOC.into()
+                || section_header.sh_flags == 0x32); // TODO: what is 0x32?
         let is_bss: bool = section_header.sh_type == abi::SHT_NOBITS
             && section_header.sh_flags == (abi::SHF_ALLOC | abi::SHF_WRITE).into();
         let is_text: bool = section_header.sh_type == abi::SHT_PROGBITS
             && section_header.sh_flags == (abi::SHF_ALLOC | abi::SHF_EXECINSTR).into();
-        let is_useful: bool = is_data || is_bss || is_text;
-        if is_useful {
-            if is_data || is_text {
-                let section_data = file.section_data(&section_header).unwrap();
-                match section_data {
-                    (section_data, None) => {
-                        if is_data {
-                            data_sections.push((section_header, section_data));
-                        } else if is_text {
-                            text_sections.push((section_header, section_data));
-                        }
+        if is_data || is_rodata || is_text {
+            let section_data = file.section_data(&section_header).unwrap();
+            match section_data {
+                (section_data, None) => {
+                    if is_data || is_rodata {
+                        data_sections.push((section_header, section_data));
+                    } else if is_text {
+                        text_sections.push((section_header, section_data));
                     }
-                    _ => panic!("unsupported: compressed ELF section data"),
                 }
-            } else if is_bss {
-                bss_sections.push(section_header);
+                _ => panic!("unsupported: compressed ELF section data"),
             }
+        } else if is_bss {
+            bss_sections.push(section_header);
         }
     }
     let initial_program_counter = text_sections
