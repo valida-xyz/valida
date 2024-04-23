@@ -9,11 +9,12 @@ use elf::abi;
 use elf::endian::AnyEndian;
 use elf::section::SectionHeader;
 use elf::ElfBytes;
-use valida_machine::{ProgramROM, Word};
+use valida_machine::{ProgramROM, Word, INSTRUCTION_ELEMENTS};
 
 pub struct Program {
     pub code: ProgramROM<i32>,
     pub data: BTreeMap<u32, Word<u8>>,
+    pub initial_program_counter: u32,
 }
 
 pub fn load_executable_file(file: Vec<u8>) -> Program {
@@ -23,6 +24,7 @@ pub fn load_executable_file(file: Vec<u8>) -> Program {
         Program {
             code: ProgramROM::from_machine_code(file.as_slice()),
             data: BTreeMap::new(),
+            initial_program_counter: 0,
         }
     }
 }
@@ -58,6 +60,11 @@ pub fn load_elf_object_file(file: Vec<u8>) -> Program {
             }
         }
     }
+    let initial_program_counter = text_sections
+        .iter()
+        .map(|(section_header, _)| section_header.sh_addr / ((INSTRUCTION_ELEMENTS * 4) as u64))
+        .reduce(|a, b| a.min(b))
+        .unwrap();
     let code_size = text_sections
         .iter()
         .map(|(section_header, _)| section_header.sh_addr + section_header.sh_size)
@@ -85,6 +92,7 @@ pub fn load_elf_object_file(file: Vec<u8>) -> Program {
     }
     Program {
         code: ProgramROM::from_machine_code(code.as_slice()),
-        data: data,
+        data,
+        initial_program_counter: <u64 as TryInto<u32>>::try_into(initial_program_counter).unwrap(),
     }
 }

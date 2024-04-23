@@ -75,13 +75,14 @@ impl Context {
             last_fp_size_: 0,
         };
 
-        let Program { code, data } = load_executable_file(
+        let Program { code, data, initial_program_counter } = load_executable_file(
             fs::read(&args.program)
                 .expect(format!("Failed to read executable file: {}", &args.program).as_str()),
         );
 
         context.machine_.program_mut().set_program_rom(&code);
         context.machine_.static_data_mut().load(data);
+        context.machine_.cpu_mut().pc = initial_program_counter;
         context.machine_.cpu_mut().fp = args.stack_height;
         context.machine_.cpu_mut().save_register_state();
 
@@ -322,12 +323,13 @@ fn main() {
     }
 
     let mut machine = BasicMachine::<BabyBear>::default();
-    let Program { code, data } = load_executable_file(
+    let Program { code, data, initial_program_counter } = load_executable_file(
         fs::read(&args.program)
             .expect(format!("Failed to read executable file: {}", &args.program).as_str()),
     );
     machine.program_mut().set_program_rom(&code);
     machine.cpu_mut().fp = args.stack_height;
+    machine.cpu_mut().pc = initial_program_counter;
     machine.cpu_mut().save_register_state();
     machine.static_data_mut().load(data);
 
