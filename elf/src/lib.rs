@@ -1,3 +1,5 @@
+#![no_std]
+
 extern crate alloc;
 
 use alloc::collections::BTreeMap;
@@ -33,7 +35,6 @@ pub fn load_elf_object_file(file: Vec<u8>) -> Program {
     let mut bss_sections: Vec<SectionHeader> = vec![];
     let mut text_sections: Vec<(SectionHeader, &[u8])> = vec![];
     for section_header in file.section_headers().unwrap().iter() {
-        std::println!("sh_type = {:?}, sh_flags = {:?}, sh_name = {:?}, sh_size = {:?}", section_header.sh_type, section_header.sh_flags, section_header.sh_name, section_header.sh_size);
         let is_data: bool = section_header.sh_type == abi::SHT_PROGBITS
             && section_header.sh_flags == (abi::SHF_ALLOC | abi::SHF_WRITE).into();
         let is_rodata: bool = section_header.sh_type == abi::SHT_PROGBITS
@@ -76,7 +77,11 @@ pub fn load_elf_object_file(file: Vec<u8>) -> Program {
     }
     let mut data: BTreeMap<u32, Word<u8>> = BTreeMap::new();
     for (section_header, section_data) in data_sections {
-        for i in 0..(section_header.sh_size / 4) as usize {
+        let mut section_data = Vec::from(section_data);
+        while section_data.len() % 4 != 0 {
+            section_data.push(0);
+        }
+        for i in 0..(section_data.len() / 4) as usize {
             data.insert(
                 <u64 as TryInto<u32>>::try_into(section_header.sh_addr).unwrap()
                     + <usize as TryInto<u32>>::try_into(i * 4).unwrap(),

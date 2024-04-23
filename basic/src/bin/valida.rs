@@ -75,7 +75,11 @@ impl Context {
             last_fp_size_: 0,
         };
 
-        let Program { code, data, initial_program_counter } = load_executable_file(
+        let Program {
+            code,
+            data,
+            initial_program_counter,
+        } = load_executable_file(
             fs::read(&args.program)
                 .expect(format!("Failed to read executable file: {}", &args.program).as_str()),
         );
@@ -323,7 +327,11 @@ fn main() {
     }
 
     let mut machine = BasicMachine::<BabyBear>::default();
-    let Program { code, data, initial_program_counter } = load_executable_file(
+    let Program {
+        code,
+        data,
+        initial_program_counter,
+    } = load_executable_file(
         fs::read(&args.program)
             .expect(format!("Failed to read executable file: {}", &args.program).as_str()),
     );

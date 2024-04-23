@@ -1070,8 +1070,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         let opcode = instruction.opcode;
         let ops = instruction.operands;
 
-        println!("pc = {:?}, instruction = {:?}", pc, instruction);
-
         // Execute
         match opcode {
             <Load32Instruction as Instruction<Self, F>>::OPCODE => {
