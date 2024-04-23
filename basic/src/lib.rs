@@ -1165,7 +1165,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             <WriteInstruction as Instruction<Self, F>>::OPCODE => {
                 WriteInstruction::execute_with_advice::<Adv>(self, ops, advice)
             }
-            _ => panic!("Unrecognized opcode: {}", opcode),
+            _ => panic!("Unrecognized opcode: {}, pc = {}", opcode, pc),
         };
         self.read_word(pc as usize);
 
