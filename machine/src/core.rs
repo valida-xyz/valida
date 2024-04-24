@@ -3,7 +3,7 @@ use core::cmp::Ordering;
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Index, IndexMut, Mul, Shl, Shr, Sub};
 use p3_field::{Field, PrimeField};
 
-// Currently stored in big-endian form.
+// Stored in little-endian form, to avoid conversion between the compiler and the VM, and to be consistent with our file format.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Word<F>(pub [F; MEMORY_CELL_BYTES]);
 
@@ -18,6 +18,7 @@ pub fn addr_of_word(addr: u32) -> u32 {
     (addr & !3) as u32
 }
 
+/// Check that an address is a multiple of 4.
 pub fn is_mul_4(addr: u32) -> bool {
     addr.rem_euclid(4) == 0
 }
@@ -26,7 +27,7 @@ pub fn is_mul_4(addr: u32) -> bool {
 impl Word<u8> {
     pub fn from_u8(byte: u8) -> Self {
         let mut result = [0; MEMORY_CELL_BYTES];
-        result[MEMORY_CELL_BYTES - 1] = byte;
+        result[0] = byte;
         Self(result)
     }
 }
@@ -35,7 +36,7 @@ impl Word<u8> {
     pub fn sign_extend_byte(byte: u8) -> Self {
         let sign = byte as i8 >> 7;
         let mut result: [u8; MEMORY_CELL_BYTES] = [sign as u8; MEMORY_CELL_BYTES];
-        result[3] = byte;
+        result[0] = byte;
         Self(result)
     }
 }
@@ -56,7 +57,7 @@ impl<F: Copy> Word<F> {
     {
         let mut result: [T; MEMORY_CELL_BYTES] = [T::default(); MEMORY_CELL_BYTES];
         for (i, item) in self.0.iter().enumerate() {
-            result[i] = f(*item);
+            result[3 - i] = f(*item);
         }
         Word(result)
     }
@@ -76,7 +77,7 @@ impl Into<u32> for Word<u8> {
     fn into(self) -> u32 {
         let mut result = 0u32;
         for i in 0..MEMORY_CELL_BYTES {
-            result += (self[MEMORY_CELL_BYTES - i - 1] as u32) << (i * 8);
+            result += (self[i] as u32) << (i * 8);
         }
         result
     }
@@ -86,7 +87,7 @@ impl From<u32> for Word<u8> {
     fn from(value: u32) -> Self {
         let mut result = Word::<u8>::default();
         for i in 0..MEMORY_CELL_BYTES {
-            result[MEMORY_CELL_BYTES - i - 1] = ((value >> (i * 8)) & 0xFF) as u8;
+            result[i] = ((value >> (i * 8)) & 0xFF) as u8;
         }
         result
     }
@@ -272,7 +273,7 @@ impl BitOr for Word<u8> {
 
 impl<F: Field> From<F> for Word<F> {
     fn from(bytes: F) -> Self {
-        Self([F::zero(), F::zero(), F::zero(), bytes])
+        Self([bytes, F::zero(), F::zero(), F::zero()])
     }
 }
 
