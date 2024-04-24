@@ -103,16 +103,16 @@ impl Add32Chip {
 
                 let mut carry_1 = 0;
                 let mut carry_2 = 0;
-                if b[3] as u32 + c[3] as u32 > 255 {
+                if b[0] as u32 + c[0] as u32 > 255 {
                     carry_1 = 1;
-                    cols.carry[0] = F::one();
+                    cols.carry[3] = F::one();
                 }
-                if b[2] as u32 + c[2] as u32 + carry_1 > 255 {
+                if b[1] as u32 + c[1] as u32 + carry_1 > 255 {
                     carry_2 = 1;
-                    cols.carry[1] = F::one();
-                }
-                if b[1] as u32 + c[1] as u32 + carry_2 > 255 {
                     cols.carry[2] = F::one();
+                }
+                if b[2] as u32 + c[2] as u32 + carry_2 > 255 {
+                    cols.carry[1] = F::one();
                 }
                 cols.is_real = F::one();
             }
