@@ -9,7 +9,10 @@ use p3_baby_bear::BabyBear;
 
 use p3_fri::{FriConfig, TwoAdicFriPcs, TwoAdicFriPcsConfig};
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{Machine, MachineProof, ProgramROM, StdinAdviceProvider, StoppingFlag};
+use valida_machine::{
+    AdviceProvider, GlobalAdviceProvider, Machine, MachineProof, ProgramROM, StdinAdviceProvider,
+    StoppingFlag,
+};
 use valida_memory::MachineWithMemoryChip;
 
 use valida_elf::{load_executable_file, Program};
@@ -51,6 +54,10 @@ struct Args {
     /// Stack height (which is also the initial frame pointer value)
     #[arg(long, default_value = "16777216")]
     stack_height: u32,
+
+    /// Advice file
+    #[arg(name = "Advice file")]
+    advice: Option<String>,
 }
 
 struct Context {
@@ -61,6 +68,7 @@ struct Context {
     last_fp_: u32,
     recorded_current_fp_: u32,
     last_fp_size_: u32,
+    advice: GlobalAdviceProvider,
 }
 
 impl Context {
@@ -73,6 +81,7 @@ impl Context {
             last_fp_: args.stack_height,
             recorded_current_fp_: args.stack_height,
             last_fp_size_: 0,
+            advice: GlobalAdviceProvider::new(&args.advice),
         };
 
         let Program {
@@ -98,7 +107,7 @@ impl Context {
         if self.stopped_ == StoppingFlag::DidStop {
             return (StoppingFlag::DidStop, 0);
         }
-        let state = self.machine_.step(&mut StdinAdviceProvider);
+        let state = self.machine_.step(&mut self.advice);
         let pc = self.machine_.cpu().pc;
         let fp = self.machine_.cpu().fp;
 
@@ -342,7 +351,7 @@ fn main() {
     machine.static_data_mut().load(data);
 
     // Run the program
-    machine.run(&code, &mut StdinAdviceProvider);
+    machine.run(&code, &mut GlobalAdviceProvider::new(&args.advice));
 
     type Val = BabyBear;
     type Challenge = BinomialExtensionField<Val, 5>;
