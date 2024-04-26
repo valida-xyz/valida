@@ -17,8 +17,8 @@ use valida_machine::{
 };
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 use valida_opcodes::{
-    BEQ, BNE, BYTES_PER_INSTR, IMM32, JAL, JALV, LOAD32, LOADFP, LOADS8, LOADU8, TLOADU8, READ_ADVICE, STOP,
-    STORE32, STOREU8,
+    BEQ, BNE, BYTES_PER_INSTR, IMM32, JAL, JALV, LOAD32, LOADFP, LOADS8, LOADU8, READ_ADVICE, STOP,
+    STORE32, STOREU8, TLOADU8,
 };
 
 use p3_air::VirtualPairCol;
@@ -480,7 +480,6 @@ where
     }
 }
 
-
 impl<M, F> Instruction<M, F> for TLoadU8Instruction
 where
     M: MachineWithCpuChip<F>,
@@ -534,7 +533,7 @@ where
 
         // The Word to write, with one byte overwritten to the read byte
         let cell_to_write = cell_write.update_byte(cell_byte, index_of_write);
-        
+
         state
             .mem_mut()
             .write(clk, write_addr_index, cell_to_write, true);
@@ -542,7 +541,6 @@ where
         state.cpu_mut().push_op(Operation::TLoadU8, opcode, ops);
     }
 }
-
 
 impl<M, F> Instruction<M, F> for LoadU8Instruction
 where
@@ -643,7 +641,7 @@ where
         // The address, converted to a multiple of 4.
         let write_addr_index = addr_of_word(write_addr);
 
-        // The Word to write, with one byte overwritten to the read byte
+        // The Word to write, with the read byte sign extended to 32 bits.
         let cell_to_write = Word::sign_extend_byte(cell_byte);
 
         state

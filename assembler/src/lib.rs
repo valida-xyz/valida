@@ -105,7 +105,7 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
 
                 // Insert zero operands if necessary
                 match mnemonic {
-                    "lw" | "loadu8"| "tloadu8" | "loads8" => {
+                    "lw" | "loadu8" | "tloadu8" | "loads8" => {
                         // (a, 0, c, 0, 0)
                         operands.insert(1, 0);
                         operands.extend(vec![0; 2]);
