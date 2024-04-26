@@ -36,6 +36,8 @@ pub enum Opcode {
     MULHS32 = 114,
     LTE32 = 115,
     EQ32 = 116,
+    SLT32 = 117,
+    SLE32 = 118,
     ADD = 200,
     SUB = 201,
     MUL = 202,
@@ -85,6 +87,8 @@ declare_opcode!(SRA32);
 declare_opcode!(MULHS32);
 declare_opcode!(LTE32);
 declare_opcode!(EQ32);
+declare_opcode!(SLT32);
+declare_opcode!(SLE32);
 
 /// NATIVE FIELD
 declare_opcode!(ADD);
