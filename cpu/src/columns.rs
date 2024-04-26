@@ -49,6 +49,7 @@ pub struct OpcodeFlagCols<T> {
     pub is_imm_op: T,
     pub is_load: T,
     pub is_load_u8: T,
+    pub is_tload_u8: T,
     pub is_load_s8: T,
     pub is_store: T,
     pub is_store_u8: T,

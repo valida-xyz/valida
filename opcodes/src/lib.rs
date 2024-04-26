@@ -18,6 +18,7 @@ pub enum Opcode {
     LOADU8 = 11,
     LOADS8 = 12,
     STOREU8 = 13,
+    TLOADU8 = 16,
 
     ADD32 = 100,
     SUB32 = 101,
@@ -65,6 +66,7 @@ declare_opcode!(LOADFP);
 declare_opcode!(LOADU8);
 declare_opcode!(LOADS8);
 declare_opcode!(STOREU8);
+declare_opcode!(TLOADU8);
 
 /// NONDETERMINISTIC
 declare_opcode!(READ_ADVICE);
