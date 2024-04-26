@@ -1,5 +1,6 @@
 use super::MEMORY_CELL_BYTES;
 use core::cmp::Ordering;
+use core::mem::transmute;
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Index, IndexMut, Mul, Shl, Shr, Sub};
 use p3_field::{Field, PrimeField};
 
@@ -86,6 +87,12 @@ impl Into<u32> for Word<u8> {
             result += (self[MEMORY_CELL_BYTES - i - 1] as u32) << (i * 8);
         }
         result
+    }
+}
+
+impl Into<i32> for Word<u8> {
+    fn into(self) -> i32 {
+        unsafe { transmute::<u32, i32>(self.into()) }
     }
 }
 

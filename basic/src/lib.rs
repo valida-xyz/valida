@@ -23,7 +23,10 @@ use valida_alu_u32::{
     },
     com::{Com32Chip, Eq32Instruction, MachineWithCom32Chip, Ne32Instruction},
     div::{Div32Chip, Div32Instruction, MachineWithDiv32Chip, SDiv32Instruction},
-    lt::{Lt32Chip, Lt32Instruction, Lte32Instruction, MachineWithLt32Chip},
+    lt::{
+        Lt32Chip, Lt32Instruction, Lte32Instruction, MachineWithLt32Chip, Sle32Instruction,
+        Slt32Instruction,
+    },
     mul::{
         MachineWithMul32Chip, Mul32Chip, Mul32Instruction, Mulhs32Instruction, Mulhu32Instruction,
     },
@@ -1143,6 +1146,12 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             }
             <Lte32Instruction as Instruction<Self, F>>::OPCODE => {
                 Lte32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Slt32Instruction as Instruction<Self, F>>::OPCODE => {
+                Slt32Instruction::execute_with_advice::<Adv>(self, ops, advice)
+            }
+            <Sle32Instruction as Instruction<Self, F>>::OPCODE => {
+                Sle32Instruction::execute_with_advice::<Adv>(self, ops, advice)
             }
             <And32Instruction as Instruction<Self, F>>::OPCODE => {
                 And32Instruction::execute_with_advice::<Adv>(self, ops, advice)
