@@ -1,6 +1,7 @@
 use crate::columns::{CpuCols, NUM_CPU_COLS};
 use crate::CpuChip;
 use core::borrow::Borrow;
+use p3_field::extension::BinomiallyExtendable;
 use valida_machine::Word;
 
 use p3_air::{Air, AirBuilder, BaseAir};
@@ -45,8 +46,14 @@ where
 
         // Immediate value constraints (TODO: we'd need to range check read_value_2 in
         // this case)
+        // this asserts that at most one of `is_imm_op` and `is_left_imm_op` is true.
+        builder.assert_bool(local.opcode_flags.is_imm_op + local.opcode_flags.is_left_imm_op);
         builder.when(local.opcode_flags.is_imm_op).assert_eq(
             local.instruction.operands.c(),
+            reduce::<AB>(&base, local.read_value_2()),
+        );
+        builder.when(local.opcode_flags.is_left_imm_op).assert_eq(
+            local.instruction.operands.b(),
             reduce::<AB>(&base, local.read_value_2()),
         );
 
@@ -82,6 +89,7 @@ impl CpuChip {
         let is_loadfp = local.opcode_flags.is_loadfp;
         let _is_advice = local.opcode_flags.is_advice; // TODO: unused
         let is_imm_op = local.opcode_flags.is_imm_op;
+        let is_left_imm_op = local.opcode_flags.is_left_imm_op;
         let is_bus_op = local.opcode_flags.is_bus_op;
         let _is_bus_op_with_mem = local.opcode_flags.is_bus_op_with_mem; // TODO: unused
 
@@ -94,11 +102,12 @@ impl CpuChip {
         builder.assert_zero(local.mem_channels[2].is_read);
 
         // Read (1)
+        // note that here we are using the fact that at most one of 'is_imm_op' and 'is_left_imm_op' is ever true.
         builder
-            .when(is_jalv + is_beq + is_bne + is_bus_op)
+            .when(is_jalv + is_beq + is_bne + is_bus_op * (AB::Expr::one() - is_left_imm_op))
             .assert_eq(local.read_addr_1(), addr_b.clone());
         builder
-            .when(is_load + is_store)
+            .when(is_load + is_store + is_bus_op * is_left_imm_op)
             .assert_eq(local.read_addr_1(), addr_c.clone());
         builder
             .when(is_load + is_store + is_jalv + is_beq + is_bne + is_bus_op)
@@ -106,6 +115,7 @@ impl CpuChip {
         builder.when(is_jal).assert_zero(local.read_1_used());
 
         // Read (2)
+        // note that here we are again using the fact that at most one of 'is_imm_op' and 'is_left_imm_op' is ever true.
         builder.when(is_load).assert_eq(
             local.read_addr_2(),
             reduce::<AB>(base, local.read_value_1()),
@@ -114,18 +124,19 @@ impl CpuChip {
             .when(is_store)
             .assert_eq(local.read_addr_2(), addr_b);
         builder
-            .when(is_jalv + (AB::Expr::one() - is_imm_op) * (is_beq + is_bne + is_bus_op))
+            .when(is_jalv + (AB::Expr::one() - (is_imm_op + is_left_imm_op)) * is_bus_op)
             .assert_eq(local.read_addr_2(), addr_c);
         builder
             .when(
                 is_load
                     + is_store
                     + is_jalv
-                    + (AB::Expr::one() - is_imm_op) * (is_beq + is_bne + is_bus_op),
+                    + (AB::Expr::one() - is_imm_op) * (is_beq + is_bne)
+                    + (AB::Expr::one() - (is_imm_op + is_left_imm_op)) * is_bus_op,
             )
             .assert_one(local.read_2_used());
         builder
-            .when(is_jal + is_imm_op * (is_beq + is_bne + is_bus_op))
+            .when(is_jal + is_imm_op * (is_beq + is_bne) + (is_imm_op + is_left_imm_op) * is_bus_op)
             .assert_zero(local.read_2_used());
 
         // Write

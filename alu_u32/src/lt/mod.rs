@@ -148,13 +148,13 @@ where
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;
-        let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
         let src1: Word<u8> = if ops.d() == 1 {
             let b = (ops.b() as u32).into();
             imm = Some(b);
             b
         } else {
+            let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
             state
                 .mem_mut()
                 .read(clk, read_addr_1, true, pc, opcode, 0, "")
@@ -181,7 +181,11 @@ where
             .lt_u32_mut()
             .operations
             .push(Operation::Lt32(dst, src1, src2));
-        state.cpu_mut().push_bus_op(imm, opcode, ops);
+        if ops.d() == 1 {
+            state.cpu_mut().push_left_imm_bus_op(imm, opcode, ops);
+        } else {
+            state.cpu_mut().push_bus_op(imm, opcode, ops);
+        }
     }
 }
 
@@ -197,13 +201,13 @@ where
         let clk = state.cpu().clock;
         let pc = state.cpu().pc;
         let mut imm: Option<Word<u8>> = None;
-        let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
         let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
         let src1: Word<u8> = if ops.d() == 1 {
             let b = (ops.b() as u32).into();
             imm = Some(b);
             b
         } else {
+            let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
             state
                 .mem_mut()
                 .read(clk, read_addr_1, true, pc, opcode, 0, "")
@@ -230,6 +234,10 @@ where
             .lt_u32_mut()
             .operations
             .push(Operation::Lte32(dst, src1, src2));
-        state.cpu_mut().push_bus_op(imm, opcode, ops);
+        if ops.d() == 1 {
+            state.cpu_mut().push_left_imm_bus_op(imm, opcode, ops);
+        } else {
+            state.cpu_mut().push_bus_op(imm, opcode, ops);
+        }
     }
 }

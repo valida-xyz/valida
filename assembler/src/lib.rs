@@ -135,7 +135,7 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
                     }
                     "ilt" | "ilte" => {
                         // (a, b, c, 1, 0)
-                        operands.extend(vec![0, 1]);
+                        operands.extend(vec![1, 0]);
                     }
                     "advread" => {
                         // (a, 0, 0, 0, 0)
