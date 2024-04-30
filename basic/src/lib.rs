@@ -42,7 +42,6 @@ use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
     Load32Instruction, LoadFpInstruction, LoadS8Instruction, LoadU8Instruction,
     ReadAdviceInstruction, StopInstruction, Store32Instruction, StoreU8Instruction,
-    TLoadU8Instruction,
 };
 use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_machine::__internal::p3_challenger::{CanObserve, FieldChallenger};
@@ -68,7 +67,6 @@ pub struct BasicMachine<F: PrimeField32 + TwoAdicField> {
     // Core instructions
     load32: Load32Instruction,
     loadu8: LoadU8Instruction,
-    tloadu8: TLoadU8Instruction,
     loads8: LoadS8Instruction,
     store32: Store32Instruction,
     storeu8: StoreU8Instruction,
@@ -1082,9 +1080,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             }
             <LoadU8Instruction as Instruction<Self, F>>::OPCODE => {
                 LoadU8Instruction::execute_with_advice::<Adv>(self, ops, advice)
-            }
-            <TLoadU8Instruction as Instruction<Self, F>>::OPCODE => {
-                TLoadU8Instruction::execute_with_advice::<Adv>(self, ops, advice)
             }
             <LoadS8Instruction as Instruction<Self, F>>::OPCODE => {
                 LoadS8Instruction::execute_with_advice::<Adv>(self, ops, advice)

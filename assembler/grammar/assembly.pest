@@ -3,7 +3,7 @@ comment = { ";" ~ (!"\n" ~ ANY)* ~ "\n" }
 label = { (!":" ~ !"\n" ~ ANY)+ ~ ":" ~ "\n" }
 instruction = { mnemonic ~ (operand ~ ", "?)+? ~ "\n"? }
 mnemonic = { 
-    "lw" | "sw" | "loadu8" | "tloadu8" | "loads8" | "storeu8" | "jalv" | "jal" | "beqi" | "beq" | "bnei" | "bne" | "imm32" | "stop" |
+    "lw" | "sw" | "loadu8" | "loads8" | "storeu8" | "jalv" | "jal" | "beqi" | "beq" | "bnei" | "bne" | "imm32" | "stop" |
     "advread" | "advwrite" | 
     "addi" | "add" | "subi" | "sub" | "muli" | "mul" | "mulhsi"| "mulhui"| "mulhs"| "mulhu"  | "divi" | "div" | "sdiv" | "sdivi" |
     "ilte" | "ltei" | "lte" | "ilt" | "lti" | "lt" | "shli" | "shl" | "shri" | "shr" | "srai" | "sra" |
