@@ -42,8 +42,7 @@ impl Word<u8> {
     }
 }
 
-/// Update the cell with one byte overwritten to the input byte.
-/// The cell is stored in little endian format in the compiler. But the VM stores it in big endian.
+// The cell is stored in little endian format in the compiler. But the VM stores it in big endian.
 impl Word<u8> {
     pub fn update_byte(self, byte: u8, loc: usize) -> Self {
         let result_little_end: [u8; MEMORY_CELL_BYTES] = self.0;
