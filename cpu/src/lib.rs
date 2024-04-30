@@ -170,9 +170,6 @@ impl CpuChip {
         cols.fp = SC::Val::from_canonical_u32(self.registers[clk].fp);
         cols.clk = SC::Val::from_canonical_usize(clk);
 
-        self.set_instruction_values(clk, cols);
-        self.set_memory_channel_values::<M, SC>(clk, cols, machine);
-
         match op {
             Operation::Store32 => {
                 cols.opcode_flags.is_store = SC::Val::one();
@@ -230,6 +227,9 @@ impl CpuChip {
             }
         }
 
+        self.set_instruction_values(clk, cols);
+        self.set_memory_channel_values::<M, SC>(clk, cols, machine);
+
         row
     }
 
@@ -249,13 +249,14 @@ impl CpuChip {
         cols.mem_channels[1].is_read = SC::Val::one();
         cols.mem_channels[2].is_read = SC::Val::zero();
 
+        let is_left_imm_op = cols.opcode_flags.is_left_imm_op == SC::Val::one();
         let memory = machine.mem();
         for ops in memory.operations.get(&(clk as u32)).iter() {
             let mut is_first_read = true;
             for op in ops.iter() {
                 match op {
                     MemoryOperation::Read(addr, value) => {
-                        if is_first_read {
+                        if is_first_read & !is_left_imm_op {
                             cols.mem_channels[0].used = SC::Val::one();
                             cols.mem_channels[0].addr = SC::Val::from_canonical_u32(*addr);
                             cols.mem_channels[0].value =
@@ -363,7 +364,7 @@ impl CpuChip {
         if let Some(imm) = imm {
             cols.opcode_flags.is_left_imm_op = F::one();
             let imm = imm.transform(F::from_canonical_u8);
-            cols.mem_channels[1].value = imm;
+            cols.mem_channels[0].value = imm;
             cols.instruction.operands.0[1] = imm.reduce();
         }
     }
