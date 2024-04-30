@@ -105,6 +105,9 @@ impl InstructionWord<i32> {
             valida_opcodes::LOADU8 => {
                 format!("{}(fp), {}(fp)", self.operands.0[0], self.operands.0[2])
             }
+            valida_opcodes::TLOADU8 => {
+                format!("{}(fp), {}(fp)", self.operands.0[0], self.operands.0[2])
+            }
             valida_opcodes::LOADS8 => {
                 format!("{}(fp), {}(fp)", self.operands.0[0], self.operands.0[2])
             }
