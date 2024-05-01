@@ -115,7 +115,7 @@ impl Lt32Chip {
             .into_iter()
             .zip(c.into_iter())
             .enumerate()
-            .find_map(|(n, (x, y))| if x == y { Some(n) } else { None })
+            .find_map(|(n, (x, y))| if x == y { None } else { Some(n) })
         {
             let z = 256u16 + b[n] as u16 - c[n] as u16;
             for i in 0..10 {

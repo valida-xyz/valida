@@ -33,46 +33,59 @@ where
 
         // Check bit decomposition of z = 256 + input_1[n] - input_2[n], where
         // n is the most significant byte that differs between inputs
-        for i in 0..3 {
-            builder
-                .when_ne(local.byte_flag[i], AB::Expr::one())
-                .assert_eq(local.input_1[i], local.input_2[i]);
-
+        for i in 0..4 {
             builder.when(local.byte_flag[i]).assert_eq(
                 AB::Expr::from_canonical_u32(256) + local.input_1[i] - local.input_2[i],
                 bit_comp.clone(),
             );
-
             builder.assert_bool(local.byte_flag[i]);
         }
 
-        // Check final byte (if no other byte flags were set)
-        let flag_sum = local.byte_flag[0] + local.byte_flag[1] + local.byte_flag[2];
+        // ensure at most one byte flag is set
+        let flag_sum =
+            local.byte_flag[0] + local.byte_flag[1] + local.byte_flag[2] + local.byte_flag[3];
         builder.assert_bool(flag_sum.clone());
+
+        // case: top bytes match
         builder
-            .when_ne(local.multiplicity, AB::Expr::zero())
+            .when_ne(local.byte_flag[0], AB::Expr::one())
+            .assert_eq(local.input_1[0], local.input_2[0]);
+        // case: top two bytes match
+        builder
+            .when_ne(local.byte_flag[0] + local.byte_flag[1], AB::Expr::one())
+            .assert_eq(local.input_1[1], local.input_2[1]);
+        // case: top three bytes match
+        builder
+            .when_ne(
+                local.byte_flag[0] + local.byte_flag[1] + local.byte_flag[2],
+                AB::Expr::one(),
+            )
+            .assert_eq(local.input_1[2], local.input_2[2]);
+        // case: top four bytes match; must set z = 0
+        builder
             .when_ne(flag_sum.clone(), AB::Expr::one())
-            .assert_eq(
-                AB::Expr::from_canonical_u32(256) + local.input_1[3] - local.input_2[3],
-                bit_comp.clone(),
-            );
+            .assert_eq(local.input_1[3], local.input_2[3]);
+        builder
+            .when_ne(flag_sum.clone(), AB::Expr::one())
+            .assert_eq(bit_comp, AB::Expr::zero());
 
         builder.assert_bool(local.is_lt);
         builder.assert_bool(local.is_lte);
         builder.assert_bool(local.is_lt + local.is_lte);
 
         // Output constraints
+        // local.bits[8] is 1 iff input_1 > input_2: output should be 0
         builder.when(local.bits[8]).assert_zero(local.output);
-        builder
-            .when_ne(local.multiplicity, AB::Expr::zero())
-            .when_ne(local.bits[8], AB::Expr::one())
-            .assert_one(local.output);
         // output should be 1 if is_lte & input_1 == input_2
-        let all_flag_sum = flag_sum + local.byte_flag[3];
         builder
             .when(local.is_lte)
-            .when_ne(all_flag_sum, AB::Expr::one())
+            .when_ne(flag_sum.clone(), AB::Expr::one())
             .assert_one(local.output);
+        // output should be 0 if is_lt & input_1 == input_2
+        builder
+            .when(local.is_lt)
+            .when_ne(flag_sum, AB::Expr::one())
+            .assert_zero(local.output);
 
         // Check bit decomposition
         for bit in local.bits.into_iter() {

@@ -3,6 +3,7 @@ extern crate core;
 use p3_baby_bear::BabyBear;
 use p3_fri::{TwoAdicFriPcs, TwoAdicFriPcsConfig};
 use valida_alu_u32::add::{Add32Instruction, MachineWithAdd32Chip};
+use valida_alu_u32::lt::{Lt32Instruction, Lte32Instruction};
 use valida_basic::BasicMachine;
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
@@ -20,7 +21,7 @@ use valida_program::MachineWithProgramChip;
 use p3_challenger::DuplexChallenger;
 use p3_dft::Radix2Bowers;
 use p3_field::extension::BinomialExtensionField;
-use p3_field::Field;
+use p3_field::{Field, PrimeField32, TwoAdicField};
 use p3_fri::FriConfig;
 use p3_keccak::Keccak256Hash;
 use p3_mds::coset_mds::CosetMds;
@@ -31,8 +32,7 @@ use rand::thread_rng;
 use valida_machine::StarkConfigImpl;
 use valida_machine::__internal::p3_commit::ExtensionMmcs;
 
-#[test]
-fn prove_fibonacci() {
+fn fib_program<Val: PrimeField32 + TwoAdicField>() -> Vec<InstructionWord<i32>> {
     let mut program = vec![];
 
     // Label locations
@@ -46,7 +46,7 @@ fn prove_fibonacci() {
     //main:                                   ; @main
     //; %bb.0:
     //	imm32	-4(fp), 0, 0, 0, 0
-    //	imm32	-8(fp), 0, 0, 0, 10
+    //	imm32	-8(fp), 0, 0, 0, 25
     //	addi	-16(fp), -8(fp), 0
     //	imm32	-20(fp), 0, 0, 0, 28
     //	jal	-28(fp), fib, -28
@@ -184,7 +184,74 @@ fn prove_fibonacci() {
             operands: Operands([-4, 0, 8, 0, 0]),
         },
     ]);
+    program
+}
 
+fn left_imm_ops_program<Val: PrimeField32 + TwoAdicField>() -> Vec<InstructionWord<i32>> {
+    let mut program = vec![];
+
+    // imm32	-4(fp), 0, 0, 0, 3
+    // lt32    -8(fp), 3, -4(fp), 1, 0
+    // lte32    -12(fp), 3, -4(fp), 1, 0
+    // stop
+    program.extend([
+        InstructionWord {
+            opcode: <Imm32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([-4, 0, 0, 0, 3]),
+        },
+        InstructionWord {
+            opcode: <Imm32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([-8, 0, 0, 1, 0]),
+        },
+        InstructionWord {
+            opcode: <Lt32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([4, 3, -4, 1, 0]),
+        },
+        InstructionWord {
+            opcode: <Lte32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([8, 3, -4, 1, 0]),
+        },
+        InstructionWord {
+            opcode: <Lt32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([12, 4, -4, 1, 0]),
+        },
+        InstructionWord {
+            opcode: <Lte32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([16, 4, -4, 1, 0]),
+        },
+        InstructionWord {
+            opcode: <Lt32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([20, 2, -4, 1, 0]),
+        },
+        InstructionWord {
+            opcode: <Lte32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([24, 2, -4, 1, 0]),
+        },
+        InstructionWord {
+            opcode: <Lt32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([28, 256, -4, 1, 0]),
+        },
+        InstructionWord {
+            opcode: <Lte32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([32, 256, -4, 1, 0]),
+        },
+        InstructionWord {
+            opcode: <Lt32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([36, 3, -8, 1, 0]),
+        },
+        InstructionWord {
+            opcode: <Lte32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([40, 3, -8, 1, 0]),
+        },
+        InstructionWord {
+            opcode: <StopInstruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands::default(),
+        },
+    ]);
+    program
+}
+
+fn prove_program(program: Vec<InstructionWord<i32>>) -> BasicMachine<BabyBear> {
     let mut machine = BasicMachine::<Val>::default();
     let rom = ProgramROM::new(program);
     machine.program_mut().set_program_rom(&rom);
@@ -194,6 +261,7 @@ fn prove_fibonacci() {
     machine.run(&rom, &mut FixedAdviceProvider::empty());
 
     type Val = BabyBear;
+
     type Challenge = BinomialExtensionField<Val, 5>;
     type PackedChallenge = BinomialExtensionField<<Val as Field>::Packing, 5>;
 
@@ -250,13 +318,68 @@ fn prove_fibonacci() {
         .verify(&config, &deserialized_proof)
         .expect("verification failed");
 
+    machine
+}
+#[test]
+fn prove_fibonacci() {
+    let program = fib_program::<BabyBear>();
+
+    let machine = prove_program(program);
+
     assert_eq!(machine.cpu().clock, 192);
     assert_eq!(machine.cpu().operations.len(), 192);
     assert_eq!(machine.mem().operations.values().flatten().count(), 401);
     assert_eq!(machine.add_u32().operations.len(), 105);
-
     assert_eq!(
         *machine.mem().cells.get(&(0x1000 + 4)).unwrap(), // Return value
         Word([0, 1, 37, 17,])                             // 25th fibonacci number (75025)
+    );
+}
+
+#[test]
+fn prove_left_imm_ops() {
+    let program = left_imm_ops_program::<BabyBear>();
+
+    let machine = prove_program(program);
+
+    assert_eq!(
+        *machine.mem().cells.get(&(0x1000 + 4)).unwrap(),
+        Word([0, 0, 0, 0]) // 3 < 3 (false)
+    );
+    assert_eq!(
+        *machine.mem().cells.get(&(0x1000 + 8)).unwrap(),
+        Word([0, 0, 0, 1]) // 3 <= 3 (true)
+    );
+    assert_eq!(
+        *machine.mem().cells.get(&(0x1000 + 12)).unwrap(),
+        Word([0, 0, 0, 0]) // 4 < 3 (false)
+    );
+    assert_eq!(
+        *machine.mem().cells.get(&(0x1000 + 16)).unwrap(),
+        Word([0, 0, 0, 0]) // 4 <= 3 (false)
+    );
+    assert_eq!(
+        *machine.mem().cells.get(&(0x1000 + 20)).unwrap(),
+        Word([0, 0, 0, 1]) // 2 < 3 (true)
+    );
+    assert_eq!(
+        *machine.mem().cells.get(&(0x1000 + 24)).unwrap(),
+        Word([0, 0, 0, 1]) // 2 <= 3 (true)
+    );
+    assert_eq!(
+        *machine.mem().cells.get(&(0x1000 + 28)).unwrap(),
+        Word([0, 0, 0, 0]) // 256 < 3 (false)
+    );
+    assert_eq!(
+        *machine.mem().cells.get(&(0x1000 + 32)).unwrap(),
+        Word([0, 0, 0, 0]) // 256 <= 3 (false)
+    );
+    assert_eq!(
+        *machine.mem().cells.get(&(0x1000 + 36)).unwrap(),
+        Word([0, 0, 0, 1]) // 3 < 256 (true)
+    );
+    assert_eq!(
+        *machine.mem().cells.get(&(0x1000 + 40)).unwrap(),
+        Word([0, 0, 0, 1]) // 3 <= 256 (false)
     );
 }
