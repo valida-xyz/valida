@@ -435,9 +435,9 @@ fn main() {
             Ok(_) => {
                 stdout().write("Proof verified\n".as_bytes()).unwrap();
             }
-            Err(e) => {
+            Err(_) => {
                 stdout()
-                    .write("Proof verification failed: \n".as_bytes())
+                    .write("Proof verification failed\n".as_bytes())
                     .unwrap();
             }
         }

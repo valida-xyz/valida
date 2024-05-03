@@ -1,3 +1,5 @@
+#![no_std]
+
 extern crate alloc;
 
 use crate::columns::{CpuCols, CPU_COL_MAP, NUM_CPU_COLS};

@@ -1,7 +1,6 @@
 use crate::columns::{CpuCols, NUM_CPU_COLS};
 use crate::CpuChip;
 use core::borrow::Borrow;
-
 use valida_machine::Word;
 
 use p3_air::{Air, AirBuilder, BaseAir};
