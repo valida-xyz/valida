@@ -31,21 +31,13 @@ where
             .map(|(bit, base)| bit * base)
             .sum();
 
-        // Check bit decomposition of z = 256 + input_1[n] - input_2[n], where
-        // n is the most significant byte that differs between inputs
-        for i in 0..4 {
-            builder.when(local.byte_flag[i]).assert_eq(
-                AB::Expr::from_canonical_u32(256) + local.input_1[i] - local.input_2[i],
-                bit_comp.clone(),
-            );
-            builder.assert_bool(local.byte_flag[i]);
-        }
+        // check that the n-th byte flag is set, where n is the first byte that differs between the two inputs
 
         // ensure at most one byte flag is set
         let flag_sum =
             local.byte_flag[0] + local.byte_flag[1] + local.byte_flag[2] + local.byte_flag[3];
         builder.assert_bool(flag_sum.clone());
-
+        // check that bytes before the first set byte flag are all equal
         // case: top bytes match
         builder
             .when_ne(local.byte_flag[0], AB::Expr::one())
@@ -67,7 +59,17 @@ where
             .assert_eq(local.input_1[3], local.input_2[3]);
         builder
             .when_ne(flag_sum.clone(), AB::Expr::one())
-            .assert_eq(bit_comp, AB::Expr::zero());
+            .assert_eq(bit_comp.clone(), AB::Expr::zero());
+
+        // Check bit decomposition of z = 256 + input_1[n] - input_2[n]
+        // when `n` is the first byte that differs between the two inputs.
+        for i in 0..4 {
+            builder.when(local.byte_flag[i]).assert_eq(
+                AB::Expr::from_canonical_u32(256) + local.input_1[i] - local.input_2[i],
+                bit_comp.clone(),
+            );
+            builder.assert_bool(local.byte_flag[i]);
+        }
 
         builder.assert_bool(local.is_lt);
         builder.assert_bool(local.is_lte);

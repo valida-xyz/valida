@@ -139,6 +139,57 @@ impl Lt32Chip {
         }
         cols.multiplicity = F::one();
     }
+
+    fn execute_with_closure<M, E, F>(
+        state: &mut M,
+        ops: Operands<i32>,
+        opcode: u32,
+        comp: F,
+    ) -> (Word<u8>, Word<u8>, Word<u8>)
+    where
+        M: MachineWithLt32Chip<E>,
+        E: Field,
+        F: Fn(Word<u8>, Word<u8>) -> bool,
+    {
+        let clk = state.cpu().clock;
+        let pc = state.cpu().pc;
+        let mut imm: Option<Word<u8>> = None;
+        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
+        let src1: Word<u8> = if ops.d() == 1 {
+            let b = (ops.b() as u32).into();
+            imm = Some(b);
+            b
+        } else {
+            let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
+            state
+                .mem_mut()
+                .read(clk, read_addr_1, true, pc, opcode, 0, "")
+        };
+        let src2: Word<u8> = if ops.is_imm() == 1 {
+            let c = (ops.c() as u32).into();
+            imm = Some(c);
+            c
+        } else {
+            let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
+            state
+                .mem_mut()
+                .read(clk, read_addr_2, true, pc, opcode, 1, "")
+        };
+
+        let dst = if comp(src1, src2) {
+            Word::from(1)
+        } else {
+            Word::from(0)
+        };
+        state.mem_mut().write(clk, write_addr, dst, true);
+
+        if ops.d() == 1 {
+            state.cpu_mut().push_left_imm_bus_op(imm, opcode, ops)
+        } else {
+            state.cpu_mut().push_bus_op(imm, opcode, ops);
+        }
+        (dst, src1, src2)
+    }
 }
 
 pub trait MachineWithLt32Chip<F: Field>: MachineWithCpuChip<F> {
@@ -162,47 +213,13 @@ where
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let opcode = <Self as Instruction<M, F>>::OPCODE;
-        let clk = state.cpu().clock;
-        let pc = state.cpu().pc;
-        let mut imm: Option<Word<u8>> = None;
-        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let src1: Word<u8> = if ops.d() == 1 {
-            let b = (ops.b() as u32).into();
-            imm = Some(b);
-            b
-        } else {
-            let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
-            state
-                .mem_mut()
-                .read(clk, read_addr_1, true, pc, opcode, 0, "")
-        };
-        let src2: Word<u8> = if ops.is_imm() == 1 {
-            let c = (ops.c() as u32).into();
-            imm = Some(c);
-            c
-        } else {
-            let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state
-                .mem_mut()
-                .read(clk, read_addr_2, true, pc, opcode, 1, "")
-        };
-
-        let dst = if src1 < src2 {
-            Word::from(1)
-        } else {
-            Word::from(0)
-        };
-        state.mem_mut().write(clk, write_addr, dst, true);
+        let comp = |a, b| a < b;
+        let (dst, src1, src2) = Lt32Chip::execute_with_closure(state, ops, opcode, comp);
 
         state
             .lt_u32_mut()
             .operations
             .push(Operation::Lt32(dst, src1, src2));
-        if ops.d() == 1 {
-            state.cpu_mut().push_left_imm_bus_op(imm, opcode, ops);
-        } else {
-            state.cpu_mut().push_bus_op(imm, opcode, ops);
-        }
     }
 }
 
@@ -215,47 +232,12 @@ where
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let opcode = <Self as Instruction<M, F>>::OPCODE;
-        let clk = state.cpu().clock;
-        let pc = state.cpu().pc;
-        let mut imm: Option<Word<u8>> = None;
-        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let src1: Word<u8> = if ops.d() == 1 {
-            let b = (ops.b() as u32).into();
-            imm = Some(b);
-            b
-        } else {
-            let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
-            state
-                .mem_mut()
-                .read(clk, read_addr_1, true, pc, opcode, 0, "")
-        };
-        let src2: Word<u8> = if ops.is_imm() == 1 {
-            let c = (ops.c() as u32).into();
-            imm = Some(c);
-            c
-        } else {
-            let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state
-                .mem_mut()
-                .read(clk, read_addr_2, true, pc, opcode, 1, "")
-        };
-
-        let dst = if src1 <= src2 {
-            Word::from(1)
-        } else {
-            Word::from(0)
-        };
-        state.mem_mut().write(clk, write_addr, dst, true);
-
+        let comp = |a, b| a <= b;
+        let (dst, src1, src2) = Lt32Chip::execute_with_closure(state, ops, opcode, comp);
         state
             .lt_u32_mut()
             .operations
             .push(Operation::Lte32(dst, src1, src2));
-        if ops.d() == 1 {
-            state.cpu_mut().push_left_imm_bus_op(imm, opcode, ops);
-        } else {
-            state.cpu_mut().push_bus_op(imm, opcode, ops);
-        }
     }
 }
 
@@ -268,45 +250,16 @@ where
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let opcode = <Self as Instruction<M, F>>::OPCODE;
-        let clk = state.cpu().clock;
-        let pc = state.cpu().pc;
-        let mut imm: Option<Word<u8>> = None;
-        let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
-        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let src1: Word<u8> = if ops.d() == 1 {
-            let b = (ops.b() as u32).into();
-            imm = Some(b);
-            b
-        } else {
-            state
-                .mem_mut()
-                .read(clk, read_addr_1, true, pc, opcode, 0, "")
+        let comp = |a: Word<u8>, b: Word<u8>| {
+            let a_i: i32 = a.into();
+            let b_i: i32 = b.into();
+            a_i < b_i
         };
-        let src2: Word<u8> = if ops.is_imm() == 1 {
-            let c = (ops.c() as u32).into();
-            imm = Some(c);
-            c
-        } else {
-            let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state
-                .mem_mut()
-                .read(clk, read_addr_2, true, pc, opcode, 1, "")
-        };
-
-        let src1_i: i32 = src1.into();
-        let src2_i: i32 = src2.into();
-        let dst = if src1_i < src2_i {
-            Word::from(1)
-        } else {
-            Word::from(0)
-        };
-        state.mem_mut().write(clk, write_addr, dst, true);
-
+        let (dst, src1, src2) = Lt32Chip::execute_with_closure(state, ops, opcode, comp);
         state
             .lt_u32_mut()
             .operations
             .push(Operation::Slt32(dst, src1, src2));
-        state.cpu_mut().push_bus_op(imm, opcode, ops);
     }
 }
 
@@ -319,44 +272,16 @@ where
 
     fn execute(state: &mut M, ops: Operands<i32>) {
         let opcode = <Self as Instruction<M, F>>::OPCODE;
-        let clk = state.cpu().clock;
-        let pc = state.cpu().pc;
-        let mut imm: Option<Word<u8>> = None;
-        let read_addr_1 = (state.cpu().fp as i32 + ops.b()) as u32;
-        let write_addr = (state.cpu().fp as i32 + ops.a()) as u32;
-        let src1: Word<u8> = if ops.d() == 1 {
-            let b = (ops.b() as u32).into();
-            imm = Some(b);
-            b
-        } else {
-            state
-                .mem_mut()
-                .read(clk, read_addr_1, true, pc, opcode, 0, "")
+        let comp = |a: Word<u8>, b: Word<u8>| {
+            let a_i: i32 = a.into();
+            let b_i: i32 = b.into();
+            a_i <= b_i
         };
-        let src2: Word<u8> = if ops.is_imm() == 1 {
-            let c = (ops.c() as u32).into();
-            imm = Some(c);
-            c
-        } else {
-            let read_addr_2 = (state.cpu().fp as i32 + ops.c()) as u32;
-            state
-                .mem_mut()
-                .read(clk, read_addr_2, true, pc, opcode, 1, "")
-        };
-
-        let src1_i: i32 = src1.into();
-        let src2_i: i32 = src2.into();
-        let dst = if src1_i <= src2_i {
-            Word::from(1)
-        } else {
-            Word::from(0)
-        };
-        state.mem_mut().write(clk, write_addr, dst, true);
+        let (dst, src1, src2) = Lt32Chip::execute_with_closure(state, ops, opcode, comp);
 
         state
             .lt_u32_mut()
             .operations
             .push(Operation::Sle32(dst, src1, src2));
-        state.cpu_mut().push_bus_op(imm, opcode, ops);
     }
 }

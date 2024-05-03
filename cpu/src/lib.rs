@@ -171,6 +171,7 @@ impl CpuChip {
         cols.pc = SC::Val::from_canonical_u32(self.registers[clk].pc);
         cols.fp = SC::Val::from_canonical_u32(self.registers[clk].fp);
         cols.clk = SC::Val::from_canonical_usize(clk);
+        self.set_instruction_values(clk, cols);
 
         match op {
             Operation::Store32 => {
@@ -229,7 +230,6 @@ impl CpuChip {
             }
         }
 
-        self.set_instruction_values(clk, cols);
         self.set_memory_channel_values::<M, SC>(clk, cols, machine);
 
         row

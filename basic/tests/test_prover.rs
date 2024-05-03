@@ -190,59 +190,69 @@ fn fib_program<Val: PrimeField32 + TwoAdicField>() -> Vec<InstructionWord<i32>> 
 fn left_imm_ops_program<Val: PrimeField32 + TwoAdicField>() -> Vec<InstructionWord<i32>> {
     let mut program = vec![];
 
-    // imm32	-4(fp), 0, 0, 0, 3
-    // lt32    -8(fp), 3, -4(fp), 1, 0
-    // lte32    -12(fp), 3, -4(fp), 1, 0
-    // stop
     program.extend([
+        // imm32	-4(fp), 0, 0, 0, 3
+        // ;(0, 0, 1, 0) == 256
         InstructionWord {
             opcode: <Imm32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
             operands: Operands([-4, 0, 0, 0, 3]),
         },
+        // imm32   -8(fp), 0, 0, 1, 0
         InstructionWord {
             opcode: <Imm32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
             operands: Operands([-8, 0, 0, 1, 0]),
         },
+        // lt32    4(fp), 3, -4(fp), 1, 0
         InstructionWord {
             opcode: <Lt32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
             operands: Operands([4, 3, -4, 1, 0]),
         },
+        // lte32    8(fp), 3, -4(fp), 1, 0
         InstructionWord {
             opcode: <Lte32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
             operands: Operands([8, 3, -4, 1, 0]),
         },
+        // lt32    12(fp), 4, -4(fp), 1, 0
         InstructionWord {
             opcode: <Lt32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
             operands: Operands([12, 4, -4, 1, 0]),
         },
+        // lte32   16(fp), 4, -4(fp), 1, 0
         InstructionWord {
             opcode: <Lte32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
             operands: Operands([16, 4, -4, 1, 0]),
         },
+        // lt32 20(fp), 2, -4(fp), 1, 0
         InstructionWord {
             opcode: <Lt32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
             operands: Operands([20, 2, -4, 1, 0]),
         },
+        // lte32 24(fp), 2, -4(fp), 1, 0
         InstructionWord {
             opcode: <Lte32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
             operands: Operands([24, 2, -4, 1, 0]),
         },
+        // lt32 28(fp), 256, -4(fp), 1, 0
         InstructionWord {
             opcode: <Lt32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
             operands: Operands([28, 256, -4, 1, 0]),
         },
+        // lte32 32(fp), 256, -4(fp), 1, 0
         InstructionWord {
             opcode: <Lte32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
             operands: Operands([32, 256, -4, 1, 0]),
         },
+        // lt32 36(fp), 3, -8(fp), 1, 0
         InstructionWord {
             opcode: <Lt32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
             operands: Operands([36, 3, -8, 1, 0]),
         },
+        // lte32 40(fp), 3, -8(fp), 1, 0
         InstructionWord {
             opcode: <Lte32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
             operands: Operands([40, 3, -8, 1, 0]),
         },
+        // stop 0, 0, 0, 0, 0
         InstructionWord {
             opcode: <StopInstruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
             operands: Operands::default(),
