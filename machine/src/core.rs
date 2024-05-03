@@ -45,12 +45,7 @@ impl Word<u8> {
 // The cell is stored in little endian format in the compiler. But the VM stores it in big endian.
 impl Word<u8> {
     pub fn update_byte(self, byte: u8, loc: usize) -> Self {
-        let result_little_end: [u8; MEMORY_CELL_BYTES] = self.0;
-        let mut result = [0; 4];
-        // Convert from little to big endian.
-        for i in 0..MEMORY_CELL_BYTES {
-            result[i] = result_little_end[3 - i];
-        }
+        let mut result = self.0;
         result[loc] = byte;
         Self(result)
     }
