@@ -1,5 +1,6 @@
 use super::MEMORY_CELL_BYTES;
 use core::cmp::Ordering;
+use core::mem::transmute;
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Index, IndexMut, Mul, Shl, Shr, Sub};
 use p3_field::{Field, PrimeField};
 
@@ -9,8 +10,9 @@ pub struct Word<F>(pub [F; MEMORY_CELL_BYTES]);
 
 // Functions for byte manipulations
 /// Get the index of a byte in a memory cell.
+/// The index is converted from little endian (as emitted by the compiler) to big endian.
 pub fn index_of_byte(addr: u32) -> usize {
-    (addr & 3) as usize
+    (3 - (addr & 3)) as usize
 }
 
 /// Get the address of the memory cells which is not empty (a multiple of 4).
@@ -40,9 +42,15 @@ impl Word<u8> {
     }
 }
 
+// The cell is stored in little endian format in the compiler. But the VM stores it in big endian.
 impl Word<u8> {
     pub fn update_byte(self, byte: u8, loc: usize) -> Self {
-        let mut result: [u8; MEMORY_CELL_BYTES] = self.0;
+        let result_little_end: [u8; MEMORY_CELL_BYTES] = self.0;
+        let mut result = [0; 4];
+        // Convert from little to big endian.
+        for i in 0..MEMORY_CELL_BYTES {
+            result[i] = result_little_end[3 - i];
+        }
         result[loc] = byte;
         Self(result)
     }
@@ -79,6 +87,12 @@ impl Into<u32> for Word<u8> {
             result += (self[MEMORY_CELL_BYTES - i - 1] as u32) << (i * 8);
         }
         result
+    }
+}
+
+impl Into<i32> for Word<u8> {
+    fn into(self) -> i32 {
+        unsafe { transmute::<u32, i32>(self.into()) }
     }
 }
 
