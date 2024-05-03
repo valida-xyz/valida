@@ -10,7 +10,6 @@ pub struct AssemblyParser;
 
 pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
     let parsed = AssemblyParser::parse(Rule::assembly, input).unwrap();
-
     // First pass: Record label locations
     let mut label_locations = HashMap::new();
     let mut pc = 0;
@@ -82,6 +81,8 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
                     "sdiv" | "sdivi" => SDIV32,
                     "ilt" | "lt" | "lti" => LT32,
                     "ilte" | "lte" | "ltei" => LTE32,
+                    "islt" | "slt" | "slti" => SLT32,
+                    "isle" | "sle" | "slei" => SLE32,
                     "shl" | "shli" => SHL32,
                     "shr" | "shri" => SHR32,
                     "sra" | "srai" => SRA32,
@@ -123,17 +124,17 @@ pub fn assemble(input: &str) -> Result<Vec<u8>, String> {
                     }
                     "add" | "sub" | "mul" | "mulhs" | "mulhu" | "div" | "lt" | "lte" | "shl"
                     | "shr" | "sra" | "beq" | "bne" | "and" | "or" | "xor" | "ne" | "eq"
-                    | "jal" | "jalv" => {
+                    | "jal" | "jalv" | "slt" | "sle" => {
                         // (a, b, c, 0, 0)
                         operands.extend(vec![0; 2]);
                     }
                     "addi" | "subi" | "muli" | "mulhsi" | "mulhui" | "divi" | "sdivi" | "lti"
                     | "ltei" | "shli" | "shri" | "srai" | "beqi" | "bnei" | "andi" | "ori"
-                    | "xori" | "nei" | "eqi" => {
+                    | "xori" | "nei" | "eqi" | "slti" | "slei" => {
                         // (a, b, c, 0, 1)
                         operands.extend(vec![0, 1]);
                     }
-                    "ilt" | "ilte" => {
+                    "ilt" | "ilte" | "islt" | "isle" => {
                         // (a, b, c, 1, 0)
                         operands.extend(vec![1, 0]);
                     }
