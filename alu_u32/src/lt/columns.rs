@@ -21,6 +21,9 @@ pub struct Lt32Cols<T> {
 
     pub is_lt: T,
     pub is_lte: T,
+
+    // inverse of input_1[i] - input_2[i] where i is the first byte that differs
+    pub diff_inv: T,
 }
 
 pub const NUM_LT_COLS: usize = size_of::<Lt32Cols<u8>>();

@@ -68,6 +68,11 @@ where
                 AB::Expr::from_canonical_u32(256) + local.input_1[i] - local.input_2[i],
                 bit_comp.clone(),
             );
+            // ensure that when the n-th byte flag is set, the n-th bytes are actually different
+            builder.when(local.byte_flag[i]).assert_eq(
+                (local.input_1[i] - local.input_2[i]) * local.diff_inv,
+                AB::Expr::one(),
+            );
             builder.assert_bool(local.byte_flag[i]);
         }
 

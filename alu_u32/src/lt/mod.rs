@@ -119,6 +119,9 @@ impl Lt32Chip {
         F: PrimeField,
     {
         // Set the input columns
+        debug_assert_eq!(a.0.len(), 4);
+        debug_assert_eq!(b.0.len(), 4);
+        debug_assert_eq!(c.0.len(), 4);
         cols.input_1 = b.transform(F::from_canonical_u8);
         cols.input_2 = c.transform(F::from_canonical_u8);
         cols.output = F::from_canonical_u8(a[3]);
@@ -133,9 +136,9 @@ impl Lt32Chip {
             for i in 0..10 {
                 cols.bits[i] = F::from_canonical_u16(z >> i & 1);
             }
-            if n < 4 {
-                cols.byte_flag[n] = F::one();
-            }
+            cols.byte_flag[n] = F::one();
+            // b[n] != c[n] always here, so the difference is never zero.
+            cols.diff_inv = (cols.input_1[n] - cols.input_2[n]).inverse();
         }
         cols.multiplicity = F::one();
     }
