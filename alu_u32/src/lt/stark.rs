@@ -22,7 +22,7 @@ where
         let main = builder.main();
         let local: &Lt32Cols<AB::Var> = main.row_slice(0).borrow();
 
-        let base_2 = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512].map(AB::Expr::from_canonical_u32);
+        let base_2 = [1, 2, 4, 8, 16, 32, 64, 128, 256].map(AB::Expr::from_canonical_u32);
 
         let bit_comp: AB::Expr = local
             .bits
@@ -76,26 +76,89 @@ where
             builder.assert_bool(local.byte_flag[i]);
         }
 
+        // Check the bit decomposition of the top bytes:
+        let top_comp_1: AB::Expr = local
+            .top_bits_1
+            .into_iter()
+            .zip(base_2.iter().cloned())
+            .map(|(bit, base)| bit * base)
+            .sum();
+        let top_comp_2: AB::Expr = local
+            .top_bits_2
+            .into_iter()
+            .zip(base_2.iter().cloned())
+            .map(|(bit, base)| bit * base)
+            .sum();
+        builder.assert_eq(top_comp_1, local.input_1[0]);
+        builder.assert_eq(top_comp_2, local.input_2[0]);
+
+        // Check that `different_signs` is set correctly by comparing sign bits.
+        builder
+            .when(local.byte_flag[0])
+            .when_ne(local.top_bits_1[7], local.top_bits_2[7])
+            .assert_eq(local.different_signs, AB::Expr::one());
+        builder
+            .when(local.different_signs)
+            .assert_eq(local.byte_flag[0], AB::Expr::one());
+        // local.top_bits_1[7] and local.top_bits_2[7] are boolean; their sum is 1 iff they are unequal.
+        builder
+            .when(local.different_signs)
+            .assert_eq(local.top_bits_1[7] + local.top_bits_2[7], AB::Expr::one());
+
         builder.assert_bool(local.is_lt);
         builder.assert_bool(local.is_lte);
-        builder.assert_bool(local.is_lt + local.is_lte);
+        builder.assert_bool(local.is_slt);
+        builder.assert_bool(local.is_sle);
+        builder.assert_bool(local.is_lt + local.is_lte + local.is_slt + local.is_sle);
+
+        let is_signed = local.is_slt + local.is_sle;
+        let is_unsigned = AB::Expr::one() - is_signed;
+        let same_sign = AB::Expr::one() - local.different_signs;
+        let are_equal = AB::Expr::one() - flag_sum.clone();
 
         // Output constraints
-        // local.bits[8] is 1 iff input_1 > input_2: output should be 0
-        builder.when(local.bits[8]).assert_zero(local.output);
-        // output should be 1 if is_lte & input_1 == input_2
+        // Case 0: input_1 > input_2 as unsigned ints; equivalently, local.bits[8] == 1
+        //  when both inputs have the same sign, signed and unsigned inequality agree.
         builder
-            .when(local.is_lte)
-            .when_ne(flag_sum.clone(), AB::Expr::one())
+            .when(local.bits[8])
+            .when(is_unsigned.clone() + same_sign.clone())
+            .assert_zero(local.output);
+        // when the inputs have different signs, signed inequality is the opposite of unsigned inequality.
+        builder
+            .when(local.bits[8])
+            .when(local.different_signs)
             .assert_one(local.output);
-        // output should be 0 if is_lt & input_1 == input_2
+
+        // Case 1: input_1 < input_2 as unsigned ints; equivalently, local.bits[8] == is_equal == 0.
         builder
-            .when(local.is_lt)
-            .when_ne(flag_sum, AB::Expr::one())
+            // when are_equal == 1, we have already enforced that local.bits[8] == 0
+            .when_ne(local.bits[8] + are_equal.clone(), AB::Expr::one())
+            .when(is_unsigned.clone() + same_sign.clone())
+            .assert_one(local.output);
+        builder
+            .when_ne(local.bits[8] + are_equal.clone(), AB::Expr::one())
+            .when(local.different_signs)
             .assert_zero(local.output);
 
-        // Check bit decomposition
-        for bit in local.bits.into_iter() {
+        // Case 2: input_1 == input_2; equivalently, are_equal == 1
+        // output should be 1 if is_lte or is_sle
+        builder
+            .when(are_equal.clone())
+            .when(local.is_lte + local.is_sle)
+            .assert_one(local.output);
+        // output should be 0 if is_lt or is_slt
+        builder
+            .when(are_equal.clone())
+            .when(local.is_lt + local.is_slt)
+            .assert_zero(local.output);
+
+        // Check "bit" values are all boolean
+        for bit in local
+            .bits
+            .into_iter()
+            .chain(local.top_bits_1.into_iter())
+            .chain(local.top_bits_2.into_iter())
+        {
             builder.assert_bool(bit);
         }
     }
