@@ -96,28 +96,32 @@ impl Lt32Chip {
         match op {
             Operation::Lt32(a, b, c) => {
                 cols.is_lt = F::one();
-                self.set_cols(cols, a, b, c);
-                cols.different_signs = F::zero();
+                self.set_cols(cols, false, a, b, c);
             }
             Operation::Lte32(a, b, c) => {
                 cols.is_lte = F::one();
-                self.set_cols(cols, a, b, c);
-                cols.different_signs = F::zero();
+                self.set_cols(cols, false, a, b, c);
             }
             Operation::Slt32(a, b, c) => {
                 cols.is_slt = F::one();
-                self.set_cols(cols, a, b, c);
+                self.set_cols(cols, true, a, b, c);
             }
             Operation::Sle32(a, b, c) => {
                 cols.is_sle = F::one();
-                self.set_cols(cols, a, b, c);
+                self.set_cols(cols, true, a, b, c);
             }
         }
         row
     }
 
-    fn set_cols<F>(&self, cols: &mut Lt32Cols<F>, a: &Word<u8>, b: &Word<u8>, c: &Word<u8>)
-    where
+    fn set_cols<F>(
+        &self,
+        cols: &mut Lt32Cols<F>,
+        is_signed: bool,
+        a: &Word<u8>,
+        b: &Word<u8>,
+        c: &Word<u8>,
+    ) where
         F: PrimeField,
     {
         // Set the input columns
@@ -148,8 +152,12 @@ impl Lt32Chip {
             cols.top_bits_2[i] = F::from_canonical_u8(c[0] >> i & 1);
         }
         // check if sign bits agree and set different_signs accordingly
-        cols.different_signs = if cols.top_bits_1[7] != cols.top_bits_2[7] {
-            F::one()
+        cols.different_signs = if is_signed {
+            if cols.top_bits_1[7] != cols.top_bits_2[7] {
+                F::one()
+            } else {
+                F::zero()
+            }
         } else {
             F::zero()
         };
