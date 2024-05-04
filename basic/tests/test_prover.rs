@@ -290,6 +290,7 @@ fn signed_inequality_program<Val: PrimeField32 + TwoAdicField>() -> Vec<Instruct
     // slt32 24(fp), -1, -12(fp), 1, 0
     // slt32 28(fp), -8(fp), -12(fp), 0, 0
     // slt32 32(fp), -8(fp), -4(fp), 0, 0
+
     program.extend([
         InstructionWord {
             opcode: <Slt32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
@@ -370,7 +371,7 @@ fn signed_inequality_program<Val: PrimeField32 + TwoAdicField>() -> Vec<Instruct
         // stop 0, 0, 0, 0, 0
         InstructionWord {
             opcode: <StopInstruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
-            operands: Operands::default(),
+            operands: Operands([0, 0, 0, 0, 0]),
         },
     ]);
 

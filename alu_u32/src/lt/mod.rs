@@ -97,10 +97,12 @@ impl Lt32Chip {
             Operation::Lt32(a, b, c) => {
                 cols.is_lt = F::one();
                 self.set_cols(cols, a, b, c);
+                cols.different_signs = F::zero();
             }
             Operation::Lte32(a, b, c) => {
                 cols.is_lte = F::one();
                 self.set_cols(cols, a, b, c);
+                cols.different_signs = F::zero();
             }
             Operation::Slt32(a, b, c) => {
                 cols.is_slt = F::one();

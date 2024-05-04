@@ -92,9 +92,18 @@ where
         builder.assert_eq(top_comp_1, local.input_1[0]);
         builder.assert_eq(top_comp_2, local.input_2[0]);
 
+        let is_signed = local.is_slt + local.is_sle;
+        let is_unsigned = AB::Expr::one() - is_signed.clone();
+        let same_sign = AB::Expr::one() - local.different_signs;
+        let are_equal = AB::Expr::one() - flag_sum.clone();
+
+        builder
+            .when(is_unsigned.clone())
+            .assert_zero(local.different_signs);
+
         // Check that `different_signs` is set correctly by comparing sign bits.
         builder
-            .when(local.byte_flag[0])
+            .when(is_signed.clone())
             .when_ne(local.top_bits_1[7], local.top_bits_2[7])
             .assert_eq(local.different_signs, AB::Expr::one());
         builder
@@ -110,11 +119,6 @@ where
         builder.assert_bool(local.is_slt);
         builder.assert_bool(local.is_sle);
         builder.assert_bool(local.is_lt + local.is_lte + local.is_slt + local.is_sle);
-
-        let is_signed = local.is_slt + local.is_sle;
-        let is_unsigned = AB::Expr::one() - is_signed;
-        let same_sign = AB::Expr::one() - local.different_signs;
-        let are_equal = AB::Expr::one() - flag_sum.clone();
 
         // Output constraints
         // Case 0: input_1 > input_2 as unsigned ints; equivalently, local.bits[8] == 1
