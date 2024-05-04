@@ -248,7 +248,7 @@ where
         state
             .bitwise_u32_mut()
             .operations
-            .push(Operation::And32(a, b, c));
+            .push(Operation::Or32(a, b, c));
         state.cpu_mut().push_bus_op(imm, opcode, ops);
     }
 }
