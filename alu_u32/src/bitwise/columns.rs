@@ -4,7 +4,7 @@ use valida_derive::AlignedBorrow;
 use valida_machine::Word;
 use valida_util::indices_arr;
 
-#[derive(AlignedBorrow, Default)]
+#[derive(AlignedBorrow, Default, Debug)]
 pub struct Bitwise32Cols<T> {
     pub input_1: Word<T>,
     pub input_2: Word<T>,
