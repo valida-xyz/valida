@@ -13,7 +13,7 @@ pub struct Lt32Cols<T> {
     pub byte_flag: [T; 4],
 
     /// Bit decomposition of 256 + input_1 - input_2
-    pub bits: [T; 10],
+    pub bits: [T; 9],
 
     pub output: T,
 
@@ -21,9 +21,18 @@ pub struct Lt32Cols<T> {
 
     pub is_lt: T,
     pub is_lte: T,
+    pub is_slt: T,
+    pub is_sle: T,
 
     // inverse of input_1[i] - input_2[i] where i is the first byte that differs
     pub diff_inv: T,
+
+    // bit decomposition of top bytes for input_1 and input_2
+    pub top_bits_1: [T; 8],
+    pub top_bits_2: [T; 8],
+
+    // boolean flag for whether the sign of the two inputs is different
+    pub different_signs: T,
 }
 
 pub const NUM_LT_COLS: usize = size_of::<Lt32Cols<u8>>();

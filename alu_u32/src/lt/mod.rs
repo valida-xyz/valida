@@ -60,6 +60,8 @@ where
             vec![
                 (LT_COL_MAP.is_lt, SC::Val::from_canonical_u32(LT32)),
                 (LT_COL_MAP.is_lte, SC::Val::from_canonical_u32(LTE32)),
+                (LT_COL_MAP.is_slt, SC::Val::from_canonical_u32(SLT32)),
+                (LT_COL_MAP.is_sle, SC::Val::from_canonical_u32(SLE32)),
             ],
             SC::Val::zero(),
         );
@@ -94,28 +96,32 @@ impl Lt32Chip {
         match op {
             Operation::Lt32(a, b, c) => {
                 cols.is_lt = F::one();
-                self.set_cols(cols, a, b, c);
+                self.set_cols(cols, false, a, b, c);
             }
             Operation::Lte32(a, b, c) => {
                 cols.is_lte = F::one();
-                self.set_cols(cols, a, b, c);
+                self.set_cols(cols, false, a, b, c);
             }
             Operation::Slt32(a, b, c) => {
-                // TODO: this is just a placeholder
-                cols.is_lt = F::one();
-                self.set_cols(cols, a, b, c);
+                cols.is_slt = F::one();
+                self.set_cols(cols, true, a, b, c);
             }
             Operation::Sle32(a, b, c) => {
-                // TODO: this is just a placeholder
-                cols.is_lte = F::one();
-                self.set_cols(cols, a, b, c);
+                cols.is_sle = F::one();
+                self.set_cols(cols, true, a, b, c);
             }
         }
         row
     }
 
-    fn set_cols<F>(&self, cols: &mut Lt32Cols<F>, a: &Word<u8>, b: &Word<u8>, c: &Word<u8>)
-    where
+    fn set_cols<F>(
+        &self,
+        cols: &mut Lt32Cols<F>,
+        is_signed: bool,
+        a: &Word<u8>,
+        b: &Word<u8>,
+        c: &Word<u8>,
+    ) where
         F: PrimeField,
     {
         // Set the input columns
@@ -133,13 +139,29 @@ impl Lt32Chip {
             .find_map(|(n, (x, y))| if x == y { None } else { Some(n) })
         {
             let z = 256u16 + b[n] as u16 - c[n] as u16;
-            for i in 0..10 {
+            for i in 0..9 {
                 cols.bits[i] = F::from_canonical_u16(z >> i & 1);
             }
             cols.byte_flag[n] = F::one();
             // b[n] != c[n] always here, so the difference is never zero.
             cols.diff_inv = (cols.input_1[n] - cols.input_2[n]).inverse();
         }
+        // compute (little-endian) bit decomposition of the top bytes
+        for i in 0..8 {
+            cols.top_bits_1[i] = F::from_canonical_u8(b[0] >> i & 1);
+            cols.top_bits_2[i] = F::from_canonical_u8(c[0] >> i & 1);
+        }
+        // check if sign bits agree and set different_signs accordingly
+        cols.different_signs = if is_signed {
+            if cols.top_bits_1[7] != cols.top_bits_2[7] {
+                F::one()
+            } else {
+                F::zero()
+            }
+        } else {
+            F::zero()
+        };
+
         cols.multiplicity = F::one();
     }
 
@@ -218,7 +240,6 @@ where
         let opcode = <Self as Instruction<M, F>>::OPCODE;
         let comp = |a, b| a < b;
         let (dst, src1, src2) = Lt32Chip::execute_with_closure(state, ops, opcode, comp);
-
         state
             .lt_u32_mut()
             .operations
@@ -281,7 +302,6 @@ where
             a_i <= b_i
         };
         let (dst, src1, src2) = Lt32Chip::execute_with_closure(state, ops, opcode, comp);
-
         state
             .lt_u32_mut()
             .operations
