@@ -44,6 +44,7 @@ pub enum Operation {
     Bne(Option<Word<u8>> /*imm*/),
     Imm32,
     Bus(Option<Word<u8>> /*imm*/),
+    BusLeftImm(Option<Word<u8>> /*imm*/),
     BusWithMemory(Option<Word<u8>> /*imm*/),
     ReadAdvice,
     Stop,
@@ -170,9 +171,7 @@ impl CpuChip {
         cols.pc = SC::Val::from_canonical_u32(self.registers[clk].pc);
         cols.fp = SC::Val::from_canonical_u32(self.registers[clk].fp);
         cols.clk = SC::Val::from_canonical_usize(clk);
-
         self.set_instruction_values(clk, cols);
-        self.set_memory_channel_values::<M, SC>(clk, cols, machine);
 
         match op {
             Operation::Store32 => {
@@ -211,6 +210,10 @@ impl CpuChip {
                 cols.opcode_flags.is_bus_op = SC::Val::one();
                 self.set_imm_value(cols, *imm);
             }
+            Operation::BusLeftImm(imm) => {
+                cols.opcode_flags.is_bus_op = SC::Val::one();
+                self.set_left_imm_value(cols, *imm);
+            }
             Operation::BusWithMemory(imm) => {
                 cols.opcode_flags.is_bus_op = SC::Val::one();
                 cols.opcode_flags.is_bus_op_with_mem = SC::Val::one();
@@ -226,6 +229,8 @@ impl CpuChip {
                 cols.opcode_flags.is_loadfp = SC::Val::one();
             }
         }
+
+        self.set_memory_channel_values::<M, SC>(clk, cols, machine);
 
         row
     }
@@ -246,13 +251,14 @@ impl CpuChip {
         cols.mem_channels[1].is_read = SC::Val::one();
         cols.mem_channels[2].is_read = SC::Val::zero();
 
+        let is_left_imm_op = cols.opcode_flags.is_left_imm_op == SC::Val::one();
         let memory = machine.mem();
         for ops in memory.operations.get(&(clk as u32)).iter() {
             let mut is_first_read = true;
             for op in ops.iter() {
                 match op {
                     MemoryOperation::Read(addr, value) => {
-                        if is_first_read {
+                        if is_first_read & !is_left_imm_op {
                             cols.mem_channels[0].used = SC::Val::one();
                             cols.mem_channels[0].addr = SC::Val::from_canonical_u32(*addr);
                             cols.mem_channels[0].value =
@@ -353,6 +359,15 @@ impl CpuChip {
             let imm = imm.transform(F::from_canonical_u8);
             cols.mem_channels[1].value = imm;
             cols.instruction.operands.0[2] = imm.reduce();
+        }
+    }
+
+    fn set_left_imm_value<F: PrimeField>(&self, cols: &mut CpuCols<F>, imm: Option<Word<u8>>) {
+        if let Some(imm) = imm {
+            cols.opcode_flags.is_left_imm_op = F::one();
+            let imm = imm.transform(F::from_canonical_u8);
+            cols.mem_channels[0].value = imm;
+            cols.instruction.operands.0[1] = imm.reduce();
         }
     }
 }
@@ -879,6 +894,16 @@ impl CpuChip {
     pub fn push_bus_op(&mut self, imm: Option<Word<u8>>, opcode: u32, operands: Operands<i32>) {
         self.pc += 1;
         self.push_op(Operation::Bus(imm), opcode, operands);
+    }
+
+    pub fn push_left_imm_bus_op(
+        &mut self,
+        imm: Option<Word<u8>>,
+        opcode: u32,
+        operands: Operands<i32>,
+    ) {
+        self.pc += 1;
+        self.push_op(Operation::BusLeftImm(imm), opcode, operands);
     }
 
     pub fn push_op(&mut self, op: Operation, opcode: u32, operands: Operands<i32>) {

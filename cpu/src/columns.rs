@@ -4,7 +4,7 @@ use valida_derive::AlignedBorrow;
 use valida_machine::{Operands, Word, CPU_MEMORY_CHANNELS};
 use valida_util::indices_arr;
 
-#[derive(AlignedBorrow, Default)]
+#[derive(AlignedBorrow, Default, Debug)]
 pub struct CpuCols<T> {
     /// Clock cycle
     pub clk: T,
@@ -36,17 +36,18 @@ pub struct CpuCols<T> {
     pub chip_channel: ChipChannelCols<T>,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct InstructionCols<T> {
     pub opcode: T,
     pub operands: Operands<T>,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct OpcodeFlagCols<T> {
     pub is_bus_op: T,
     pub is_bus_op_with_mem: T,
     pub is_imm_op: T,
+    pub is_left_imm_op: T,
     pub is_load: T,
     pub is_load_u8: T,
     pub is_load_s8: T,
@@ -62,7 +63,7 @@ pub struct OpcodeFlagCols<T> {
     pub is_loadfp: T,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct MemoryChannelCols<T> {
     pub used: T,
     pub is_read: T,
@@ -70,7 +71,7 @@ pub struct MemoryChannelCols<T> {
     pub value: Word<T>,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ChipChannelCols<T> {
     pub clk_or_zero: T,
 }
