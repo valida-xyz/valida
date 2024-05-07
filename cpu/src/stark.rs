@@ -91,6 +91,7 @@ impl CpuChip {
         let is_left_imm_op = local.opcode_flags.is_left_imm_op;
         let is_bus_op = local.opcode_flags.is_bus_op;
         let _is_bus_op_with_mem = local.opcode_flags.is_bus_op_with_mem; // TODO: unused
+        let is_write = local.opcode_flags.is_write;
 
         let addr_a = local.fp + local.instruction.operands.a();
         let addr_b = local.fp + local.instruction.operands.b();
@@ -148,7 +149,7 @@ impl CpuChip {
 
         // Write
         builder
-            .when(is_load + is_jal + is_jalv + is_imm32 + is_bus_op)
+            .when(is_load + is_jal + is_jalv + is_imm32 + is_bus_op * (AB::Expr::one() - is_write))
             .assert_eq(local.write_addr(), addr_a);
         builder
             .when(is_store)
@@ -185,7 +186,15 @@ impl CpuChip {
             .when(is_loadfp)
             .assert_eq(local.fp, reduce::<AB>(base, local.write_value()));
         builder
-            .when(is_store + is_load + is_jal + is_jalv + is_imm32 + is_loadfp + is_bus_op)
+            .when(
+                is_store
+                    + is_load
+                    + is_jal
+                    + is_jalv
+                    + is_imm32
+                    + is_loadfp
+                    + is_bus_op * (AB::Expr::one() - is_write),
+            )
             .assert_one(local.write_used());
     }
 

@@ -61,6 +61,7 @@ pub struct OpcodeFlagCols<T> {
     pub is_advice: T,
     pub is_stop: T,
     pub is_loadfp: T,
+    pub is_write: T,
 }
 
 #[derive(Default, Debug)]

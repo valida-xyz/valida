@@ -2,7 +2,7 @@ use crate::columns::{OutputCols, NUM_OUTPUT_COLS, OUTPUT_COL_MAP};
 use core::iter;
 use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
-use valida_cpu::MachineWithCpuChip;
+use valida_cpu::{MachineWithCpuChip, Operation};
 use valida_machine::{
     instructions, Chip, Instruction, Interaction, Operands, Word, CPU_MEMORY_CHANNELS,
     MEMORY_CELL_BYTES,
@@ -165,7 +165,7 @@ where
             .push((clk, b.into_iter().last().unwrap()));
 
         let imm: Option<Word<u8>> = Some(0u32.into());
-        state.cpu_mut().push_bus_op(imm, opcode, ops);
+        state.cpu_mut().push_op(Operation::Write, opcode, ops);
 
         // The immediate value flag should be set, and the immediate operand value should
         // equal zero. We only write one byte of one word at a time to output.

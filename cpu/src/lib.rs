@@ -49,6 +49,7 @@ pub enum Operation {
     ReadAdvice,
     Stop,
     LoadFp,
+    Write,
 }
 
 #[derive(Default)]
@@ -227,6 +228,11 @@ impl CpuChip {
             }
             Operation::LoadFp => {
                 cols.opcode_flags.is_loadfp = SC::Val::one();
+            }
+            Operation::Write => {
+                cols.opcode_flags.is_write = SC::Val::one();
+                cols.opcode_flags.is_bus_op = SC::Val::one();
+                self.set_imm_value(cols, Some(0u32.into()))
             }
         }
 
