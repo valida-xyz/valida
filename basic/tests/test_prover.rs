@@ -7,7 +7,7 @@ use valida_alu_u32::lt::{Lt32Instruction, Lte32Instruction, Sle32Instruction, Sl
 use valida_basic::BasicMachine;
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
-    MachineWithCpuChip, StopInstruction,
+    LoadFpInstruction, MachineWithCpuChip, StopInstruction,
 };
 use valida_machine::{
     FixedAdviceProvider, Instruction, InstructionWord, Machine, MachineProof, Operands, ProgramROM,
@@ -378,6 +378,29 @@ fn signed_inequality_program<Val: PrimeField32 + TwoAdicField>() -> Vec<Instruct
     program
 }
 
+fn loadfp_program<Val: PrimeField32 + TwoAdicField>() -> Vec<InstructionWord<i32>> {
+    let mut program = vec![];
+    // loadfp 4(fp), 0, 0, 0, 0
+    // loadfp 8(fp), 3, 0, 0, 0
+    // stop
+    program.extend([
+        InstructionWord {
+            opcode: <LoadFpInstruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([4, 0, 0, 0, 0]),
+        },
+        InstructionWord {
+            opcode: <LoadFpInstruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([8, 3, 0, 0, 0]),
+        },
+        InstructionWord {
+            opcode: <StopInstruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands::default(),
+        },
+    ]);
+
+    program
+}
+
 fn prove_program(program: Vec<InstructionWord<i32>>) -> BasicMachine<BabyBear> {
     let mut machine = BasicMachine::<Val>::default();
     let rom = ProgramROM::new(program);
@@ -582,5 +605,21 @@ fn prove_signed_inequality() {
     assert_eq!(
         *machine.mem().cells.get(&(0x1000 + 64)).unwrap(),
         Word([0, 0, 0, 0]) // 0xFFFFFFFF < 1 (false)
+    );
+}
+
+#[test]
+fn prove_loadfp() {
+    let program = loadfp_program::<BabyBear>();
+
+    let machine = prove_program(program);
+
+    assert_eq!(
+        *machine.mem().cells.get(&(0x1000 + 4)).unwrap(),
+        Word([0, 0, 16, 0]) // fp = 0x1000 = (0, 0, 16, 0)
+    );
+    assert_eq!(
+        *machine.mem().cells.get(&(0x1000 + 8)).unwrap(),
+        Word([0, 0, 16, 3]) // fp(3) = 0x1003 = (0, 0, 16, 0)
     );
 }
