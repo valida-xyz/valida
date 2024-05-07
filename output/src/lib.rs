@@ -4,7 +4,8 @@ use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{
-    instructions, Chip, Instruction, Interaction, Operands, CPU_MEMORY_CHANNELS, MEMORY_CELL_BYTES,
+    instructions, Chip, Instruction, Interaction, Operands, Word, CPU_MEMORY_CHANNELS,
+    MEMORY_CELL_BYTES,
 };
 use valida_opcodes::WRITE;
 
@@ -163,7 +164,8 @@ where
             .values
             .push((clk, b.into_iter().last().unwrap()));
 
-        state.cpu_mut().push_bus_op(None, opcode, ops);
+        let imm: Option<Word<u8>> = Some(0u32.into());
+        state.cpu_mut().push_bus_op(imm, opcode, ops);
 
         // The immediate value flag should be set, and the immediate operand value should
         // equal zero. We only write one byte of one word at a time to output.
