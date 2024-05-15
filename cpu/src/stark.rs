@@ -119,7 +119,7 @@ impl CpuChip {
             )
             .assert_one(local.read_1_used());
         builder
-            .when(is_jal + is_left_imm_op)
+            .when(is_jal + is_left_imm_op + is_loadfp + is_imm32)
             .assert_zero(local.read_1_used());
 
         // Read (2)
@@ -130,7 +130,7 @@ impl CpuChip {
         );
         builder
             .when(is_store)
-            .assert_eq(local.read_addr_2(), addr_b);
+            .assert_eq(local.read_addr_2(), addr_b.clone());
         builder
             .when(is_jalv + (AB::Expr::one() - is_imm_op) * is_bus_op)
             .assert_eq(local.read_addr_2(), addr_c);
@@ -143,12 +143,12 @@ impl CpuChip {
             )
             .assert_one(local.read_2_used());
         builder
-            .when(is_jal + is_imm_op * (is_beq + is_bne) + is_imm_op * is_bus_op)
+            .when(is_jal + is_imm_op * (is_beq + is_bne + is_bus_op) + is_loadfp + is_imm32)
             .assert_zero(local.read_2_used());
 
         // Write
         builder
-            .when(is_load + is_jal + is_jalv + is_imm32 + is_bus_op)
+            .when(is_load + is_jal + is_jalv + is_imm32 + is_bus_op + is_loadfp)
             .assert_eq(local.write_addr(), addr_a);
         builder
             .when(is_store)
@@ -183,10 +183,13 @@ impl CpuChip {
         );
         builder
             .when(is_loadfp)
-            .assert_eq(local.fp, reduce::<AB>(base, local.write_value()));
+            .assert_eq(addr_b, reduce::<AB>(base, local.write_value()));
         builder
             .when(is_store + is_load + is_jal + is_jalv + is_imm32 + is_loadfp + is_bus_op)
             .assert_one(local.write_used());
+        builder
+            .when(is_beq + is_bne)
+            .assert_zero(local.write_used());
     }
 
     fn eval_pc<AB>(
