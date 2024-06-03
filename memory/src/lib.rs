@@ -2,7 +2,7 @@
 
 extern crate alloc;
 
-use valida_machine::MEMORY_CELL_BYTES;
+use valida_machine::{ValidaPublicValues, MEMORY_CELL_BYTES};
 
 use crate::alloc::string::ToString;
 use crate::columns::{MemoryCols, MEM_COL_MAP, NUM_MEM_COLS};
@@ -16,6 +16,7 @@ use p3_field::{AbstractField, Field, PrimeField};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::prelude::*;
 use valida_bus::MachineWithMemBus;
+use valida_machine::PublicRow;
 use valida_machine::StarkConfig;
 use valida_machine::{Chip, Interaction, Machine, Word};
 use valida_util::batch_multiplicative_inverse_allowing_zero;
@@ -140,6 +141,8 @@ where
     M: MachineWithMemBus<SC::Val>,
     SC: StarkConfig,
 {
+    type Public = ValidaPublicValues<SC::Val>;
+
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let mut ops = self
             .operations

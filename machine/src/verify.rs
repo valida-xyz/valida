@@ -4,6 +4,7 @@ use p3_field::{AbstractField, Field};
 use p3_util::reverse_slice_index_bits;
 
 use crate::folding_builder::VerifierConstraintFolder;
+use crate::public::PublicValues;
 use crate::{
     eval_permutation_constraints, Chip, Machine, OodEvaluationMismatch, OpenedValues, StarkConfig,
 };
@@ -12,6 +13,7 @@ pub fn verify_constraints<M, C, SC>(
     machine: &M,
     chip: &C,
     opened_values: &OpenedValues<SC::Challenge>,
+    public_values: &Option<C::Public>,
     cumulative_sum: SC::Challenge,
     log_degree: usize,
     g: SC::Val,
@@ -38,6 +40,15 @@ where
         permutation_next,
         quotient_chunks,
     } = opened_values;
+
+    let (public_local, public_next) = if let Some(ref public_values) = public_values {
+        (
+            public_values.interpolate(zeta, 0),
+            public_values.interpolate(zeta, 1),
+        )
+    } else {
+        (vec![], vec![])
+    };
 
     let monomials = (0..SC::Challenge::D)
         .map(SC::Challenge::monomial)
@@ -76,6 +87,10 @@ where
         main: TwoRowMatrixView {
             local: &trace_local,
             next: &trace_next,
+        },
+        public_values: TwoRowMatrixView {
+            local: &public_local,
+            next: &public_next,
         },
         perm: TwoRowMatrixView {
             local: &unflatten(permutation_local),

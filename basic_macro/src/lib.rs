@@ -40,7 +40,7 @@ use valida_cpu::{CpuChip, MachineWithCpuChip};
 use valida_derive::Machine;
 use valida_machine::{
     AdviceProvider, BusArgument, Chip, ChipProof, Instruction, Machine, MachineProof, ProgramROM,
-    StoppingFlag, ValidaAirBuilder, ColumnVector, ColumnIndex,
+    StoppingFlag, ValidaAirBuilder,
 };
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_output::{MachineWithOutputChip, OutputChip, WriteInstruction};

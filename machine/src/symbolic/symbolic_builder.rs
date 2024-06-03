@@ -1,10 +1,9 @@
-use alloc::vec;
 use alloc::vec::Vec;
 
 use crate::config::StarkConfig;
 use crate::{Machine, ValidaAirBuilder};
-use p3_air::ExtensionBuilder;
 use p3_air::{Air, AirBuilder, PairBuilder, PermutationAirBuilder};
+use p3_air::{AirBuilderWithPublicValues, ExtensionBuilder};
 use p3_field::AbstractExtensionField;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_util::log2_ceil_usize;
@@ -59,6 +58,7 @@ pub struct SymbolicAirBuilder<'a, M: Machine<SC::Val>, SC: StarkConfig> {
     preprocessed: RowMajorMatrix<SymbolicVariable<SC::Val>>,
     main: RowMajorMatrix<SymbolicVariable<SC::Val>>,
     permutation: RowMajorMatrix<SymbolicVariable<SC::Challenge>>,
+    public_values: RowMajorMatrix<SymbolicVariable<SC::Val>>,
     constraints: Vec<SymbolicExpression<SC::Val>>,
 }
 
@@ -70,6 +70,7 @@ impl<'a, M: Machine<SC::Val>, SC: StarkConfig> SymbolicAirBuilder<'a, M, SC> {
             preprocessed: SymbolicVariable::window(Trace::Preprocessed, width),
             main: SymbolicVariable::window(Trace::Main, width),
             permutation: SymbolicVariable::window(Trace::Permutation, width),
+            public_values: SymbolicVariable::window(Trace::Public, width),
             constraints: vec![],
         }
     }
@@ -150,5 +151,13 @@ impl<'a, M: Machine<SC::Val>, SC: StarkConfig> ValidaAirBuilder for SymbolicAirB
 
     fn machine(&self) -> &Self::Machine {
         self.machine
+    }
+}
+
+impl<'a, M: Machine<SC::Val>, SC: StarkConfig> AirBuilderWithPublicValues
+    for SymbolicAirBuilder<'a, M, SC>
+{
+    fn public_values(&self) -> Self::M {
+        self.public_values.clone()
     }
 }

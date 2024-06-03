@@ -8,7 +8,10 @@ use columns::{Shift32Cols, COL_MAP, NUM_SHIFT_COLS};
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Sra, Word};
+use valida_machine::{
+    instructions, Chip, Instruction, Interaction, Operands, PublicRow, Sra, ValidaPublicValues,
+    Word,
+};
 use valida_opcodes::{DIV32, MUL32, SDIV32, SHL32, SHR32, SRA32};
 
 use p3_air::VirtualPairCol;
@@ -38,6 +41,8 @@ where
     M: MachineWithGeneralBus<SC::Val> + MachineWithRangeBus8<SC::Val>,
     SC: StarkConfig,
 {
+    type Public = ValidaPublicValues<SC::Val>;
+
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let rows = self
             .operations

@@ -1,5 +1,6 @@
 use crate::__internal::ProverConstraintFolder;
 use crate::config::StarkConfig;
+use crate::public::PublicValues;
 use crate::symbolic::symbolic_builder::get_log_quotient_degree;
 use crate::{eval_permutation_constraints, Chip, Machine};
 use itertools::Itertools;
@@ -10,7 +11,7 @@ use p3_field::{
     TwoAdicField,
 };
 use p3_matrix::dense::RowMajorMatrix;
-use p3_matrix::{MatrixGet, MatrixRows};
+use p3_matrix::{Matrix, MatrixGet, MatrixRows};
 use p3_maybe_rayon::prelude::*;
 use p3_uni_stark::{decompose_and_flatten, ZerofierOnCoset};
 use tracing::instrument;
@@ -23,6 +24,7 @@ pub fn quotient<M, A, SC, PreprocessedTraceLde, MainTraceLde, PermTraceLde>(
     preprocessed_trace_lde: Option<PreprocessedTraceLde>,
     main_trace_lde: MainTraceLde,
     perm_trace_lde: PermTraceLde,
+    public_values: &Option<A::Public>,
     cumulative_sum: SC::Challenge,
     perm_challenges: &[SC::Challenge],
     alpha: SC::Challenge,
@@ -34,6 +36,7 @@ where
     PreprocessedTraceLde: MatrixRows<SC::Val> + MatrixGet<SC::Val> + Sync,
     MainTraceLde: MatrixRows<SC::Val> + MatrixGet<SC::Val> + Sync,
     PermTraceLde: MatrixRows<SC::Val> + MatrixGet<SC::Val> + Sync,
+    A::Public: Send + Sync,
 {
     let pcs = config.pcs();
     let log_quotient_degree = get_log_quotient_degree::<M, SC, A>(machine, air);
@@ -55,6 +58,7 @@ where
         preprocessed_trace_lde_for_quotient,
         main_trace_lde_for_quotient,
         perm_trace_lde_for_quotient,
+        public_values,
         cumulative_sum,
         perm_challenges,
         alpha,
@@ -77,6 +81,7 @@ fn quotient_values<M, SC, A, PreprocessedTraceLde, MainTraceLde, PermTraceLde>(
     preprocessed_trace_lde: Option<PreprocessedTraceLde>,
     main_trace_lde: MainTraceLde,
     perm_trace_lde: PermTraceLde,
+    public_values: &Option<A::Public>,
     cumulative_sum: SC::Challenge,
     perm_challenges: &[SC::Challenge],
     alpha: SC::Challenge,
@@ -85,6 +90,7 @@ where
     M: Machine<SC::Val>,
     SC: StarkConfig,
     A: Chip<M, SC>,
+    A::Public: Send + Sync,
     PreprocessedTraceLde: MatrixRows<SC::Val> + MatrixGet<SC::Val> + Sync,
     MainTraceLde: MatrixRows<SC::Val> + MatrixGet<SC::Val> + Sync,
     PermTraceLde: MatrixRows<SC::Val> + MatrixGet<SC::Val> + Sync,
@@ -196,9 +202,35 @@ where
                 })
                 .collect();
 
+            let (public_local, public_next): (Vec<_>, Vec<_>) = match public_values {
+                Some(ref public_values) => (
+                    (0..public_values.width())
+                        .map(|col| {
+                            SC::PackedVal::from_fn(|offset| {
+                                let row = wrap(i_local_start + offset);
+                                public_values.get(row, col)
+                            })
+                        })
+                        .collect(),
+                    (0..public_values.width())
+                        .map(|col| {
+                            SC::PackedVal::from_fn(|offset| {
+                                let row = wrap(i_next_start + offset);
+                                public_values.get(row, col)
+                            })
+                        })
+                        .collect(),
+                ),
+                None => (vec![], vec![]),
+            };
+
             let accumulator = SC::PackedChallenge::zero();
             let mut folder = ProverConstraintFolder {
                 machine,
+                public_values: TwoRowMatrixView {
+                    local: &public_local,
+                    next: &public_next,
+                },
                 preprocessed: TwoRowMatrixView {
                     local: &preprocessed_local,
                     next: &preprocessed_next,

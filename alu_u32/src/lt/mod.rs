@@ -8,7 +8,8 @@ use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{
-    instructions, Chip, Instruction, Interaction, Operands, Word, MEMORY_CELL_BYTES,
+    instructions, Chip, Instruction, Interaction, Operands, PublicRow, ValidaPublicValues, Word,
+    MEMORY_CELL_BYTES,
 };
 use valida_opcodes::{LT32, LTE32, SLE32, SLT32};
 
@@ -40,6 +41,8 @@ where
     M: MachineWithGeneralBus<SC::Val>,
     SC: StarkConfig,
 {
+    type Public = ValidaPublicValues<SC::Val>;
+
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let rows = self
             .operations

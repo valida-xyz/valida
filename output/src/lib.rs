@@ -4,7 +4,8 @@ use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{
-    instructions, Chip, Instruction, Interaction, Operands, CPU_MEMORY_CHANNELS, MEMORY_CELL_BYTES,
+    instructions, Chip, Instruction, Interaction, Operands, PublicRow, ValidaPublicValues,
+    CPU_MEMORY_CHANNELS, MEMORY_CELL_BYTES,
 };
 use valida_opcodes::WRITE;
 
@@ -34,6 +35,8 @@ where
     M: MachineWithGeneralBus<SC::Val>,
     SC: StarkConfig,
 {
+    type Public = ValidaPublicValues<SC::Val>;
+
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let table_len = self.values.len() as u32;
         let mut rows = self
@@ -94,6 +97,11 @@ where
         let mut values = rows.concat();
         pad_to_power_of_two::<NUM_OUTPUT_COLS, SC::Val>(&mut values);
         RowMajorMatrix::new(values, NUM_OUTPUT_COLS)
+    }
+
+    fn generate_public_values(&self) -> Option<Self::Public> {
+        //TODO: This should give the output vector, without clock values
+        None
     }
 
     //fn local_sends(&self) -> Vec<Interaction<SC::Val>> {

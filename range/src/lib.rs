@@ -8,13 +8,13 @@ use alloc::vec::Vec;
 use columns::{RangeCols, NUM_RANGE_COLS, RANGE_COL_MAP};
 use core::mem::transmute;
 use valida_bus::MachineWithRangeBus8;
-use valida_machine::Interaction;
 use valida_machine::{Chip, Machine, Word};
+use valida_machine::{Interaction, ValidaPublicValues};
 
 use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
-use valida_machine::StarkConfig;
+use valida_machine::{PublicRow, StarkConfig};
 
 pub mod columns;
 pub mod stark;
@@ -29,6 +29,8 @@ where
     M: MachineWithRangeBus8<SC::Val>,
     SC: StarkConfig,
 {
+    type Public = ValidaPublicValues<SC::Val>;
+
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let mut rows = vec![[SC::Val::zero(); NUM_RANGE_COLS]; MAX as usize];
         for (n, row) in rows.iter_mut().enumerate() {

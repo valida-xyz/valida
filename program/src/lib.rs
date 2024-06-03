@@ -2,11 +2,15 @@
 
 extern crate alloc;
 
+use core::mem::transmute;
+
 use crate::columns::NUM_PROGRAM_COLS;
 use alloc::vec;
 use alloc::vec::Vec;
+use columns::{ProgramPreprocessedCols, NUM_PREPROCESSED_COLS};
+use p3_air::BaseAir;
 use valida_bus::MachineWithProgramBus;
-use valida_machine::{Chip, Interaction, Machine, ProgramROM};
+use valida_machine::{Chip, Interaction, Machine, ProgramROM, ValidaPublicValues};
 use valida_util::pad_to_power_of_two;
 
 use p3_field::{AbstractField, Field};
@@ -35,6 +39,8 @@ where
     M: MachineWithProgramBus<SC::Val>,
     SC: StarkConfig,
 {
+    type Public = ValidaPublicValues<SC::Val>;
+
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let mut values = self
             .counts

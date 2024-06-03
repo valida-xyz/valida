@@ -5,7 +5,10 @@ use alloc::vec::Vec;
 use columns::{Mul32Cols, MUL_COL_MAP, NUM_MUL_COLS};
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Chip, Instruction, Interaction, Mulhs, Mulhu, Operands, Word};
+use valida_machine::{
+    instructions, Chip, Instruction, Interaction, Mulhs, Mulhu, Operands, PublicRow,
+    ValidaPublicValues, Word,
+};
 use valida_opcodes::{MUL32, MULHS32, MULHU32};
 use valida_range::MachineWithRangeChip;
 
@@ -35,6 +38,8 @@ where
     M: MachineWithGeneralBus<SC::Val>,
     SC: StarkConfig,
 {
+    type Public = ValidaPublicValues<SC::Val>;
+
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         const MIN_LENGTH: usize = 1 << 10; // for the range check counter
 

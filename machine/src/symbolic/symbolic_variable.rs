@@ -11,6 +11,7 @@ pub enum Trace {
     Preprocessed,
     Main,
     Permutation,
+    Public,
 }
 
 /// A variable within the evaluation window, i.e. a column in either the local or next row.
@@ -44,6 +45,15 @@ impl<F: Field> SymbolicVariable<F> {
             is_next: self.is_next,
             column: self.column,
             _phantom: PhantomData,
+        }
+    }
+
+    pub(crate) fn degree_multiple(&self) -> usize {
+        match self.trace {
+            Trace::Preprocessed => 1,
+            Trace::Main => 1,
+            Trace::Permutation => 1,
+            Trace::Public => 0,
         }
     }
 }
