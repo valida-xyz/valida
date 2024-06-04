@@ -145,7 +145,7 @@ where
     let betas = random_elements[2].powers();
 
     let preprocessed = chip.preprocessed_trace();
-
+    let public = chip.generate_public_values();
     // Compute the reciprocal columns
     //
     // Row: | q_1 | q_2 | q_3 | ... | q_n | \phi |
@@ -171,9 +171,15 @@ where
             } else {
                 &[]
             };
+            let public_row = if public.is_some() {
+                public.as_ref().unwrap().row_slice(n)
+            } else {
+                &[]
+            };
             row[m] = reduce_row(
                 main_row,
                 preprocessed_row,
+                public_row,
                 &interaction.fields,
                 alpha_m,
                 betas.clone(),
@@ -197,10 +203,16 @@ where
         } else {
             &[]
         };
+        let public_row = if public.is_some() {
+            public.as_ref().unwrap().row_slice(n)
+        } else {
+            &[]
+        };
         for (m, (interaction, interaction_type)) in all_interactions.iter().enumerate() {
-            let mult = interaction
-                .count
-                .apply::<SC::Val, SC::Val>(preprocessed_row, main_row);
+            let mult =
+                interaction
+                    .count
+                    .apply::<SC::Val, SC::Val>(preprocessed_row, public_row, main_row);
             match interaction_type {
                 InteractionType::LocalSend | InteractionType::GlobalSend => {
                     phi[n] += perm_row[m] * mult;
@@ -239,6 +251,10 @@ pub fn eval_permutation_constraints<M, C, SC, AB>(
     let preprocessed_local = preprocessed.row_slice(0);
     let preprocessed_next = preprocessed.row_slice(1);
 
+    let public = builder.public_values();
+    let public_local = public.row_slice(0);
+    let public_next = public.row_slice(1);
+
     let perm = builder.permutation();
     let perm_width = perm.width();
     let perm_local: &[AB::VarEF] = perm.row_slice(0);
@@ -259,7 +275,8 @@ pub fn eval_permutation_constraints<M, C, SC, AB>(
         // Reciprocal constraints
         let mut rlc = AB::ExprEF::zero();
         for (field, beta) in interaction.fields.iter().zip(betas.clone()) {
-            let elem = field.apply::<AB::Expr, AB::Var>(preprocessed_local, main_local);
+            let elem =
+                field.apply::<AB::Expr, AB::Var>(preprocessed_local, public_local, main_local);
             rlc += AB::ExprEF::from_f(beta) * elem;
         }
         if interaction.is_local() {
@@ -269,12 +286,15 @@ pub fn eval_permutation_constraints<M, C, SC, AB>(
         }
         builder.assert_one_ext(rlc * perm_local[m].into());
 
-        let mult_local = interaction
-            .count
-            .apply::<AB::Expr, AB::Var>(preprocessed_local, main_local);
-        let mult_next = interaction
-            .count
-            .apply::<AB::Expr, AB::Var>(preprocessed_next, main_next);
+        let mult_local = interaction.count.apply::<AB::Expr, AB::Var>(
+            preprocessed_local,
+            public_local,
+            main_local,
+        );
+        let mult_next =
+            interaction
+                .count
+                .apply::<AB::Expr, AB::Var>(preprocessed_next, public_next, main_next);
 
         // Build the RHS of the permutation constraint
         match interaction_type {
@@ -348,6 +368,7 @@ where
 fn reduce_row<F, EF>(
     main_row: &[F],
     preprocessed_row: &[F],
+    public_row: &[F],
     fields: &[VirtualPairCol<F>],
     alpha: EF,
     betas: Powers<EF>,
@@ -358,7 +379,7 @@ where
 {
     let mut rlc = EF::zero();
     for (columns, beta) in fields.iter().zip(betas) {
-        rlc += beta * columns.apply::<F, F>(preprocessed_row, main_row)
+        rlc += beta * columns.apply::<F, F>(preprocessed_row, public_row, main_row)
     }
     rlc += alpha;
     rlc

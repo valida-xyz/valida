@@ -11,7 +11,8 @@ use valida_machine::{Chip, Interaction, Machine, ProgramROM, ValidaPublicValues}
 use valida_util::pad_to_power_of_two;
 
 use p3_field::{AbstractField, Field};
-use p3_matrix::dense::RowMajorMatrix;
+use p3_matrix::{dense::RowMajorMatrix, MatrixRows};
+use valida_lookups::{LookupTable, LookupType};
 use valida_machine::StarkConfig;
 
 pub mod columns;
