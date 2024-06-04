@@ -14,7 +14,7 @@ use valida_machine::{Interaction, ValidaPublicValues};
 use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
-use valida_machine::{PublicRow, StarkConfig};
+use valida_machine::StarkConfig;
 
 pub mod columns;
 pub mod stark;

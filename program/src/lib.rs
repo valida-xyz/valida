@@ -2,13 +2,10 @@
 
 extern crate alloc;
 
-use core::mem::transmute;
-
 use crate::columns::NUM_PROGRAM_COLS;
 use alloc::vec;
 use alloc::vec::Vec;
 use columns::{ProgramPreprocessedCols, NUM_PREPROCESSED_COLS};
-use p3_air::BaseAir;
 use valida_bus::MachineWithProgramBus;
 use valida_machine::{Chip, Interaction, Machine, ProgramROM, ValidaPublicValues};
 use valida_util::pad_to_power_of_two;

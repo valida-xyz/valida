@@ -1,6 +1,6 @@
 use alloc::slice;
 use core::iter::Cloned;
-use p3_field::{AbstractExtensionField, AbstractField, ExtensionField, TwoAdicField};
+use p3_field::{ExtensionField, TwoAdicField};
 use p3_interpolation;
 use p3_matrix::{
     dense::{RowMajorMatrix, RowMajorMatrixView},

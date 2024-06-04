@@ -14,7 +14,7 @@ use valida_machine::is_mul_4;
 use valida_machine::ValidaPublicValues;
 use valida_machine::{
     addr_of_word, index_of_byte, instructions, AdviceProvider, Chip, Instruction, InstructionWord,
-    Interaction, Operands, PublicRow, Word,
+    Interaction, Operands, Word,
 };
 use valida_memory::{MachineWithMemoryChip, Operation as MemoryOperation};
 use valida_opcodes::{

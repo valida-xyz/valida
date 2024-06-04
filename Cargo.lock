@@ -1533,6 +1533,48 @@ dependencies = [
 ]
 
 [[package]]
+name = "valida-basic-macro"
+version = "0.1.0"
+dependencies = [
+ "byteorder",
+ "ciborium",
+ "clap",
+ "p3-air",
+ "p3-baby-bear",
+ "p3-challenger",
+ "p3-commit",
+ "p3-dft",
+ "p3-field",
+ "p3-fri",
+ "p3-goldilocks",
+ "p3-keccak",
+ "p3-matrix",
+ "p3-maybe-rayon",
+ "p3-mds",
+ "p3-merkle-tree",
+ "p3-poseidon",
+ "p3-symmetric",
+ "p3-uni-stark",
+ "p3-util",
+ "rand",
+ "rand_pcg",
+ "rand_seeder",
+ "tracing",
+ "valida-alu-u32",
+ "valida-assembler",
+ "valida-bus",
+ "valida-cpu",
+ "valida-derive",
+ "valida-machine",
+ "valida-memory",
+ "valida-opcodes",
+ "valida-output",
+ "valida-program",
+ "valida-range",
+ "valida-static-data",
+]
+
+[[package]]
 name = "valida-bus"
 version = "0.1.0"
 dependencies = [

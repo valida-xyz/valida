@@ -9,8 +9,7 @@ use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{
-    instructions, Chip, Instruction, Interaction, Operands, PublicRow, Sra, ValidaPublicValues,
-    Word,
+    instructions, Chip, Instruction, Interaction, Operands, Sra, ValidaPublicValues, Word,
 };
 use valida_opcodes::{DIV32, MUL32, SDIV32, SHL32, SHR32, SRA32};
 

@@ -4,7 +4,7 @@ use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{
-    instructions, Chip, Instruction, Interaction, Operands, PublicRow, ValidaPublicValues,
+    instructions, Chip, Instruction, Interaction, Operands, ValidaPublicValues,
     CPU_MEMORY_CHANNELS, MEMORY_CELL_BYTES,
 };
 use valida_opcodes::WRITE;

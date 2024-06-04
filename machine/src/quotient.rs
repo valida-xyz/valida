@@ -1,6 +1,5 @@
 use crate::__internal::ProverConstraintFolder;
 use crate::config::StarkConfig;
-use crate::public::PublicValues;
 use crate::symbolic::symbolic_builder::get_log_quotient_degree;
 use crate::{eval_permutation_constraints, Chip, Machine};
 use itertools::Itertools;

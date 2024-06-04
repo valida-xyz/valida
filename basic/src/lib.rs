@@ -281,7 +281,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let chip = self.cpu();
         #[cfg(debug_assertions)]
-        println!("checking cpu");
         check_constraints::<Self, _, SC>(
             self,
             chip,
@@ -290,7 +289,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             &public_values[i],
         );
-        println!("cpu checked");
         quotients.push(quotient(
             self,
             config,
@@ -308,7 +306,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let chip = self.program();
         #[cfg(debug_assertions)]
-        println!("checking program");
         check_constraints::<Self, _, SC>(
             self,
             chip,
@@ -317,7 +314,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             &public_values[i],
         );
-        println!("program checked");
         quotients.push(quotient(
             self,
             config,
@@ -335,7 +331,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let chip = self.mem();
         #[cfg(debug_assertions)]
-        println!("checking mem");
         check_constraints::<Self, _, SC>(
             self,
             chip,
@@ -344,7 +339,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             &public_values[i],
         );
-        println!("mem checked");
         quotients.push(quotient(
             self,
             config,
@@ -361,7 +355,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         i += 1;
 
         let chip = self.add_u32();
-        println!("checking add_u32");
         #[cfg(debug_assertions)]
         check_constraints::<Self, _, SC>(
             self,
@@ -371,7 +364,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             &public_values[i],
         );
-        println!("add_u32 checked");
         quotients.push(quotient(
             self,
             config,
@@ -389,7 +381,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let chip = self.sub_u32();
         #[cfg(debug_assertions)]
-        println!("checking sub_u32");
         check_constraints::<Self, _, SC>(
             self,
             chip,
@@ -398,7 +389,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             &public_values[i],
         );
-        println!("sub_u32 checked");
         quotients.push(quotient(
             self,
             config,
@@ -416,7 +406,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let chip = self.mul_u32();
         #[cfg(debug_assertions)]
-        println!("checking mul_u32");
         check_constraints::<Self, _, SC>(
             self,
             chip,
@@ -425,7 +414,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             &public_values[i],
         );
-        println!("mul_u32 checked");
         quotients.push(quotient(
             self,
             config,
@@ -443,7 +431,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let chip = self.div_u32();
         #[cfg(debug_assertions)]
-        println!("checking div_u32");
         check_constraints::<Self, _, SC>(
             self,
             chip,
@@ -452,7 +439,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             &public_values[i],
         );
-        println!("div_u32 checked");
         quotients.push(quotient(
             self,
             config,
@@ -470,7 +456,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let chip = self.shift_u32();
         #[cfg(debug_assertions)]
-        println!("checking shift_u32");
         check_constraints::<Self, _, SC>(
             self,
             chip,
@@ -479,7 +464,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             &public_values[i],
         );
-        println!("shift_u32 checked");
         quotients.push(quotient(
             self,
             config,
@@ -497,7 +481,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let chip = self.lt_u32();
         #[cfg(debug_assertions)]
-        println!("checking lt_u32");
         check_constraints::<Self, _, SC>(
             self,
             chip,
@@ -506,7 +489,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             &public_values[i],
         );
-        println!("lt_u32 checked");
         quotients.push(quotient(
             self,
             config,
@@ -524,7 +506,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let chip = self.com_u32();
         #[cfg(debug_assertions)]
-        println!("checking com_u32");
         check_constraints::<Self, _, SC>(
             self,
             chip,
@@ -533,7 +514,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             &public_values[i],
         );
-        println!("com_u32 checked");
         quotients.push(quotient(
             self,
             config,
@@ -551,7 +531,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let chip = self.bitwise_u32();
         #[cfg(debug_assertions)]
-        println!("checking bitwise_u32");
         check_constraints::<Self, _, SC>(
             self,
             chip,
@@ -560,7 +539,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             &public_values[i],
         );
-        println!("bitwise_u32 checked");
         quotients.push(quotient(
             self,
             config,
@@ -578,7 +556,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let chip = self.output();
         #[cfg(debug_assertions)]
-        println!("checking output");
         check_constraints::<Self, _, SC>(
             self,
             chip,
@@ -587,7 +564,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             &public_values[i],
         );
-        println!("output checked");
         quotients.push(quotient(
             self,
             config,
@@ -605,7 +581,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let chip = self.range();
         #[cfg(debug_assertions)]
-        println!("checking range");
         check_constraints::<Self, _, SC>(
             self,
             chip,
@@ -614,7 +589,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             &public_values[i],
         );
-        println!("range checked");
         quotients.push(quotient(
             self,
             config,
@@ -632,7 +606,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let chip = self.static_data();
         #[cfg(debug_assertions)]
-        println!("checking static data");
         check_constraints::<Self, _, SC>(
             self,
             chip,
@@ -641,7 +614,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             &public_values[i],
         );
-        println!("static data checked");
         quotients.push(quotient(
             self,
             config,

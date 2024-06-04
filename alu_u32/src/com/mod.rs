@@ -7,11 +7,11 @@ use core::iter;
 use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
+use valida_machine::StarkConfig;
 use valida_machine::{
     instructions, Chip, Instruction, Interaction, Operands, ValidaPublicValues, Word,
     MEMORY_CELL_BYTES,
 };
-use valida_machine::{PublicRow, StarkConfig};
 use valida_opcodes::{EQ32, NE32};
 
 use p3_air::VirtualPairCol;

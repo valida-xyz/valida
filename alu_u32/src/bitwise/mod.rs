@@ -7,7 +7,7 @@ use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{
-    instructions, Chip, Instruction, Interaction, Operands, PublicRow, ValidaPublicValues, Word,
+    instructions, Chip, Instruction, Interaction, Operands, ValidaPublicValues, Word,
 };
 use valida_opcodes::{AND32, OR32, XOR32};
 
