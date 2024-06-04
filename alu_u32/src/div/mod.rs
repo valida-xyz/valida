@@ -8,6 +8,7 @@ use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::SDiv;
 use valida_machine::StarkConfig;
+use valida_machine::ValidaPublicValues;
 use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
 use valida_opcodes::{DIV32, SDIV32};
 use valida_range::MachineWithRangeChip;
@@ -37,6 +38,8 @@ where
     M: MachineWithGeneralBus<SC::Val>,
     SC: StarkConfig,
 {
+    type Public = ValidaPublicValues<SC::Val>;
+
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let rows = self
             .operations

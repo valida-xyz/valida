@@ -17,10 +17,12 @@ pub fn check_constraints<M, A, SC>(
     main: &RowMajorMatrix<SC::Val>,
     perm: &RowMajorMatrix<SC::Challenge>,
     perm_challenges: &[SC::Challenge],
+    public: &Option<A::Public>,
 ) where
     M: Machine<SC::Val>,
     A: Chip<M, SC>,
     SC: StarkConfig,
+    A::Public: Sync,
 {
     assert_eq!(main.height(), perm.height());
     let height = main.height();
@@ -38,6 +40,16 @@ pub fn check_constraints<M, A, SC>(
 
         let main_local = main.row_slice(i);
         let main_next = main.row_slice(i_next);
+        let public_local = if public.is_some() {
+            public.as_ref().unwrap().row_slice(i)
+        } else {
+            &[]
+        };
+        let public_next = if public.is_some() {
+            public.as_ref().unwrap().row_slice(i_next)
+        } else {
+            &[]
+        };
         let preprocessed_local = if preprocessed.is_some() {
             preprocessed.as_ref().unwrap().row_slice(i)
         } else {
@@ -56,6 +68,10 @@ pub fn check_constraints<M, A, SC>(
             main: TwoRowMatrixView {
                 local: &main_local,
                 next: &main_next,
+            },
+            public_values: TwoRowMatrixView {
+                local: &public_local,
+                next: &public_next,
             },
             preprocessed: TwoRowMatrixView {
                 local: &preprocessed_local,

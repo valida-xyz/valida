@@ -1,5 +1,8 @@
 use crate::{Machine, ValidaAirBuilder};
-use p3_air::{AirBuilder, ExtensionBuilder, PairBuilder, PermutationAirBuilder, TwoRowMatrixView};
+use p3_air::{
+    AirBuilder, AirBuilderWithPublicValues, ExtensionBuilder, PairBuilder, PermutationAirBuilder,
+    TwoRowMatrixView,
+};
 use p3_field::AbstractField;
 use valida_machine::StarkConfig;
 /// An `AirBuilder` which asserts that each constraint is zero, allowing any failed constraints to
@@ -13,6 +16,7 @@ pub struct DebugConstraintBuilder<'a, M: Machine<SC::Val>, SC: StarkConfig> {
     pub(crate) is_first_row: SC::Val,
     pub(crate) is_last_row: SC::Val,
     pub(crate) is_transition: SC::Val,
+    pub(crate) public_values: TwoRowMatrixView<'a, SC::Val>,
 }
 
 impl<'a, M, SC> AirBuilder for DebugConstraintBuilder<'a, M, SC>
@@ -110,5 +114,15 @@ where
 
     fn machine(&self) -> &Self::Machine {
         self.machine
+    }
+}
+
+impl<'a, M: Machine<SC::Val>, SC> AirBuilderWithPublicValues for DebugConstraintBuilder<'a, M, SC>
+where
+    M: Machine<SC::Val>,
+    SC: StarkConfig,
+{
+    fn public_values(&self) -> Self::M {
+        self.public_values
     }
 }

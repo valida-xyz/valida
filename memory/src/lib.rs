@@ -2,7 +2,7 @@
 
 extern crate alloc;
 
-use valida_machine::MEMORY_CELL_BYTES;
+use valida_machine::{ValidaPublicValues, MEMORY_CELL_BYTES};
 
 use crate::alloc::string::ToString;
 use crate::columns::{MemoryCols, MEM_COL_MAP, NUM_MEM_COLS};
@@ -140,6 +140,8 @@ where
     M: MachineWithMemBus<SC::Val>,
     SC: StarkConfig,
 {
+    type Public = ValidaPublicValues<SC::Val>;
+
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let mut ops = self
             .operations

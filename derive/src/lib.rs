@@ -250,6 +250,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     &main_traces[#i],
                     &perm_traces[#i],
                     &perm_challenges,
+                    &public_values[#i],
                 );
 
                 // TODO: Needlessly regenerating preprocessed_trace()
@@ -264,6 +265,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     preprocessed_trace_lde,
                     main_trace_ldes.remove(0),
                     perm_trace_ldes.remove(0),
+                    &public_values[#i],
                     cumulative_sums[#i],
                     &perm_challenges,
                     alpha,
@@ -283,13 +285,13 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             use ::valida_machine::__internal::p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
             use ::valida_machine::__internal::p3_matrix::{Matrix, MatrixRowSlices, dense::RowMajorMatrix};
             use ::valida_machine::__internal::p3_util::log2_strict_usize;
-            use ::valida_machine::{generate_permutation_trace, MachineProof, ChipProof, Commitments};
+            use ::valida_machine::{generate_permutation_trace, Chip, MachineProof, ChipProof, Commitments, ValidaPublicValues};
             use ::valida_machine::OpenedValues;
             use alloc::vec;
             use alloc::vec::Vec;
             use alloc::boxed::Box;
 
-            let mut chips: [Box<&dyn Chip<Self, SC>>; #num_chips] = [ #chip_list ];
+            let mut chips: [Box<&dyn Chip<Self, SC, Public=ValidaPublicValues<SC::Val>>>; #num_chips] = [ #chip_list ];
             let log_quotient_degrees: [usize; #num_chips] = [ #quotient_degree_calls ];
 
             let mut challenger = config.challenger();
@@ -318,6 +320,15 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                             .collect::<Vec<_>>()
                             .try_into().unwrap()
                     );
+
+            let public_values: Vec<_> =
+                    tracing::info_span!("generate public values")
+                        .in_scope(||
+                            chips.par_iter()
+                                .map(|chip| chip.generate_public_values())
+                                .collect::<Vec<_>>()
+                                .try_into().unwrap()
+                        );
 
             let degrees: [usize; #num_chips] = main_traces.iter()
                 .map(|trace| trace.height())
@@ -473,11 +484,15 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
         .enumerate()
         .map(|(i, chip)| {
             let chip_name = chip.ident.as_ref().unwrap();
+            let chip_type = &chip.ty;
             quote! {
+                let chip = self.#chip_name();
+                let public_values = <#chip_type as Chip<Self,SC>>::generate_public_values(&chip);
                 verify_constraints::<Self, _, SC>(
                     self,
                     self.#chip_name(),
                     &proof.chip_proofs[#i].opened_values,
+                    &public_values,
                     proof.chip_proofs[#i].cumulative_sum,
                     proof.chip_proofs[#i].log_degree,
                     g_subgroups[#i],
@@ -503,7 +518,7 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
             use ::valida_machine::__internal::p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
             use ::valida_machine::__internal::p3_matrix::Dimensions;
             use ::valida_machine::__internal::p3_util::log2_strict_usize;
-            use ::valida_machine::{verify_constraints, MachineProof, ChipProof, Commitments};
+            use ::valida_machine::{verify_constraints, MachineProof, ChipProof, Commitments, ValidaPublicValues};
             use ::valida_machine::OpenedValues;
             use ::valida_machine::{VerificationError, ProofShapeError, OodEvaluationMismatch};
             use alloc::vec;
@@ -511,7 +526,7 @@ fn verify_method(chips: &[&Field]) -> TokenStream2 {
             use alloc::boxed::Box;
 
 
-            let mut chips: [Box<&dyn Chip<Self, SC>>; #num_chips] = [ #chip_list ];
+            let mut chips: [Box<&dyn Chip<Self, SC, Public=ValidaPublicValues<SC::Val>>>; #num_chips] = [ #chip_list ];
             let log_quotient_degrees: [usize; #num_chips] = [ #quotient_degree_calls ];
             let mut challenger = config.challenger();
             // TODO: Seed challenger with digest of all constraints & trace lengths.

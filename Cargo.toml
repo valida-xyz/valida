@@ -22,20 +22,21 @@ members = [
 ]
 
 [workspace.dependencies]
-p3-air = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "valida-main" }
-p3-baby-bear = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "valida-main" }
-p3-commit = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "valida-main" }
-p3-challenger = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "valida-main" }
-p3-dft = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "valida-main" }
-p3-field = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "valida-main" }
-p3-fri = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "valida-main" }
-p3-goldilocks = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "valida-main" }
-p3-keccak = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "valida-main" }
-p3-matrix = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "valida-main" }
-p3-maybe-rayon = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "valida-main" }
-p3-mds = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "valida-main" }
-p3-merkle-tree = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "valida-main" }
-p3-poseidon = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "valida-main" }
-p3-symmetric = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "valida-main" }
-p3-uni-stark = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "valida-main" }
-p3-util = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "valida-main" }
+p3-air = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-baby-bear = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-commit = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-challenger = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-dft = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-field = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-fri = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-goldilocks = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-interpolation = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-keccak = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-matrix = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-maybe-rayon = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-mds = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-merkle-tree = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-poseidon = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-symmetric = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-uni-stark = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-util = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }

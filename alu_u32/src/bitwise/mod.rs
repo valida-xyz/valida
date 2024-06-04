@@ -6,7 +6,9 @@ use columns::{Bitwise32Cols, COL_MAP, NUM_BITWISE_COLS};
 use core::mem::transmute;
 use valida_bus::MachineWithGeneralBus;
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
+use valida_machine::{
+    instructions, Chip, Instruction, Interaction, Operands, ValidaPublicValues, Word,
+};
 use valida_opcodes::{AND32, OR32, XOR32};
 
 use p3_air::VirtualPairCol;
@@ -36,6 +38,8 @@ where
     M: MachineWithGeneralBus<SC::Val>,
     SC: StarkConfig,
 {
+    type Public = ValidaPublicValues<SC::Val>;
+
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let rows = self
             .operations

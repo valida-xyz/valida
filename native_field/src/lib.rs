@@ -8,7 +8,9 @@ use columns::{NativeFieldCols, COL_MAP, NUM_NATIVE_FIELD_COLS};
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithRangeBus8};
 use valida_cpu::MachineWithCpuChip;
-use valida_machine::{instructions, Chip, Instruction, Interaction, Operands, Word};
+use valida_machine::{
+    instructions, Chip, Instruction, Interaction, Operands, ValidaPublicValues, Word,
+};
 use valida_opcodes::{ADD, MUL, SUB};
 use valida_range::MachineWithRangeChip;
 use valida_util::pad_to_power_of_two;
@@ -38,6 +40,8 @@ where
     M: MachineWithGeneralBus<SC::Val> + MachineWithRangeBus8<SC::Val>,
     SC: StarkConfig,
 {
+    type Public = ValidaPublicValues<SC::Val>;
+
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let rows = self
             .operations

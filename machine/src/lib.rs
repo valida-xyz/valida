@@ -15,6 +15,7 @@ mod folding_builder;
 mod machine;
 mod program;
 mod proof;
+mod public;
 mod quotient;
 mod symbolic;
 mod verify;
@@ -27,6 +28,7 @@ pub use error::*;
 pub use machine::*;
 pub use program::*;
 pub use proof::*;
+pub use public::*;
 pub use verify::*;
 
 pub const OPERAND_ELEMENTS: usize = 5;
