@@ -1,5 +1,3 @@
-#![no_std]
-
 extern crate alloc;
 
 use alloc::collections::BTreeMap;
@@ -35,11 +33,14 @@ pub fn load_elf_object_file(file: Vec<u8>) -> Program {
     let mut bss_sections: Vec<SectionHeader> = vec![];
     let mut text_sections: Vec<(SectionHeader, &[u8])> = vec![];
     for section_header in file.section_headers().unwrap().iter() {
+        println!("{:?} {:?} {:?}", section_header.sh_name, section_header.sh_type, section_header.sh_flags);
         let is_data: bool = section_header.sh_type == abi::SHT_PROGBITS
             && section_header.sh_flags == (abi::SHF_ALLOC | abi::SHF_WRITE).into();
         let is_rodata: bool = section_header.sh_type == abi::SHT_PROGBITS
             && (section_header.sh_flags == abi::SHF_ALLOC.into()
-                || section_header.sh_flags == 0x32); // TODO: what is 0x32?
+                || section_header.sh_flags == 0x02 // TODO: what is 0x02?
+                || section_header.sh_flags == 0x32 // TODO: what is 0x32?
+                || section_header.sh_flags == 0x12); // TODO: what is 0x12?
         let is_bss: bool = section_header.sh_type == abi::SHT_NOBITS
             && section_header.sh_flags == (abi::SHF_ALLOC | abi::SHF_WRITE).into();
         let is_text: bool = section_header.sh_type == abi::SHT_PROGBITS
