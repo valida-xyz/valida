@@ -145,7 +145,7 @@ pub struct BasicMachine<F: PrimeField32 + TwoAdicField> {
     cpu: CpuChip,
 
     #[chip]
-    program: ProgramChip,
+    program: ProgramChip<F>,
 
     #[chip]
     mem: MemoryChip,
@@ -222,11 +222,11 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithCpuChip<F> for BasicMachine<F> {
 }
 
 impl<F: PrimeField32 + TwoAdicField> MachineWithProgramChip<F> for BasicMachine<F> {
-    fn program(&self) -> &ProgramChip {
+    fn program(&self) -> &ProgramChip<F> {
         &self.program
     }
 
-    fn program_mut(&mut self) -> &mut ProgramChip {
+    fn program_mut(&mut self) -> &mut ProgramChip<F> {
         &mut self.program
     }
 }

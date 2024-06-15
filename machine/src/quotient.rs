@@ -15,7 +15,7 @@ use p3_maybe_rayon::prelude::*;
 use p3_uni_stark::{decompose_and_flatten, ZerofierOnCoset};
 use tracing::instrument;
 
-pub fn quotient<M, A, SC, PreprocessedTraceLde, MainTraceLde, PermTraceLde>(
+pub fn quotient<M, A, SC, PreprocessedTraceLde, MainTraceLde, PermTraceLde, PublicTraceLde>(
     machine: &M,
     config: &SC,
     air: &A,
@@ -23,7 +23,7 @@ pub fn quotient<M, A, SC, PreprocessedTraceLde, MainTraceLde, PermTraceLde>(
     preprocessed_trace_lde: Option<PreprocessedTraceLde>,
     main_trace_lde: MainTraceLde,
     perm_trace_lde: PermTraceLde,
-    public_values: &Option<A::Public>,
+    public_trace_lde: Option<PublicTraceLde>,
     cumulative_sum: SC::Challenge,
     perm_challenges: &[SC::Challenge],
     alpha: SC::Challenge,
@@ -35,7 +35,7 @@ where
     PreprocessedTraceLde: MatrixRows<SC::Val> + MatrixGet<SC::Val> + Sync,
     MainTraceLde: MatrixRows<SC::Val> + MatrixGet<SC::Val> + Sync,
     PermTraceLde: MatrixRows<SC::Val> + MatrixGet<SC::Val> + Sync,
-    A::Public: Send + Sync,
+    PublicTraceLde: MatrixRows<SC::Val> + MatrixGet<SC::Val> + Sync,
 {
     let pcs = config.pcs();
     let log_quotient_degree = get_log_quotient_degree::<M, SC, A>(machine, air);
@@ -47,8 +47,10 @@ where
         main_trace_lde.vertically_strided(1 << log_stride_for_quotient, 0);
     let perm_trace_lde_for_quotient =
         perm_trace_lde.vertically_strided(1 << log_stride_for_quotient, 0);
+    let public_trace_lde_for_quotient =
+        public_trace_lde.map(|values| values.vertically_strided(1 << log_stride_for_quotient, 0));
 
-    let quotient_values = quotient_values::<M, SC, A, _, _, _>(
+    let quotient_values = quotient_values::<M, SC, A, _, _, _, _>(
         machine,
         config,
         air,
@@ -57,7 +59,7 @@ where
         preprocessed_trace_lde_for_quotient,
         main_trace_lde_for_quotient,
         perm_trace_lde_for_quotient,
-        public_values,
+        public_trace_lde_for_quotient,
         cumulative_sum,
         perm_challenges,
         alpha,
@@ -71,7 +73,7 @@ where
 }
 
 #[instrument(name = "compute quotient polynomial", skip_all)]
-fn quotient_values<M, SC, A, PreprocessedTraceLde, MainTraceLde, PermTraceLde>(
+fn quotient_values<M, SC, A, PreprocessedTraceLde, MainTraceLde, PermTraceLde, PublicTraceLde>(
     machine: &M,
     config: &SC,
     air: &A,
@@ -80,7 +82,7 @@ fn quotient_values<M, SC, A, PreprocessedTraceLde, MainTraceLde, PermTraceLde>(
     preprocessed_trace_lde: Option<PreprocessedTraceLde>,
     main_trace_lde: MainTraceLde,
     perm_trace_lde: PermTraceLde,
-    public_values: &Option<A::Public>,
+    public_values: Option<PublicTraceLde>,
     cumulative_sum: SC::Challenge,
     perm_challenges: &[SC::Challenge],
     alpha: SC::Challenge,
@@ -89,7 +91,7 @@ where
     M: Machine<SC::Val>,
     SC: StarkConfig,
     A: Chip<M, SC>,
-    A::Public: Send + Sync,
+    PublicTraceLde: MatrixRows<SC::Val> + MatrixGet<SC::Val> + Sync,
     PreprocessedTraceLde: MatrixRows<SC::Val> + MatrixGet<SC::Val> + Sync,
     MainTraceLde: MatrixRows<SC::Val> + MatrixGet<SC::Val> + Sync,
     PermTraceLde: MatrixRows<SC::Val> + MatrixGet<SC::Val> + Sync,
@@ -102,6 +104,27 @@ where
     let subgroup_last = g_subgroup.inverse();
     let coset_shift = config.pcs().coset_shift();
     let next_step = 1 << log_quotient_degree;
+
+    debug_assert_eq!(quotient_size, main_trace_lde.height());
+    println!("main");
+    debug_assert_eq!(quotient_size, perm_trace_lde.height());
+    println!("perm");
+    debug_assert_eq!(
+        quotient_size,
+        preprocessed_trace_lde
+            .as_ref()
+            .map(|lde| lde.height())
+            .unwrap_or(quotient_size)
+    );
+    println!("preprocessed");
+    debug_assert_eq!(
+        quotient_size,
+        public_values
+            .as_ref()
+            .map(|values| values.height())
+            .unwrap_or(quotient_size)
+    );
+    println!("public");
 
     let mut coset: Vec<_> =
         cyclic_subgroup_coset_known_order(g_extended, coset_shift, quotient_size).collect();

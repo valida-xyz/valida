@@ -1,7 +1,8 @@
 use core::marker::PhantomData;
-use p3_challenger::{CanObserve, FieldChallenger};
+use p3_challenger::{CanObserve, FieldChallenger, GrindingChallenger};
 use p3_commit::{Pcs, UnivariatePcsWithLde};
 use p3_field::{AbstractExtensionField, ExtensionField, PackedField, PrimeField32, TwoAdicField};
+use p3_fri::TwoAdicFriPcsGenericConfig;
 use p3_matrix::dense::RowMajorMatrix;
 
 pub trait StarkConfig {

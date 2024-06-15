@@ -10,7 +10,7 @@ use valida_machine::{
     FixedAdviceProvider, Instruction, InstructionWord, Machine, Operands, ProgramROM, Word,
 };
 
-use valida_program::MachineWithProgramChip;
+use valida_program::{MachineWithProgramChip, ProgramChipTrait};
 use valida_static_data::MachineWithStaticDataChip;
 
 use p3_challenger::DuplexChallenger;

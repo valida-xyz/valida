@@ -5,7 +5,7 @@ use valida_basic::BasicMachine;
 use valida_cpu::MachineWithCpuChip;
 use valida_machine::{FixedAdviceProvider, Machine, ProgramROM};
 use valida_output::MachineWithOutputChip;
-use valida_program::MachineWithProgramChip;
+use valida_program::{MachineWithProgramChip, ProgramChipTrait};
 
 #[test]
 fn run_fibonacci() {

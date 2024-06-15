@@ -28,6 +28,7 @@ use p3_symmetric::{CompressionFunctionFromHasher, SerializingHasher32};
 use rand::thread_rng;
 use valida_machine::StarkConfigImpl;
 use valida_machine::__internal::p3_commit::ExtensionMmcs;
+use valida_program::ProgramChipTrait;
 
 fn main() {
     prove_fibonacci()

@@ -15,6 +15,20 @@ pub trait MachineWithProgramBus<F: Field>: Machine<F> {
     fn program_bus(&self) -> BusArgument;
 }
 
+pub trait MachineWithLookupBus<F: Field>: Machine<F> {
+    fn lookup_bus(&self) -> BusArgument;
+}
+
+impl<F, M> MachineWithLookupBus<F> for M
+where
+    F: Field,
+    M: MachineWithProgramBus<F>,
+{
+    fn lookup_bus(&self) -> BusArgument {
+        self.program_bus()
+    }
+}
+
 pub trait MachineWithMemBus<F: Field>: Machine<F> {
     fn mem_bus(&self) -> BusArgument;
 }

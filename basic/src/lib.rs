@@ -12,7 +12,7 @@ use p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
 use p3_field::{extension::BinomialExtensionField, TwoAdicField};
 use p3_field::{AbstractExtensionField, AbstractField, PrimeField32};
 use p3_matrix::dense::RowMajorMatrix;
-use p3_matrix::{Dimensions, Matrix, MatrixRowSlices};
+use p3_matrix::{Dimensions, Matrix, MatrixRowSlices, MatrixRows};
 use p3_maybe_rayon::*;
 use p3_util::{log2_ceil_usize, log2_strict_usize};
 use valida_alu_u32::{
@@ -58,7 +58,7 @@ use valida_machine::{
 };
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
 use valida_output::{MachineWithOutputChip, OutputChip, WriteInstruction};
-use valida_program::{MachineWithProgramChip, ProgramChip};
+use valida_program::{MachineWithProgramChip, ProgramChip, ProgramChipTrait};
 use valida_range::{MachineWithRangeChip, RangeCheckerChip};
 use valida_static_data::{MachineWithStaticDataChip, StaticDataChip};
 
@@ -107,7 +107,7 @@ pub struct BasicMachine<F: PrimeField32 + TwoAdicField> {
 
     // Chips
     cpu: CpuChip,
-    program: ProgramChip,
+    program: ProgramChip<F>,
     mem: MemoryChip,
     add_u32: Add32Chip,
     sub_u32: Sub32Chip,
@@ -127,7 +127,7 @@ pub struct BasicMachine<F: PrimeField32 + TwoAdicField> {
 const NUM_CHIPS: usize = 14;
 
 impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
-    fn run<Adv>(&mut self, program: &ProgramROM<i32>, advice: &mut Adv)
+    fn run<Adv>(&mut self, _program: &ProgramROM<i32>, advice: &mut Adv)
     where
         Adv: AdviceProvider,
     {
@@ -188,27 +188,58 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         // TODO: Seed challenger with digest of all constraints & trace lengths.
         let pcs = config.pcs();
 
-        let preprocessed_traces: Vec<RowMajorMatrix<SC::Val>> =
+        let preprocessed_traces: [Option<RowMajorMatrix<SC::Val>>; NUM_CHIPS] =
             tracing::info_span!("generate preprocessed traces").in_scope(|| {
                 chips
                     .par_iter()
-                    .flat_map(|chip| chip.preprocessed_trace())
+                    .map(|chip| chip.preprocessed_trace())
                     .collect::<Vec<_>>()
+                    .try_into()
+                    .unwrap()
             });
 
-        let (preprocessed_commit, preprocessed_data) =
-            tracing::info_span!("commit to preprocessed traces")
-                .in_scope(|| pcs.commit_batches(preprocessed_traces.to_vec()));
-        challenger.observe(preprocessed_commit.clone());
-        let mut preprocessed_trace_ldes = pcs.get_ldes(&preprocessed_data);
+        let has_preprocessed_traces: [bool; NUM_CHIPS] = preprocessed_traces
+            .iter()
+            .map(Option::is_some)
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap();
 
-        let mut public_values =
+        let (preprocessed_commit, preprocessed_data) =
+            tracing::info_span!("commit to preprocessed traces").in_scope(|| {
+                pcs.commit_batches(preprocessed_traces.into_iter().flatten().collect())
+            });
+        challenger.observe(preprocessed_commit.clone());
+        let mut preprocessed_trace_ldes_real = pcs.get_ldes(&preprocessed_data).into_iter();
+
+        // add the None's back in so we can iterate through this as we do with the other lde arrays.
+        let mut preprocessed_trace_ldes: Vec<_> = has_preprocessed_traces
+            .iter()
+            .map(|&has_trace| {
+                if has_trace {
+                    Some(preprocessed_trace_ldes_real.next().unwrap())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // preprocessed_traces.iter().map(|trace|)
+
+        let mut public_traces: [Option<ValidaPublicValues<SC::Val>>; NUM_CHIPS] =
             tracing::info_span!("generate public values vector").in_scope(|| {
                 chips
                     .par_iter()
                     .map(|chip| chip.generate_public_values())
                     .collect::<Vec<_>>()
+                    .try_into()
+                    .unwrap()
             });
+
+        let mut public_trace_ldes: Vec<_> = public_traces
+            .iter()
+            .map(|opt| opt.as_ref().map(|trace| trace.get_ldes(config)))
+            .collect();
 
         let main_traces: [RowMajorMatrix<SC::Val>; NUM_CHIPS] =
             tracing::info_span!("generate main trace").in_scope(|| {
@@ -226,7 +257,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             .collect::<Vec<_>>()
             .try_into()
             .unwrap();
-        let log_degrees = degrees.map(|d| log2_strict_usize(d));
+        let log_degrees = degrees.map(log2_strict_usize);
         let g_subgroups = log_degrees.map(|log_deg| SC::Val::two_adic_generator(log_deg));
 
         let (main_commit, main_data) = tracing::info_span!("commit to main traces")
@@ -259,7 +290,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let cumulative_sums = perm_traces
             .iter()
-            .map(|trace| trace.row_slice(trace.height() - 1).last().unwrap().clone())
+            .map(|trace| *trace.row_slice(trace.height() - 1).last().unwrap())
             .collect::<Vec<_>>();
 
         let (perm_commit, perm_data) = tracing::info_span!("commit to permutation traces")
@@ -279,6 +310,8 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let mut i: usize = 0;
 
+        println!("hi");
+
         let chip = self.cpu();
         #[cfg(debug_assertions)]
         check_constraints::<Self, _, SC>(
@@ -287,22 +320,27 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
-            &public_values[i],
+            &public_traces[i],
         );
+        println!("hi2");
         quotients.push(quotient(
             self,
             config,
             chip,
             log_degrees[i],
-            None::<RowMajorMatrix<SC::Val>>,
+            preprocessed_trace_ldes.remove(0),
             main_trace_ldes.remove(0),
             perm_trace_ldes.remove(0),
-            &public_values[i],
+            public_trace_ldes.remove(0),
             cumulative_sums[i],
             &perm_challenges,
             alpha,
         ));
         i += 1;
+
+        println!("main: {:?}", &main_traces[i].height());
+        println!("perm: {:?}", &perm_traces[i].height());
+        println!("public: {:?}", &public_traces[i].as_ref().unwrap().height());
 
         let chip = self.program();
         #[cfg(debug_assertions)]
@@ -312,17 +350,17 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
-            &public_values[i],
+            &public_traces[i],
         );
         quotients.push(quotient(
             self,
             config,
             chip,
             log_degrees[i],
-            Some(preprocessed_trace_ldes.remove(0)),
+            preprocessed_trace_ldes.remove(0),
             main_trace_ldes.remove(0),
             perm_trace_ldes.remove(0),
-            &public_values[i],
+            public_trace_ldes.remove(0),
             cumulative_sums[i],
             &perm_challenges,
             alpha,
@@ -337,17 +375,17 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
-            &public_values[i],
+            &public_traces[i],
         );
         quotients.push(quotient(
             self,
             config,
             chip,
             log_degrees[i],
-            None::<RowMajorMatrix<SC::Val>>,
+            preprocessed_trace_ldes.remove(0),
             main_trace_ldes.remove(0),
             perm_trace_ldes.remove(0),
-            &public_values[i],
+            public_trace_ldes.remove(0),
             cumulative_sums[i],
             &perm_challenges,
             alpha,
@@ -362,17 +400,17 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
-            &public_values[i],
+            &public_traces[i],
         );
         quotients.push(quotient(
             self,
             config,
             chip,
             log_degrees[i],
-            None::<RowMajorMatrix<SC::Val>>,
+            preprocessed_trace_ldes.remove(0),
             main_trace_ldes.remove(0),
             perm_trace_ldes.remove(0),
-            &public_values[i],
+            public_trace_ldes.remove(0),
             cumulative_sums[i],
             &perm_challenges,
             alpha,
@@ -387,17 +425,17 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
-            &public_values[i],
+            &public_traces[i],
         );
         quotients.push(quotient(
             self,
             config,
             chip,
             log_degrees[i],
-            None::<RowMajorMatrix<SC::Val>>,
+            preprocessed_trace_ldes.remove(0),
             main_trace_ldes.remove(0),
             perm_trace_ldes.remove(0),
-            &public_values[i],
+            public_trace_ldes.remove(0),
             cumulative_sums[i],
             &perm_challenges,
             alpha,
@@ -412,17 +450,17 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
-            &public_values[i],
+            &public_traces[i],
         );
         quotients.push(quotient(
             self,
             config,
             chip,
             log_degrees[i],
-            None::<RowMajorMatrix<SC::Val>>,
+            preprocessed_trace_ldes.remove(0),
             main_trace_ldes.remove(0),
             perm_trace_ldes.remove(0),
-            &public_values[i],
+            public_trace_ldes.remove(0),
             cumulative_sums[i],
             &perm_challenges,
             alpha,
@@ -437,17 +475,17 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
-            &public_values[i],
+            &public_traces[i],
         );
         quotients.push(quotient(
             self,
             config,
             chip,
             log_degrees[i],
-            None::<RowMajorMatrix<SC::Val>>,
+            preprocessed_trace_ldes.remove(0),
             main_trace_ldes.remove(0),
             perm_trace_ldes.remove(0),
-            &public_values[i],
+            public_trace_ldes.remove(0),
             cumulative_sums[i],
             &perm_challenges,
             alpha,
@@ -462,17 +500,17 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
-            &public_values[i],
+            &public_traces[i],
         );
         quotients.push(quotient(
             self,
             config,
             chip,
             log_degrees[i],
-            None::<RowMajorMatrix<SC::Val>>,
+            preprocessed_trace_ldes.remove(0),
             main_trace_ldes.remove(0),
             perm_trace_ldes.remove(0),
-            &public_values[i],
+            public_trace_ldes.remove(0),
             cumulative_sums[i],
             &perm_challenges,
             alpha,
@@ -487,17 +525,17 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
-            &public_values[i],
+            &public_traces[i],
         );
         quotients.push(quotient(
             self,
             config,
             chip,
             log_degrees[i],
-            None::<RowMajorMatrix<SC::Val>>,
+            preprocessed_trace_ldes.remove(0),
             main_trace_ldes.remove(0),
             perm_trace_ldes.remove(0),
-            &public_values[i],
+            public_trace_ldes.remove(0),
             cumulative_sums[i],
             &perm_challenges,
             alpha,
@@ -512,17 +550,17 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
-            &public_values[i],
+            &public_traces[i],
         );
         quotients.push(quotient(
             self,
             config,
             chip,
             log_degrees[i],
-            None::<RowMajorMatrix<SC::Val>>,
+            preprocessed_trace_ldes.remove(0),
             main_trace_ldes.remove(0),
             perm_trace_ldes.remove(0),
-            &public_values[i],
+            public_trace_ldes.remove(0),
             cumulative_sums[i],
             &perm_challenges,
             alpha,
@@ -537,17 +575,17 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
-            &public_values[i],
+            &public_traces[i],
         );
         quotients.push(quotient(
             self,
             config,
             chip,
             log_degrees[i],
-            None::<RowMajorMatrix<SC::Val>>,
+            preprocessed_trace_ldes.remove(0),
             main_trace_ldes.remove(0),
             perm_trace_ldes.remove(0),
-            &public_values[i],
+            public_trace_ldes.remove(0),
             cumulative_sums[i],
             &perm_challenges,
             alpha,
@@ -562,17 +600,17 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
-            &public_values[i],
+            &public_traces[i],
         );
         quotients.push(quotient(
             self,
             config,
             chip,
             log_degrees[i],
-            None::<RowMajorMatrix<SC::Val>>,
+            preprocessed_trace_ldes.remove(0),
             main_trace_ldes.remove(0),
             perm_trace_ldes.remove(0),
-            &public_values[i],
+            public_trace_ldes.remove(0),
             cumulative_sums[i],
             &perm_challenges,
             alpha,
@@ -587,17 +625,17 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
-            &public_values[i],
+            &public_traces[i],
         );
         quotients.push(quotient(
             self,
             config,
             chip,
             log_degrees[i],
-            Some(preprocessed_trace_ldes.remove(0)),
+            preprocessed_trace_ldes.remove(0),
             main_trace_ldes.remove(0),
             perm_trace_ldes.remove(0),
-            &public_values[i],
+            public_trace_ldes.remove(0),
             cumulative_sums[i],
             &perm_challenges,
             alpha,
@@ -612,17 +650,17 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &main_traces[i],
             &perm_traces[i],
             &perm_challenges,
-            &public_values[i],
+            &public_traces[i],
         );
         quotients.push(quotient(
             self,
             config,
             chip,
             log_degrees[i],
-            None::<RowMajorMatrix<SC::Val>>,
+            preprocessed_trace_ldes.remove(0),
             main_trace_ldes.remove(0),
             perm_trace_ldes.remove(0),
-            &public_values[i],
+            public_trace_ldes.remove(0),
             cumulative_sums[i],
             &perm_challenges,
             alpha,
@@ -898,7 +936,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         i += 1;
 
         let chip = self.program();
-        let public_values = <ProgramChip as Chip<Self, SC>>::generate_public_values(&chip);
+        let public_values = <ProgramChip<F> as Chip<Self, SC>>::generate_public_values(&chip);
         verify_constraints::<Self, _, SC>(
             self,
             chip,
@@ -1139,7 +1177,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
     {
         // Fetch
         let pc = self.cpu().pc;
-        let instruction = self.program.program_rom.get_instruction(pc);
+        let instruction = self.program.program_rom().get_instruction(pc);
         let opcode = instruction.opcode;
         let ops = instruction.operands;
 
@@ -1292,11 +1330,11 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithCpuChip<F> for BasicMachine<F> {
 }
 
 impl<F: PrimeField32 + TwoAdicField> MachineWithProgramChip<F> for BasicMachine<F> {
-    fn program(&self) -> &ProgramChip {
+    fn program(&self) -> &ProgramChip<F> {
         &self.program
     }
 
-    fn program_mut(&mut self) -> &mut ProgramChip {
+    fn program_mut(&mut self) -> &mut ProgramChip<F> {
         &mut self.program
     }
 }

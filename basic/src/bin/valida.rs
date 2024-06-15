@@ -33,6 +33,7 @@ use rand_seeder::Seeder;
 use valida_machine::StarkConfigImpl;
 use valida_machine::__internal::p3_commit::ExtensionMmcs;
 use valida_output::MachineWithOutputChip;
+use valida_program::ProgramChipTrait;
 
 use reedline_repl_rs::clap::{Arg, ArgMatches, Command};
 use reedline_repl_rs::{Repl, Result};
@@ -111,7 +112,7 @@ impl Context {
         let pc = self.machine_.cpu().pc;
         let fp = self.machine_.cpu().fp;
 
-        let instruction = self.machine_.program().program_rom.get_instruction(pc);
+        let instruction = self.machine_.program().program_rom().get_instruction(pc);
         println!("{:4} : {:?}", pc, instruction.to_string());
 
         // check if fp is changed
@@ -195,7 +196,7 @@ fn last_frame(_: ArgMatches, context: &mut Context) -> Result<Option<String>> {
 fn list_instrs(args: ArgMatches, context: &mut Context) -> Result<Option<String>> {
     let pc = context.machine_.cpu().pc;
 
-    let program_rom = &context.machine_.program().program_rom;
+    let program_rom = &context.machine_.program().program_rom();
     let total_size = program_rom.0.len();
 
     let print_size_arg = args.get_one::<String>("size");

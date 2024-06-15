@@ -274,7 +274,7 @@ pub fn eval_permutation_constraints<M, C, SC, AB>(
     for (m, (interaction, interaction_type)) in all_interactions.iter().enumerate() {
         // Reciprocal constraints
         let mut rlc = AB::ExprEF::zero();
-        for (field, beta) in interaction.fields.iter().zip(betas.clone()) {
+        for ((field, beta), j) in interaction.fields.iter().zip(betas.clone()).zip(0..100) {
             let elem =
                 field.apply::<AB::Expr, AB::Var>(preprocessed_local, public_local, main_local);
             rlc += AB::ExprEF::from_f(beta) * elem;

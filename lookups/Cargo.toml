@@ -6,7 +6,9 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 p3-air = { workspace = true }
+p3-field = { workspace = true }
 p3-matrix = { workspace = true }
+valida-bus = { path = "../bus" }
 valida-machine = { path = "../machine" }
 valida-derive = { path = "../derive" }
 valida-util = { path = "../util" }

@@ -195,8 +195,10 @@ fn step_method(machine: &syn::DeriveInput, instructions: &[&Field], val: &Ident)
 
     quote! {
        fn step<Adv: ::valida_machine::AdviceProvider>(&mut self, advice: &mut Adv) -> StoppingFlag {
+           use ::valida_program::ProgramChipTrait;
+
            let pc = self.cpu().pc;
-           let instruction = self.program.program_rom.get_instruction(pc);
+           let instruction = self.program.program_rom().get_instruction(pc);
            let opcode = instruction.opcode;
            let ops = instruction.operands;
 
@@ -250,7 +252,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     &main_traces[#i],
                     &perm_traces[#i],
                     &perm_challenges,
-                    &public_values[#i],
+                    &public_values[0],
                 );
 
                 // TODO: Needlessly regenerating preprocessed_trace()
@@ -265,7 +267,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     preprocessed_trace_lde,
                     main_trace_ldes.remove(0),
                     perm_trace_ldes.remove(0),
-                    &public_values[#i],
+                    public_values.remove(0),
                     cumulative_sums[#i],
                     &perm_challenges,
                     alpha,
@@ -321,7 +323,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                             .try_into().unwrap()
                     );
 
-            let public_values: Vec<_> =
+            let mut public_values: Vec<_> =
                     tracing::info_span!("generate public values")
                         .in_scope(||
                             chips.par_iter()

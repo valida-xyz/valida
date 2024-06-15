@@ -26,6 +26,7 @@ use rand_seeder::Seeder;
 use valida_machine::StarkConfigImpl;
 use valida_machine::__internal::p3_commit::ExtensionMmcs;
 use valida_output::MachineWithOutputChip;
+use valida_program::ProgramChipTrait;
 
 #[derive(Parser)]
 struct Args {

@@ -1,5 +1,6 @@
 use alloc::slice;
 use core::iter::Cloned;
+use p3_commit::UnivariatePcsWithLde;
 use p3_field::{ExtensionField, TwoAdicField};
 use p3_interpolation;
 use p3_matrix::{
@@ -8,7 +9,9 @@ use p3_matrix::{
 };
 use p3_util::log2_strict_usize;
 
-pub trait PublicValues<F, E>: MatrixRowSlices<F> + MatrixGet<F>
+use crate::StarkConfig;
+
+pub trait PublicValues<F, E>: MatrixRowSlices<F> + MatrixGet<F> + Sized
 where
     F: TwoAdicField,
     E: ExtensionField<F> + TwoAdicField,
@@ -24,36 +27,41 @@ where
 
         p3_interpolation::interpolate_coset::<F, E, _>(self, shift, zeta)
     }
+
+    fn get_ldes<SC>(&self, config: &SC) -> Self
+    where
+        SC: StarkConfig<Val = F, Challenge = E>;
 }
 
-impl<F, E> PublicValues<F, E> for RowMajorMatrix<F>
+impl<F, E, T> PublicValues<F, E> for T
 where
     F: TwoAdicField,
     E: ExtensionField<F> + TwoAdicField,
+    T: From<RowMajorMatrix<F>> + MatrixRowSlices<F> + MatrixGet<F> + Sized + Clone,
 {
+    fn get_ldes<SC>(&self, config: &SC) -> Self
+    where
+        SC: StarkConfig<Val = F, Challenge = E>,
+    {
+        let pcs = config.pcs();
+        let mat = self.clone().to_row_major_matrix();
+        pcs.compute_lde_batch(mat).into()
+    }
 }
 
-impl<F, E> PublicValues<F, E> for RowMajorMatrixView<'_, F>
-where
-    F: TwoAdicField,
-    E: ExtensionField<F> + TwoAdicField,
-{
-}
+// impl<F, E> PublicValues<F, E> for RowMajorMatrix<F>
+// where
+//     F: TwoAdicField,
+//     E: ExtensionField<F> + TwoAdicField,
+// {
+// }
 
 // In the case that the public values are a vector rather than a matrix,
 // we view it as a matrix with a single row repeated as many times as desired.
+#[derive(Clone, Debug)]
 pub struct PublicRow<F>(pub Vec<F>);
-pub struct PublicRowView<'a, F>(pub &'a [F]);
 
 impl<T> Matrix<T> for PublicRow<T> {
-    fn width(&self) -> usize {
-        self.0.len()
-    }
-    fn height(&self) -> usize {
-        1
-    }
-}
-impl<T> Matrix<T> for PublicRowView<'_, T> {
     fn width(&self) -> usize {
         self.0.len()
     }
@@ -69,31 +77,14 @@ impl<T: Clone> MatrixRows<T> for PublicRow<T> {
         self.0.iter().cloned()
     }
 }
-impl<T: Clone> MatrixRows<T> for PublicRowView<'_, T> {
-    type Row<'a> = Cloned<slice::Iter<'a, T>> where T: 'a, Self: 'a;
-
-    fn row(&self, _r: usize) -> Self::Row<'_> {
-        self.0.iter().cloned()
-    }
-}
 
 impl<T: Clone> MatrixRowSlices<T> for PublicRow<T> {
     fn row_slice(&self, _r: usize) -> &[T] {
         self.0.iter().as_slice()
     }
 }
-impl<T: Clone> MatrixRowSlices<T> for PublicRowView<'_, T> {
-    fn row_slice(&self, _r: usize) -> &[T] {
-        self.0.iter().as_slice()
-    }
-}
 
 impl<T: Clone> MatrixGet<T> for PublicRow<T> {
-    fn get(&self, _r: usize, c: usize) -> T {
-        self.0[c].clone()
-    }
-}
-impl<T: Clone> MatrixGet<T> for PublicRowView<'_, T> {
     fn get(&self, _r: usize, c: usize) -> T {
         self.0[c].clone()
     }
@@ -107,17 +98,24 @@ where
     fn interpolate(&self, _zeta: E, _offset: usize) -> Vec<E> {
         self.0.iter().map(|v| E::from_base(v.clone())).collect()
     }
-}
-impl<F, E> PublicValues<F, E> for PublicRowView<'_, F>
-where
-    F: TwoAdicField,
-    E: ExtensionField<F> + TwoAdicField,
-{
-    fn interpolate(&self, _zeta: E, _offset: usize) -> Vec<E> {
-        self.0.iter().map(|v| E::from_base(v.clone())).collect()
+
+    fn get_ldes<SC>(&self, _config: &SC) -> Self
+    where
+        SC: StarkConfig<Val = F>,
+    {
+        self.clone()
     }
 }
 
+// // This implementation is only here to satisfy the `PublicValues` trait:
+// // as we override the `get_ldes` method for `PublicRow`, the `From` bound is not relevant here.
+// impl<F> From<RowMajorMatrix<F>> for PublicRow<F> {
+//     fn from(_mat: RowMajorMatrix<F>) -> Self {
+//         unimplemented!()
+//     }
+// }
+
+#[derive(Clone, Debug)]
 pub enum ValidaPublicValues<F> {
     PublicTrace(RowMajorMatrix<F>),
     PublicVector(PublicRow<F>),
@@ -176,6 +174,19 @@ where
         match self {
             ValidaPublicValues::PublicTrace(mat) => mat.interpolate(zeta, offset),
             ValidaPublicValues::PublicVector(row) => row.interpolate(zeta, offset),
+        }
+    }
+    fn get_ldes<SC>(&self, config: &SC) -> Self
+    where
+        SC: StarkConfig<Val = F, Challenge = E>,
+    {
+        match self {
+            ValidaPublicValues::PublicTrace(mat) => {
+                ValidaPublicValues::PublicTrace(mat.get_ldes(config))
+            }
+            ValidaPublicValues::PublicVector(row) => {
+                ValidaPublicValues::PublicVector(row.get_ldes(config))
+            }
         }
     }
 }

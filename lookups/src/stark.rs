@@ -1,12 +1,13 @@
 use p3_air::{Air, BaseAir};
+use p3_field::Field;
 use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRows};
-use valida_machine::{StarkConfig, ValidaAirBuilder, __internal::p3_field::AbstractField};
+use valida_machine::ValidaAirBuilder;
 
 use crate::{LookupChip, LookupTable, LookupType};
 
 impl<L, F> BaseAir<F> for LookupChip<L, F>
 where
-    F: AbstractField + Sync,
+    F: Field + Sync,
     L: LookupTable<F> + Sync,
 {
     fn width(&self) -> usize {

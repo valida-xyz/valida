@@ -16,7 +16,7 @@ use valida_machine::{
 
 use valida_memory::MachineWithMemoryChip;
 use valida_opcodes::BYTES_PER_INSTR;
-use valida_program::MachineWithProgramChip;
+use valida_program::{MachineWithProgramChip, ProgramChipTrait};
 
 use p3_challenger::DuplexChallenger;
 use p3_dft::Radix2Bowers;
@@ -474,6 +474,7 @@ fn prove_program(program: Vec<InstructionWord<i32>>) -> BasicMachine<BabyBear> {
 fn prove_fibonacci() {
     let program = fib_program::<BabyBear>();
 
+    println!("hi");
     let machine = prove_program(program);
 
     assert_eq!(machine.cpu().clock, 192);

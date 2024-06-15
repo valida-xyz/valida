@@ -23,21 +23,39 @@ members = [
 ]
 
 [workspace.dependencies]
-p3-air = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
-p3-baby-bear = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
-p3-commit = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
-p3-challenger = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
-p3-dft = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
-p3-field = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
-p3-fri = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
-p3-goldilocks = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
-p3-interpolation = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
-p3-keccak = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
-p3-matrix = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
-p3-maybe-rayon = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
-p3-mds = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
-p3-merkle-tree = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
-p3-poseidon = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
-p3-symmetric = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
-p3-uni-stark = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
-p3-util = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-air = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-baby-bear = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-commit = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-challenger = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-dft = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-field = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-fri = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-goldilocks = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-interpolation = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-keccak = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-matrix = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-maybe-rayon = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-mds = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-merkle-tree = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-poseidon = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-symmetric = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-uni-stark = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+#p3-util = { git = "https://github.com/valida-xyz/Plonky3.git", branch = "dorebell-public" }
+p3-air = { path = "../plonky3_valida/air" }
+p3-baby-bear = { path = "../plonky3_valida/baby-bear" }
+p3-commit = { path = "../plonky3_valida/commit" }
+p3-challenger = { path = "../plonky3_valida/challenger" }
+p3-dft = { path = "../plonky3_valida/dft" }
+p3-field = { path = "../plonky3_valida/field" }
+p3-fri = { path = "../plonky3_valida/fri" }
+p3-goldilocks = { path = "../plonky3_valida/goldilocks" }
+p3-interpolation = { path = "../plonky3_valida/interpolation" }
+p3-keccak = { path = "../plonky3_valida/keccak" }
+p3-matrix = { path = "../plonky3_valida/matrix" }
+p3-maybe-rayon = { path = "../plonky3_valida/maybe-rayon" }
+p3-mds = { path = "../plonky3_valida/mds" }
+p3-merkle-tree = { path = "../plonky3_valida/merkle-tree" }
+p3-poseidon = { path = "../plonky3_valida/poseidon" }
+p3-symmetric = { path = "../plonky3_valida/symmetric" }
+p3-uni-stark = { path = "../plonky3_valida/uni-stark" }
+p3-util = { path = "../plonky3_valida/util" }

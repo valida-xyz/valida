@@ -2,11 +2,12 @@ use core::marker::PhantomData;
 use std::mem::transmute;
 
 use p3_air::{Air, BaseAir, VirtualPairCol};
+use p3_field::Field;
 use p3_matrix::{
     dense::{RowMajorMatrix, RowMajorMatrixView},
     Matrix, MatrixRowSlices, MatrixRows,
 };
-
+use valida_bus::MachineWithLookupBus;
 use valida_machine::{
     BusArgument, Chip, Interaction, Machine, StarkConfig, ValidaAirBuilder, ValidaPublicValues,
     __internal::p3_field::AbstractField,
@@ -18,7 +19,7 @@ pub mod columns;
 pub mod stark;
 pub trait LookupTable<F>
 where
-    F: AbstractField,
+    F: Field,
 {
     type M<'a>: MatrixRowSlices<F>
     where
@@ -26,6 +27,7 @@ where
 
     fn lookup_type(&self) -> LookupType;
     fn table(&self) -> Self::M<'_>;
+    //fn bus<M: Machine<F>>(&self, machine: &M) -> BusArgument;
 }
 
 #[derive(Clone, Copy)]
@@ -35,23 +37,26 @@ pub enum LookupType {
     Private,
 }
 
-pub struct LookupChip<L, F> {
-    table: L,
+#[derive(Clone, Default)]
+pub struct LookupChip<L, F>
+where
+    F: Field,
+    L: LookupTable<F>,
+{
+    pub table: L,
     pub counts: Vec<usize>,
-    pub bus: BusArgument,
     pub _phantom: PhantomData<F>,
 }
 
 impl<L, F> LookupChip<L, F>
 where
+    F: Field,
     L: LookupTable<F>,
-    F: AbstractField,
 {
-    pub fn new(table: L, bus: BusArgument) -> Self {
+    pub fn new(table: L) -> Self {
         Self {
             table,
             counts: vec![],
-            bus,
             _phantom: PhantomData,
         }
     }
@@ -65,7 +70,7 @@ where
 
 impl<M, SC, L> Chip<M, SC> for LookupChip<L, SC::Val>
 where
-    M: Machine<SC::Val>,
+    M: MachineWithLookupBus<SC::Val>,
     SC: StarkConfig,
     L: LookupTable<SC::Val> + Sync,
 {
@@ -127,36 +132,19 @@ where
         }
     }
 
-    fn global_receives(&self, _machine: &M) -> Vec<Interaction<SC::Val>> {
-        let make_column = |i| match self.lookup_type() {
-            LookupType::Preprocessed => VirtualPairCol::single_preprocessed(i),
-            LookupType::Private => VirtualPairCol::single_main(i + NUM_LOOKUP_COLS),
-            LookupType::Public => VirtualPairCol::single_public(i),
-        };
+    // fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
+    //     let make_column = |i| match self.lookup_type() {
+    //         LookupType::Preprocessed => VirtualPairCol::single_preprocessed(i),
+    //         LookupType::Private => VirtualPairCol::single_main(i + NUM_LOOKUP_COLS),
+    //         LookupType::Public => VirtualPairCol::single_public(i),
+    //     };
 
-        let fields = (0..self.table().width()).map(make_column).collect();
-        let receives = Interaction {
-            fields,
-            count: VirtualPairCol::single_main(LOOKUP_COL_MAP.mult),
-            argument_index: self.bus,
-        };
-        vec![receives]
-        //let pc = VirtualPairCol::single_preprocessed(PREPROCESSED_COL_MAP.pc);
-        // let opcode = VirtualPairCol::single_preprocessed(PREPROCESSED_COL_MAP.opcode);
-        // let mut fields = vec![pc, opcode];
-        // fields.extend(
-        //     PREPROCESSED_COL_MAP
-        //         .operands
-        //         .0
-        //         .iter()
-        //         .map(|op| VirtualPairCol::single_preprocessed(*op)),
-        // );
-        // let receives = Interaction {
-        //     fields,
-        //     count: VirtualPairCol::single_main(COL_MAP.multiplicity),
-        //     argument_index: machine.program_bus(),
-        // };
-        // vec![receives]
-        // vec![]
-    }
+    //     let fields = (0..self.table().width()).map(make_column).collect();
+    //     let receives = Interaction {
+    //         fields,
+    //         count: VirtualPairCol::single_main(LOOKUP_COL_MAP.mult),
+    //         argument_index: machine.lookup_bus(),
+    //     };
+    //     vec![receives]
+    // }
 }

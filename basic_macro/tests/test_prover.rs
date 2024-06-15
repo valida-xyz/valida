@@ -15,7 +15,7 @@ use valida_machine::{
 
 use valida_memory::MachineWithMemoryChip;
 use valida_opcodes::BYTES_PER_INSTR;
-use valida_program::MachineWithProgramChip;
+use valida_program::{MachineWithProgramChip, ProgramChipTrait};
 
 use p3_challenger::DuplexChallenger;
 use p3_dft::Radix2Bowers;
