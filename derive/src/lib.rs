@@ -252,19 +252,15 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     &main_traces[#i],
                     &perm_traces[#i],
                     &perm_challenges,
-                    &public_values[0],
+                    &public_traces[#i],
                 );
-
-                // TODO: Needlessly regenerating preprocessed_trace()
-                let ppt: Option<RowMajorMatrix<SC::Val>> = self.#chip_name().preprocessed_trace();
-                let preprocessed_trace_lde = ppt.map(|trace| preprocessed_trace_ldes.remove(0));
 
                 quotients.push(quotient(
                     self,
                     config,
                     self.#chip_name(),
                     log_degrees[#i],
-                    preprocessed_trace_lde,
+                    preprocessed_trace_ldes.remove(0),
                     main_trace_ldes.remove(0),
                     perm_trace_ldes.remove(0),
                     public_values.remove(0),
@@ -287,7 +283,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             use ::valida_machine::__internal::p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
             use ::valida_machine::__internal::p3_matrix::{Matrix, MatrixRowSlices, dense::RowMajorMatrix};
             use ::valida_machine::__internal::p3_util::log2_strict_usize;
-            use ::valida_machine::{generate_permutation_trace, Chip, MachineProof, ChipProof, Commitments, ValidaPublicValues};
+            use ::valida_machine::{generate_permutation_trace, Chip, MachineProof, ChipProof, Commitments, ValidaPublicValues, PublicValues};
             use ::valida_machine::OpenedValues;
             use alloc::vec;
             use alloc::vec::Vec;
@@ -300,19 +296,54 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             // TODO: Seed challenger with digest of all constraints & trace lengths.
             let pcs = config.pcs();
 
-            let preprocessed_traces: Vec<RowMajorMatrix<SC::Val>> =
+            let preprocessed_traces: [Option<RowMajorMatrix<SC::Val>>; #num_chips] =
                 tracing::info_span!("generate preprocessed traces")
                     .in_scope(||
                         chips.par_iter()
-                            .flat_map(|chip| chip.preprocessed_trace())
+                            .map(|chip| chip.preprocessed_trace())
                             .collect::<Vec<_>>()
+                            .try_into()
+                            .unwrap()
                     );
 
+            let has_preprocessed_traces: [bool; #num_chips] = preprocessed_traces
+                .iter()
+                .map(Option::is_some)
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap();
+
             let (preprocessed_commit, preprocessed_data) =
-                tracing::info_span!("commit to preprocessed traces")
-                    .in_scope(|| pcs.commit_batches(preprocessed_traces.to_vec()));
+                tracing::info_span!("commit to preprocessed traces").in_scope(|| {
+                        pcs.commit_batches(preprocessed_traces.into_iter().flatten().collect())
+                    });
             challenger.observe(preprocessed_commit.clone());
-            let mut preprocessed_trace_ldes = pcs.get_ldes(&preprocessed_data);
+            let mut preprocessed_trace_ldes_real = pcs.get_ldes(&preprocessed_data);
+
+            // add the None's back in
+            let mut preprocessed_trace_ldes: Vec<_> = has_preprocessed_traces
+                    .iter()
+                    .map(|&has_trace| {
+                         if has_trace {
+                             Some(preprocessed_trace_ldes_real.remove(0))
+                         } else {
+                             None
+                         }
+                    })
+                    .collect();
+
+            let mut public_traces: [Option<ValidaPublicValues<SC::Val>>; #num_chips] =
+                tracing::info_span!("generate public traces").in_scope(|| {
+                        chips.par_iter()
+                            .map(|chip| chip.generate_public_values())
+                            .collect::<Vec<_>>()
+                            .try_into().unwrap()
+            });
+
+            let mut public_trace_ldes: Vec<_> = public_traces
+                .iter()
+                .map(|opt| opt.as_ref().map(|trace| trace.get_ldes(config)))
+                .collect();
 
             let main_traces: [RowMajorMatrix<SC::Val>; #num_chips] =
                 tracing::info_span!("generate main traces")

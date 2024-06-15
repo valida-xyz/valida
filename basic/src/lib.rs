@@ -224,10 +224,8 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             })
             .collect();
 
-        // preprocessed_traces.iter().map(|trace|)
-
         let mut public_traces: [Option<ValidaPublicValues<SC::Val>>; NUM_CHIPS] =
-            tracing::info_span!("generate public values vector").in_scope(|| {
+            tracing::info_span!("generate public traces").in_scope(|| {
                 chips
                     .par_iter()
                     .map(|chip| chip.generate_public_values())
@@ -310,8 +308,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
 
         let mut i: usize = 0;
 
-        println!("hi");
-
         let chip = self.cpu();
         #[cfg(debug_assertions)]
         check_constraints::<Self, _, SC>(
@@ -322,7 +318,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             &public_traces[i],
         );
-        println!("hi2");
         quotients.push(quotient(
             self,
             config,
@@ -337,10 +332,6 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             alpha,
         ));
         i += 1;
-
-        println!("main: {:?}", &main_traces[i].height());
-        println!("perm: {:?}", &perm_traces[i].height());
-        println!("public: {:?}", &public_traces[i].as_ref().unwrap().height());
 
         let chip = self.program();
         #[cfg(debug_assertions)]
