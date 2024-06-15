@@ -474,7 +474,6 @@ fn prove_program(program: Vec<InstructionWord<i32>>) -> BasicMachine<BabyBear> {
 fn prove_fibonacci() {
     let program = fib_program::<BabyBear>();
 
-    println!("hi");
     let machine = prove_program(program);
 
     assert_eq!(machine.cpu().clock, 192);

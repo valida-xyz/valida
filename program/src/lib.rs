@@ -62,9 +62,6 @@ where
     fn table(&self) -> RowMajorMatrix<F> {
         rom_to_table(&self.rom)
     }
-    // fn bus<M: MachineWithProgramBus<F>>(&self, machine: &M) -> BusArgument {
-    //     machine.program_bus()
-    // }
 }
 
 impl<F: Field> LookupTable<F> for ProgramTablePreprocessed {

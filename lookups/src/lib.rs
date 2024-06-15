@@ -132,19 +132,19 @@ where
         }
     }
 
-    // fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
-    //     let make_column = |i| match self.lookup_type() {
-    //         LookupType::Preprocessed => VirtualPairCol::single_preprocessed(i),
-    //         LookupType::Private => VirtualPairCol::single_main(i + NUM_LOOKUP_COLS),
-    //         LookupType::Public => VirtualPairCol::single_public(i),
-    //     };
+    fn global_receives(&self, machine: &M) -> Vec<Interaction<SC::Val>> {
+        let make_column = |i| match self.lookup_type() {
+            LookupType::Preprocessed => VirtualPairCol::single_preprocessed(i),
+            LookupType::Private => VirtualPairCol::single_main(i + NUM_LOOKUP_COLS),
+            LookupType::Public => VirtualPairCol::single_public(i),
+        };
 
-    //     let fields = (0..self.table().width()).map(make_column).collect();
-    //     let receives = Interaction {
-    //         fields,
-    //         count: VirtualPairCol::single_main(LOOKUP_COL_MAP.mult),
-    //         argument_index: machine.lookup_bus(),
-    //     };
-    //     vec![receives]
-    // }
+        let fields = (0..self.table().width()).map(make_column).collect();
+        let receives = Interaction {
+            fields,
+            count: VirtualPairCol::single_main(LOOKUP_COL_MAP.mult),
+            argument_index: machine.lookup_bus(),
+        };
+        vec![receives]
+    }
 }

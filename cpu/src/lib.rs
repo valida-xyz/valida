@@ -157,7 +157,7 @@ where
 
         mem_sends
             .chain(iter::once(send_general))
-            // .chain(iter::once(send_program))
+            .chain(iter::once(send_program))
             .collect()
     }
 }
