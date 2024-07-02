@@ -19,7 +19,7 @@ use valida_util::pad_to_power_of_two;
 pub mod columns;
 pub mod stark;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Operation {
     And32(Word<u8>, Word<u8>, Word<u8>), // (dst, src1, src2)
     Or32(Word<u8>, Word<u8>, Word<u8>),  // ''
@@ -124,6 +124,8 @@ impl Bitwise32Chip {
                 bits_2[i][j] = F::from_canonical_u8(c[i] >> j & 1);
             }
         }
+        cols.bits_1 = bits_1;
+        cols.bits_2 = bits_2;
     }
 }
 
@@ -246,7 +248,7 @@ where
         state
             .bitwise_u32_mut()
             .operations
-            .push(Operation::And32(a, b, c));
+            .push(Operation::Or32(a, b, c));
         state.cpu_mut().push_bus_op(imm, opcode, ops);
     }
 }
