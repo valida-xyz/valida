@@ -361,7 +361,7 @@ impl CpuChip {
             cols.opcode_flags.is_imm_op = F::one();
             let imm = imm.transform(F::from_canonical_u8);
             cols.mem_channels[1].value = imm;
-            cols.instruction.operands.0[2] = imm.reduce();
+            //cols.instruction.operands.0[2] = imm.reduce();
         }
     }
 
@@ -370,7 +370,7 @@ impl CpuChip {
             cols.opcode_flags.is_left_imm_op = F::one();
             let imm = imm.transform(F::from_canonical_u8);
             cols.mem_channels[0].value = imm;
-            cols.instruction.operands.0[1] = imm.reduce();
+            //cols.instruction.operands.0[1] = imm.reduce();
         }
     }
 }

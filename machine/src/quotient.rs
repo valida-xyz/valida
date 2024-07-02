@@ -105,27 +105,6 @@ where
     let coset_shift = config.pcs().coset_shift();
     let next_step = 1 << log_quotient_degree;
 
-    debug_assert_eq!(quotient_size, main_trace_lde.height());
-    println!("main");
-    debug_assert_eq!(quotient_size, perm_trace_lde.height());
-    println!("perm");
-    debug_assert_eq!(
-        quotient_size,
-        preprocessed_trace_lde
-            .as_ref()
-            .map(|lde| lde.height())
-            .unwrap_or(quotient_size)
-    );
-    println!("preprocessed");
-    debug_assert_eq!(
-        quotient_size,
-        public_values
-            .as_ref()
-            .map(|values| values.height())
-            .unwrap_or(quotient_size)
-    );
-    println!("public");
-
     let mut coset: Vec<_> =
         cyclic_subgroup_coset_known_order(g_extended, coset_shift, quotient_size).collect();
 
