@@ -9,8 +9,11 @@ use alloc::vec::Vec;
 use core::iter;
 use core::marker::Sync;
 use core::mem::transmute;
-use valida_bus::{MachineWithGeneralBus, MachineWithMemBus, MachineWithProgramBus};
+use valida_bus::{
+    MachineWithGeneralBus, MachineWithMemBus, MachineWithOutputBus, MachineWithProgramBus,
+};
 use valida_machine::is_mul_4;
+use valida_machine::MEMORY_CELL_BYTES;
 use valida_machine::{
     addr_of_word, index_of_byte, instructions, AdviceProvider, Chip, Instruction, InstructionWord,
     Interaction, Operands, Word,
@@ -74,6 +77,7 @@ where
         + MachineWithMemoryChip<SC::Val>
         + MachineWithGeneralBus<SC::Val>
         + MachineWithMemBus<SC::Val>
+        + MachineWithOutputBus<SC::Val>
         + Sync,
     SC: StarkConfig,
 {
@@ -136,6 +140,23 @@ where
             argument_index: machine.general_bus(),
         };
 
+        // Output bus channel
+        let mut fields = vec![
+            VirtualPairCol::single_main(CPU_COL_MAP.clk),
+            VirtualPairCol::single_main(
+                CPU_COL_MAP.mem_channels[0]
+                    .value
+                    .into_iter()
+                    .last()
+                    .unwrap(),
+            ),
+        ];
+        let send_output = Interaction {
+            fields,
+            count: VirtualPairCol::single_main(CPU_COL_MAP.opcode_flags.is_write),
+            argument_index: machine.output_bus(),
+        };
+
         // // Program ROM bus channel
         // let pc = VirtualPairCol::single_main(CPU_COL_MAP.pc);
         // let opcode = VirtualPairCol::single_main(CPU_COL_MAP.instruction.opcode);
@@ -155,6 +176,7 @@ where
 
         mem_sends
             .chain(iter::once(send_general))
+            .chain(iter::once(send_output))
             // .chain(iter::once(send_program))
             .collect()
     }
@@ -231,8 +253,6 @@ impl CpuChip {
             }
             Operation::Write => {
                 cols.opcode_flags.is_write = SC::Val::one();
-                cols.opcode_flags.is_bus_op = SC::Val::one();
-                self.set_imm_value(cols, Some(0u32.into()))
             }
         }
 

@@ -29,7 +29,8 @@ use valida_alu_u32::{
     sub::{MachineWithSub32Chip, Sub32Chip, Sub32Instruction},
 };
 use valida_bus::{
-    MachineWithGeneralBus, MachineWithMemBus, MachineWithProgramBus, MachineWithRangeBus8,
+    MachineWithGeneralBus, MachineWithMemBus, MachineWithOutputBus, MachineWithProgramBus,
+    MachineWithRangeBus8,
 };
 use valida_cpu::{
     BeqInstruction, BneInstruction, Imm32Instruction, JalInstruction, JalvInstruction,
@@ -208,6 +209,12 @@ impl<F: PrimeField32 + TwoAdicField> MachineWithMemBus<F> for BasicMachine<F> {
 impl<F: PrimeField32 + TwoAdicField> MachineWithRangeBus8<F> for BasicMachine<F> {
     fn range_bus(&self) -> BusArgument {
         BusArgument::Global(3)
+    }
+}
+
+impl<F: PrimeField32 + TwoAdicField> MachineWithOutputBus<F> for BasicMachine<F> {
+    fn output_bus(&self) -> BusArgument {
+        BusArgument::Global(4)
     }
 }
 

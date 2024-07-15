@@ -1695,6 +1695,7 @@ dependencies = [
  "valida-machine",
  "valida-memory",
  "valida-opcodes",
+ "valida-range",
  "valida-util",
 ]
 

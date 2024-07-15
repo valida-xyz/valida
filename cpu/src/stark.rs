@@ -309,7 +309,7 @@ impl CpuChip {
     }
 }
 
-fn reduce<AB: AirBuilder>(base: &[AB::Expr], input: Word<AB::Var>) -> AB::Expr {
+pub fn reduce<AB: AirBuilder>(base: &[AB::Expr], input: Word<AB::Var>) -> AB::Expr {
     input
         .into_iter()
         .enumerate()

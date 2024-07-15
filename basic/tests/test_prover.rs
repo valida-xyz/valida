@@ -16,6 +16,7 @@ use valida_machine::{
 
 use valida_memory::MachineWithMemoryChip;
 use valida_opcodes::BYTES_PER_INSTR;
+use valida_output::{MachineWithOutputChip, WriteInstruction};
 use valida_program::MachineWithProgramChip;
 
 use p3_challenger::DuplexChallenger;
@@ -261,6 +262,41 @@ fn left_imm_ops_program<Val: PrimeField32 + TwoAdicField>() -> Vec<InstructionWo
     program
 }
 
+fn output_program<Val: PrimeField32 + TwoAdicField>() -> Vec<InstructionWord<i32>> {
+    let mut program = vec![];
+
+    // imm32 -4(fp), 0, 0, 0, 4
+    // imm32 -8(fp), 0, 0, 1, 5
+    program.extend([
+        InstructionWord {
+            opcode: <Imm32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([-4, 0, 0, 0, 4]),
+        },
+        InstructionWord {
+            opcode: <Imm32Instruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([-8, 0, 0, 1, 5]),
+        },
+    ]);
+    // write 0(fp), -4(fp), 0, 0, 1
+    // write 0(fp), -8(fp), 0, 0, 1
+    program.extend([
+        InstructionWord {
+            opcode: <WriteInstruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([0, -4, 0, 0, 1]),
+        },
+        InstructionWord {
+            opcode: <WriteInstruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+            operands: Operands([0, -8, 0, 0, 1]),
+        },
+    ]);
+    // stop 0, 0, 0, 0, 0
+    program.push(InstructionWord {
+        opcode: <StopInstruction as Instruction<BasicMachine<Val>, Val>>::OPCODE,
+        operands: Operands::default(),
+    });
+    program
+}
+
 fn signed_inequality_program<Val: PrimeField32 + TwoAdicField>() -> Vec<InstructionWord<i32>> {
     let mut program = vec![];
 
@@ -484,6 +520,15 @@ fn prove_fibonacci() {
         *machine.mem().cells.get(&(0x1000 + 4)).unwrap(), // Return value
         Word([0, 1, 37, 17,])                             // 25th fibonacci number (75025)
     );
+}
+
+#[test]
+fn prove_output() {
+    let program = output_program::<BabyBear>();
+
+    let machine = prove_program(program);
+    assert_eq!(*machine.output().values.get(0).unwrap(), (2, 4));
+    assert_eq!(*machine.output().values.get(1).unwrap(), (3, 5));
 }
 
 #[test]

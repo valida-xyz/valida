@@ -18,3 +18,4 @@ valida-memory = { path = "../memory" }
 valida-derive = { path = "../derive" }
 valida-util = { path = "../util" }
 valida-opcodes = { path = "../opcodes" }
+valida-range = { path = "../range" }

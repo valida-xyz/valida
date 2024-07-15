@@ -26,3 +26,7 @@ pub trait MachineWithRangeBus8<F: Field>: Machine<F> {
 pub trait MachineWithPowerOfTwoBus<F: Field>: Machine<F> {
     fn power_of_two_bus(&self) -> BusArgument;
 }
+
+pub trait MachineWithOutputBus<F: Field>: Machine<F> {
+    fn output_bus(&self) -> BusArgument;
+}

@@ -1,10 +1,10 @@
 use crate::columns::{OutputCols, NUM_OUTPUT_COLS};
 use crate::OutputChip;
 use core::borrow::Borrow;
-use valida_opcodes::WRITE;
+use valida_cpu::stark::reduce;
 
 use p3_air::{Air, AirBuilder, BaseAir};
-use p3_field::PrimeField;
+use p3_field::{AbstractField, PrimeField};
 use p3_matrix::MatrixRowSlices;
 
 impl<F> BaseAir<F> for OutputChip {
@@ -23,18 +23,10 @@ where
         let local: &OutputCols<AB::Var> = main.row_slice(0).borrow();
         let next: &OutputCols<AB::Var> = main.row_slice(1).borrow();
 
-        // Range check constraints
+        let base = [1 << 24, 1 << 16, 1 << 8, 1].map(AB::Expr::from_canonical_u32);
+        let diff = reduce::<AB>(&base, local.diff);
         builder
             .when_transition()
-            .assert_eq(local.diff, next.clk - local.clk);
-        builder
-            .when_transition()
-            .assert_eq(next.counter, local.counter + AB::Expr::from(AB::F::one()));
-
-        // Bus opcode constraint
-        builder.when(local.is_real).assert_eq(
-            local.opcode,
-            AB::Expr::from(AB::F::from_canonical_u32(WRITE)),
-        );
+            .assert_eq(diff, next.clk - local.clk);
     }
 }
