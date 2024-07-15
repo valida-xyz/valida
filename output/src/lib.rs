@@ -164,7 +164,7 @@ where
             .values
             .push((clk, b.into_iter().last().unwrap()));
 
-        let imm: Option<Word<u8>> = Some(0u32.into());
+        state.cpu_mut().pc += 1;
         state.cpu_mut().push_op(Operation::Write, opcode, ops);
 
         // The immediate value flag should be set, and the immediate operand value should
