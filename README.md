@@ -1,4 +1,14 @@
-# Valida
+# Valida zkVM (Archived Repository)
+
+This repository has been **archived** and is no longer maintained. The development and maintenance of Valida zkVM have moved to a new repository hosted on Lita's GitHub.
+
+For the latest updates and contributions, please visit the new repository here:
+
+**[New Valida zkVM Repository](https://github.com/lita-xyz/valida-releases)**
+
+Thank you for your continued interest and contributions to Valida zkVM!
+
+---
 
 Valida is a STARK-based virtual machine aiming to improve upon the state of the art in the following categories:
 - **Code reuse**: The VM has a RISC-inspired instruction set, simplifying the targeting of conventional programming languages. We are currently developing a backend compiler to compile LLVM IR to the Valida ISA. This will enable proving programs written in Rust, Go, C++, and others, and require minimal to no changes in source code.
