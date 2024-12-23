@@ -64,7 +64,7 @@ impl MemoryChip {
         //         .assert_eq(value_next, value);
         // }
 
-        // // TODO: This disallows reading unitialized memory? Not sure that's desired, it depends on
+        // // TODO: This disallows reading uninitialized memory? Not sure that's desired, it depends on
         // // how we implement continuations. If we end up defaulting to zero, then we should replace
         // // this with
         // //     when(is_read).when(addr_delta).assert_zero(value_next);
