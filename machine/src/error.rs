@@ -2,10 +2,10 @@ use core::fmt::{Display, Formatter};
 
 #[derive(Debug)]
 pub enum VerificationError {
-    /// The shape of opennings does not match the chip shapes.
+    /// The shape of openings does not match the chip shapes.
     InvalidProofShape(ProofShapeError),
-    /// Openning proof is invalid.
-    InvalidOpenningArgument,
+    /// Opening proof is invalid.
+    InvalidOpeningArgument,
     /// Out-of-domain evaluation mismatch.
     ///
     /// `constraints(zeta)` did not match `quotient(zeta) Z_H(zeta)`.
@@ -19,7 +19,7 @@ pub struct OodEvaluationMismatch;
 pub enum ProofShapeError {
     Preprocessed,
     MainTrace,
-    Permuation,
+    Permutation,
     Quotient,
 }
 
@@ -27,10 +27,10 @@ impl Display for VerificationError {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match self {
             VerificationError::InvalidProofShape(err) => {
-                write!(f, "Invalid proof shape: for {} openning", err)
+                write!(f, "Invalid proof shape: for {} opening", err)
             }
-            VerificationError::InvalidOpenningArgument => {
-                write!(f, "Invalid openning argument")
+            VerificationError::InvalidOpeningArgument => {
+                write!(f, "Invalid opening argument")
             }
             VerificationError::OodEvaluationMismatch => {
                 write!(f, "Out-of-domain evaluation mismatch")
@@ -48,7 +48,7 @@ impl Display for ProofShapeError {
             ProofShapeError::MainTrace => {
                 write!(f, "Main trace opening mismatch")
             }
-            ProofShapeError::Permuation => {
+            ProofShapeError::Permutation => {
                 write!(f, "Permutation opening mismatch")
             }
             ProofShapeError::Quotient => {
