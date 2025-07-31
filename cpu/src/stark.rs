@@ -92,6 +92,18 @@ impl CpuChip {
         let is_bus_op = local.opcode_flags.is_bus_op;
         let _is_bus_op_with_mem = local.opcode_flags.is_bus_op_with_mem; // TODO: unused
 
+        builder.assert_bool(is_load);
+        builder.assert_bool(is_store);
+        builder.assert_bool(is_jal);
+        builder.assert_bool(is_jalv);
+        builder.assert_bool(is_beq);
+        builder.assert_bool(is_bne);
+        builder.assert_bool(is_imm32);
+        builder.assert_bool(is_loadfp);
+        builder.assert_bool(is_imm_op);
+        builder.assert_bool(is_left_imm_op);
+        builder.assert_bool(is_bus_op);
+
         let addr_a = local.fp + local.instruction.operands.a();
         let addr_b = local.fp + local.instruction.operands.b();
         let addr_c = local.fp + local.instruction.operands.c();

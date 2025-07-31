@@ -4,7 +4,9 @@ This repository has been **archived** and is no longer maintained. The developme
 
 For the latest updates and contributions, please visit the new repository here:
 
-**[New Valida zkVM Repository](https://github.com/lita-xyz/valida-releases)**
+**New Valida zkVM Repository**
+- [Public Release](https://github.com/lita-xyz/valida-releases)
+- [Source Code](https://github.com/lita-xyz/valida-vm)
 
 Thank you for your continued interest and contributions to Valida zkVM!
 
