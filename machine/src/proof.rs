@@ -15,7 +15,7 @@ type PcsProof<SC> = <<SC as StarkConfig>::Pcs as Pcs<Val<SC>, ValMat<SC>>>::Proo
 pub struct MachineProof<SC: StarkConfig> {
     pub commitments: Commitments<Com<SC>>,
     pub opening_proof: PcsProof<SC>,
-    pub chip_proofs: Vec<ChipProof<SC::Challenge>>,
+    pub chip_proofs: Vec<ChipProof<SC>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -26,10 +26,17 @@ pub struct Commitments<Com> {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct ChipProof<Challenge> {
+pub struct ColumnIndex(usize);
+
+#[derive(Serialize, Deserialize)]
+pub struct ColumnVector<A>(Vec<A>);
+
+#[derive(Serialize, Deserialize)]
+pub struct ChipProof<SC: StarkConfig> {
+    pub public_inputs: Vec<(ColumnIndex, ColumnVector<SC::Val>)>,
     pub log_degree: usize,
-    pub opened_values: OpenedValues<Challenge>,
-    pub cumulative_sum: Challenge,
+    pub opened_values: OpenedValues<SC::Challenge>,
+    pub cumulative_sum: SC::Challenge,
 }
 
 #[derive(Serialize, Deserialize)]

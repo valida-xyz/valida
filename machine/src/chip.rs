@@ -1,5 +1,5 @@
 use crate::folding_builder::VerifierConstraintFolder;
-use crate::Machine;
+use crate::{Machine, ColumnVector, ColumnIndex};
 use crate::__internal::{DebugConstraintBuilder, ProverConstraintFolder};
 use alloc::vec;
 use alloc::vec::Vec;
@@ -20,6 +20,10 @@ pub trait Chip<M: Machine<SC::Val>, SC: StarkConfig>:
 {
     /// Generate the main trace for the chip given the provided machine.
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<SC::Val>;
+
+    fn generate_public_inputs(&self) -> Vec<(ColumnIndex, ColumnVector<SC::Val>)> {
+        vec![]
+    }
 
     fn local_sends(&self) -> Vec<Interaction<SC::Val>> {
         vec![]

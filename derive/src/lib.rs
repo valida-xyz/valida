@@ -268,6 +268,9 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                     &perm_challenges,
                     alpha,
                 ));
+                public_inputs.push(Chip::generate_public_inputs(
+                  self.#chip_name() as &dyn Chip<Self, SC>,
+                ));
             }
         })
         .collect::<TokenStream2>();
@@ -283,7 +286,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             use ::valida_machine::__internal::p3_commit::{Pcs, UnivariatePcs, UnivariatePcsWithLde};
             use ::valida_machine::__internal::p3_matrix::{Matrix, MatrixRowSlices, dense::RowMajorMatrix};
             use ::valida_machine::__internal::p3_util::log2_strict_usize;
-            use ::valida_machine::{generate_permutation_trace, MachineProof, ChipProof, Commitments};
+            use ::valida_machine::{generate_permutation_trace, Chip, MachineProof, ChipProof, Commitments};
             use ::valida_machine::OpenedValues;
             use alloc::vec;
             use alloc::vec::Vec;
@@ -360,6 +363,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
             let alpha: SC::Challenge = challenger.sample_ext_element();
 
             let mut quotients: Vec<RowMajorMatrix<SC::Val>> = vec![];
+            let mut public_inputs: Vec<Vec<(ColumnIndex, ColumnVector<SC::Val>)>> = vec![];
             #compute_quotients
             assert_eq!(quotients.len(), #num_chips);
             assert_eq!(log_quotient_degrees.len(), #num_chips);
@@ -409,7 +413,8 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
                 .zip(perm_openings)
                 .zip(quotient_openings)
                 .zip(perm_traces)
-                .map(|((((log_degree,  main), perm), quotient), perm_trace)| {
+                .zip(public_inputs)
+                .map(|(((((log_degree,  main), perm), quotient), perm_trace), public_inputs)| {
                     // TODO: add preprocessed openings
                     let [preprocessed_local, preprocessed_next] =
                         [vec![], vec![]];
@@ -430,6 +435,7 @@ fn prove_method(chips: &[&Field]) -> TokenStream2 {
 
                     let cumulative_sum = perm_trace.row_slice(perm_trace.height() - 1).last().unwrap().clone();
                     ChipProof {
+                        public_inputs,
                         log_degree: *log_degree,
                         opened_values,
                         cumulative_sum,

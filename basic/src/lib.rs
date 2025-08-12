@@ -50,7 +50,7 @@ use valida_machine::__internal::{
 };
 use valida_machine::{
     generate_permutation_trace, verify_constraints, AdviceProvider, BusArgument, Chip, ChipProof,
-    Commitments, Instruction, Machine, MachineProof, OpenedValues, ProgramROM, StoppingFlag,
+    Commitments, Instruction, Machine, MachineProof, OpenedValues, ProgramROM, StoppingFlag, ColumnVector, ColumnIndex,
     ValidaAirBuilder,
 };
 use valida_memory::{MachineWithMemoryChip, MemoryChip};
@@ -263,6 +263,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
         let alpha: SC::Challenge = challenger.sample_ext_element();
 
         let mut quotients: Vec<RowMajorMatrix<SC::Val>> = vec![];
+        let mut public_inputs: Vec<Vec<(ColumnIndex, ColumnVector<SC::Val>)>> = vec![];
 
         let mut i: usize = 0;
 
@@ -287,6 +288,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.program();
@@ -303,12 +305,15 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             config,
             chip,
             log_degrees[i],
-            Some(preprocessed_trace_ldes.remove(0)),
+            None::<RowMajorMatrix<SC::Val>>,
             main_trace_ldes.remove(0),
             perm_trace_ldes.remove(0),
             cumulative_sums[i],
             &perm_challenges,
             alpha,
+        ));
+        public_inputs.push(Chip::generate_public_inputs(
+            chip as &dyn Chip<Self, SC>,
         ));
         i += 1;
 
@@ -333,6 +338,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.add_u32();
@@ -356,6 +362,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.sub_u32();
@@ -379,6 +386,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.mul_u32();
@@ -402,6 +410,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.div_u32();
@@ -425,6 +434,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.shift_u32();
@@ -448,6 +458,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.lt_u32();
@@ -471,6 +482,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.com_u32();
@@ -494,6 +506,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.bitwise_u32();
@@ -517,6 +530,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.output();
@@ -539,6 +553,9 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             cumulative_sums[i],
             &perm_challenges,
             alpha,
+        ));
+        public_inputs.push(Chip::generate_public_inputs(
+            chip as &dyn Chip<Self, SC>,
         ));
         i += 1;
 
@@ -563,6 +580,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             &perm_challenges,
             alpha,
         ));
+        public_inputs.push(vec![]);
         i += 1;
 
         let chip = self.static_data();
@@ -585,6 +603,9 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             cumulative_sums[i],
             &perm_challenges,
             alpha,
+        ));
+        public_inputs.push(Chip::generate_public_inputs(
+            chip as &dyn Chip<Self, SC>,
         ));
         i += 1;
 
@@ -636,7 +657,8 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
             .zip(perm_openings)
             .zip(quotient_openings)
             .zip(perm_traces)
-            .map(|((((log_degree, main), perm), quotient), perm_trace)| {
+            .zip(public_inputs)
+            .map(|(((((log_degree, main), perm), quotient), perm_trace), public_inputs)| {
                 // TODO: add preprocessed openings
                 let [preprocessed_local, preprocessed_next] = [vec![], vec![]];
 
@@ -660,6 +682,7 @@ impl<F: PrimeField32 + TwoAdicField> Machine<F> for BasicMachine<F> {
                     .unwrap()
                     .clone();
                 ChipProof {
+                    public_inputs,
                     log_degree: *log_degree,
                     opened_values,
                     cumulative_sum,
