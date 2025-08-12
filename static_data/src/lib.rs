@@ -11,7 +11,7 @@ use p3_air::VirtualPairCol;
 use p3_field::{AbstractField, Field};
 use p3_matrix::dense::RowMajorMatrix;
 use valida_bus::MachineWithMemBus;
-use valida_machine::{Chip, Interaction, StarkConfig, Word};
+use valida_machine::{Chip, Interaction, StarkConfig, ValidaPublicValues, Word};
 use valida_memory::MachineWithMemoryChip;
 
 pub mod columns;
@@ -57,6 +57,8 @@ where
     M: MachineWithMemBus<SC::Val>,
     SC: StarkConfig,
 {
+    type Public = ValidaPublicValues<SC::Val>;
+
     fn generate_trace(&self, _machine: &M) -> RowMajorMatrix<SC::Val> {
         let mut rows = self
             .cells
@@ -76,6 +78,11 @@ where
             SC::Val::zero(),
         );
         RowMajorMatrix::new(rows, NUM_STATIC_DATA_COLS)
+    }
+
+    //TODO: fill this in with the static data values
+    fn generate_public_values(&self) -> Option<Self::Public> {
+        None
     }
 
     fn global_sends(&self, machine: &M) -> Vec<Interaction<SC::Val>> {

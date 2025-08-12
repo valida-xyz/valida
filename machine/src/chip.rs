@@ -1,25 +1,34 @@
-use crate::folding_builder::VerifierConstraintFolder;
-use crate::Machine;
 use crate::__internal::{DebugConstraintBuilder, ProverConstraintFolder};
+use crate::folding_builder::VerifierConstraintFolder;
+use crate::public::PublicValues;
+use crate::Machine;
 use alloc::vec;
 use alloc::vec::Vec;
 
 use crate::config::StarkConfig;
 use crate::symbolic::symbolic_builder::SymbolicAirBuilder;
 use p3_air::ExtensionBuilder;
-use p3_air::{Air, PairBuilder, PermutationAirBuilder, VirtualPairCol};
+use p3_air::{Air, AirBuilderWithPublicValues, PairBuilder, PermutationAirBuilder, VirtualPairCol};
 use p3_field::{AbstractField, ExtensionField, Field, Powers};
 use p3_matrix::{dense::RowMajorMatrix, Matrix, MatrixRowSlices};
 use valida_util::batch_multiplicative_inverse_allowing_zero;
 
-pub trait Chip<M: Machine<SC::Val>, SC: StarkConfig>:
+pub trait Chip<M, SC>:
     for<'a> Air<ProverConstraintFolder<'a, M, SC>>
     + for<'a> Air<VerifierConstraintFolder<'a, M, SC>>
     + for<'a> Air<SymbolicAirBuilder<'a, M, SC>>
     + for<'a> Air<DebugConstraintBuilder<'a, M, SC>>
+where
+    M: Machine<SC::Val>,
+    SC: StarkConfig,
 {
+    type Public: PublicValues<SC::Val, SC::Challenge>;
     /// Generate the main trace for the chip given the provided machine.
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<SC::Val>;
+
+    fn generate_public_values(&self) -> Option<Self::Public> {
+        None
+    }
 
     fn local_sends(&self) -> Vec<Interaction<SC::Val>> {
         vec![]
@@ -67,7 +76,9 @@ pub trait Chip<M: Machine<SC::Val>, SC: StarkConfig>:
     }
 }
 
-pub trait ValidaAirBuilder: PairBuilder + PermutationAirBuilder {
+pub trait ValidaAirBuilder:
+    PairBuilder + PermutationAirBuilder + AirBuilderWithPublicValues
+{
     type Machine;
 
     fn machine(&self) -> &Self::Machine;
@@ -118,15 +129,16 @@ impl<F: Field> Interaction<F> {
 
 /// Generate the permutation trace for a chip with the provided machine.
 /// This is called only after `generate_trace` has been called on all chips.
-pub fn generate_permutation_trace<M, SC>(
+pub fn generate_permutation_trace<M, SC, P>(
     machine: &M,
-    chip: &dyn Chip<M, SC>,
+    chip: &dyn Chip<M, SC, Public = P>,
     main: &RowMajorMatrix<SC::Val>,
     random_elements: Vec<SC::Challenge>,
 ) -> RowMajorMatrix<SC::Challenge>
 where
     M: Machine<SC::Val>,
     SC: StarkConfig,
+    P: PublicValues<SC::Val, SC::Challenge>,
 {
     let all_interactions = chip.all_interactions(machine);
     let (alphas_local, alphas_global) = generate_rlc_elements(machine, chip, &random_elements);
@@ -288,14 +300,15 @@ pub fn eval_permutation_constraints<M, C, SC, AB>(
     );
 }
 
-fn generate_rlc_elements<M, SC>(
+fn generate_rlc_elements<M, SC, P>(
     machine: &M,
-    chip: &dyn Chip<M, SC>,
+    chip: &dyn Chip<M, SC, Public = P>,
     random_elements: &[SC::Challenge],
 ) -> (Vec<SC::Challenge>, Vec<SC::Challenge>)
 where
     M: Machine<SC::Val>,
     SC: StarkConfig,
+    P: PublicValues<SC::Val, SC::Challenge>,
 {
     let alphas_local = random_elements[0]
         .powers()

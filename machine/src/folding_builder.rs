@@ -1,10 +1,14 @@
 use crate::{Machine, ValidaAirBuilder};
-use p3_air::{AirBuilder, ExtensionBuilder, PairBuilder, PermutationAirBuilder, TwoRowMatrixView};
+use p3_air::{
+    AirBuilder, AirBuilderWithPublicValues, ExtensionBuilder, PairBuilder, PermutationAirBuilder,
+    TwoRowMatrixView,
+};
 use p3_field::AbstractField;
 use valida_machine::StarkConfig;
 
 pub struct ProverConstraintFolder<'a, M: Machine<SC::Val>, SC: StarkConfig> {
     pub(crate) machine: &'a M,
+    pub(crate) public_values: TwoRowMatrixView<'a, SC::PackedVal>,
     pub(crate) preprocessed: TwoRowMatrixView<'a, SC::PackedVal>,
     pub(crate) main: TwoRowMatrixView<'a, SC::PackedVal>,
     pub(crate) perm: TwoRowMatrixView<'a, SC::PackedChallenge>,
@@ -20,6 +24,7 @@ pub struct VerifierConstraintFolder<'a, M, SC: StarkConfig> {
     pub(crate) machine: &'a M,
     pub(crate) preprocessed: TwoRowMatrixView<'a, SC::Challenge>,
     pub(crate) main: TwoRowMatrixView<'a, SC::Challenge>,
+    pub(crate) public_values: TwoRowMatrixView<'a, SC::Challenge>,
     pub(crate) perm: TwoRowMatrixView<'a, SC::Challenge>,
     pub(crate) perm_challenges: &'a [SC::Challenge],
     pub(crate) is_first_row: SC::Challenge,
@@ -124,6 +129,16 @@ where
     }
 }
 
+impl<'a, M, SC> AirBuilderWithPublicValues for ProverConstraintFolder<'a, M, SC>
+where
+    M: Machine<SC::Val>,
+    SC: StarkConfig,
+{
+    fn public_values(&self) -> Self::M {
+        self.public_values
+    }
+}
+
 impl<'a, M, SC> AirBuilder for VerifierConstraintFolder<'a, M, SC>
 where
     M: Machine<SC::Val>,
@@ -213,5 +228,15 @@ where
 
     fn machine(&self) -> &Self::Machine {
         self.machine
+    }
+}
+
+impl<'a, M, SC> AirBuilderWithPublicValues for VerifierConstraintFolder<'a, M, SC>
+where
+    M: Machine<SC::Val>,
+    SC: StarkConfig,
+{
+    fn public_values(&self) -> Self::M {
+        self.public_values
     }
 }

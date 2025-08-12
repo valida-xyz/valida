@@ -11,6 +11,7 @@ use core::marker::Sync;
 use core::mem::transmute;
 use valida_bus::{MachineWithGeneralBus, MachineWithMemBus, MachineWithProgramBus};
 use valida_machine::is_mul_4;
+use valida_machine::ValidaPublicValues;
 use valida_machine::{
     addr_of_word, index_of_byte, instructions, AdviceProvider, Chip, Instruction, InstructionWord,
     Interaction, Operands, Word,
@@ -76,6 +77,8 @@ where
         + Sync,
     SC: StarkConfig,
 {
+    type Public = ValidaPublicValues<SC::Val>;
+
     fn generate_trace(&self, machine: &M) -> RowMajorMatrix<SC::Val> {
         let mut rows = self
             .operations
