@@ -111,7 +111,7 @@ impl Add for Word<u8> {
     fn add(self, other: Self) -> Self {
         let b: u32 = self.into();
         let c: u32 = other.into();
-        let res = (b as u64 + c as u64) as u32;
+        let res=b.wrapping_add(c);
         res.into()
     }
 }
@@ -121,7 +121,7 @@ impl Sub for Word<u8> {
     fn sub(self, other: Self) -> Self {
         let b: u32 = self.into();
         let c: u32 = other.into();
-        let res = b - c;
+        let res = b.wrapping_sub(c);
         res.into()
     }
 }
