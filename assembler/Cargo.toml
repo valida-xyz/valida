@@ -12,7 +12,7 @@ path = "src/bin/assembler.rs"
 byteorder = "1.4.3"
 clap = {version = "4.4.5", features = ["cargo"]}
 pest = "2.7.3"
-pest_derive = "2.7.3"
+pest_derive = "2.8.6"
 valida-opcodes = { path = "../opcodes" }
 
 [build-dependencies]
